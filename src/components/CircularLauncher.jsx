@@ -393,6 +393,7 @@ export default function CircularLauncher({ modules, onOpen }) {
           const y2 = CY + Math.sin(angle) * L_END
           const state = getState(m)
           const isHov = hoveredKey === m.key
+          const isBusy = busyKey === m.key
 
           return (
             <g key={m.key}>
