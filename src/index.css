@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Tokens globales ─────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+  --brand:       #0B5F8D;
+  --brand-dark:  #08486A;
+  --accent:      #3B82F6;
+  --surface:     #ffffff;
+  --bg:          #EEF2F7;
+  --border:      rgba(226,232,240,0.8);
+  --border-hover:rgba(11,95,141,0.25);
+  --text-1:      #1e293b;
+  --text-2:      #475569;
+  --text-3:      #94a3b8;
+  --ease-expo:   cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+/* ── Fondo claro tipo Linear / Stripe ────────────────────────────────────── */
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #334155;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(11,95,141,0.04), transparent 65%),
+    linear-gradient(145deg, #edf1f7 0%, #e6ecf5 55%, #edf2f8 100%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Textura de puntos casi imperceptible */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(11,95,141,0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Utilitario glass claro ──────────────────────────────────────────────── */
+.glass {
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid var(--border);
+}
+
+/* ── Botón surface premium ───────────────────────────────────────────────── */
+.surface-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+  transition: background 150ms var(--ease-expo),
+              border-color 150ms var(--ease-expo),
+              color 150ms var(--ease-expo),
+              box-shadow 150ms var(--ease-expo);
+  cursor: pointer;
+  text-decoration: none;
+}
+.surface-btn:hover {
+  background: #f8fafc;
+  border-color: var(--border-hover);
+  color: var(--brand);
+  box-shadow: 0 2px 8px rgba(11,95,141,0.10);
+}
+.surface-btn.danger:hover {
+  background: #fff1f1;
+  border-color: rgba(239,68,68,0.28);
+  color: #dc2626;
+}
+
+/* ── Animaciones ─────────────────────────────────────────────────────────── */
+@keyframes spin-cw  { to { transform: rotate( 360deg); } }
+@keyframes spin-ccw { to { transform: rotate(-360deg); } }
+
+@keyframes energy-flow {
+  from { stroke-dashoffset:  8; }
+  to   { stroke-dashoffset: -90; }
+}
+
+/* Dashes marchando del hub al módulo */
+@keyframes dash-march {
+  from { stroke-dashoffset: 12; }
+  to   { stroke-dashoffset:  0; }
+}
+
+/* Anillo pulsante exterior del hub */
+@keyframes hub-ring {
+  0%, 100% { transform: scale(1);    opacity: 0.55; }
+  50%       { transform: scale(1.12); opacity: 0;    }
+}
+
+/* hub-float reemplazado por GSAP (CircularLauncher.jsx) */
+
+/* ── Scrollbar discreta ──────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.4); border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }

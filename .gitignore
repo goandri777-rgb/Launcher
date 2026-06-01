@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.local
+*.log
+.DS_Store
+# Dev utilities
+s.cjs
+shot.png
+shot_hub.png

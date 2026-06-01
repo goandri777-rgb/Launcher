@@ -1,0 +1,159 @@
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { LogOut, Settings2 } from 'lucide-react'
+import { useAuth } from '../lib/AuthContext'
+import { useModules } from '../hooks/useModules'
+import CircularLauncher from '../components/CircularLauncher'
+
+const ROLE_LABEL = {
+  admin:      'Administrador',
+  operador:   'Operador',
+  supervisor: 'Supervisor',
+  invitado:   'Invitado',
+}
+
+const EASE = [0.16, 1, 0.3, 1]
+
+// ── Tokens inline para no depender de clases dark ────────────────────────
+const T = {
+  border:   'rgba(226,232,240,0.85)',
+  brand:    '#0B5F8D',
+  text1:    '#1e293b',
+  text2:    '#475569',
+  text3:    '#94a3b8',
+  surface:  '#ffffff',
+  bg:       'rgba(255,255,255,0.88)',
+}
+
+export default function Launcher() {
+  const { profile, signOut } = useAuth()
+  const { modules, loading, openModule } = useModules()
+
+  return (
+    <div className="h-full flex flex-col">
+
+      {/* ════ Header ════════════════════════════════════════════════════ */}
+      <motion.header
+        style={{
+          background: T.bg,
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: `1px solid ${T.border}`,
+          boxShadow: '0 1px 3px rgba(15,23,42,0.05)',
+        }}
+        className="relative z-10 grid grid-cols-[auto_1fr_auto] items-center px-6 py-3 gap-6"
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, ease: EASE }}
+      >
+        {/* Izquierda — tarjeta usuario compacta */}
+        <div
+          className="flex items-center gap-3"
+          style={{
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: 12,
+            padding: '8px 12px',
+            boxShadow: '0 1px 3px rgba(15,23,42,0.05)',
+          }}
+        >
+          {/* Avatar */}
+          <div style={{
+            width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+            background: T.brand,
+            display: 'grid', placeItems: 'center',
+            fontFamily: '"Sora", system-ui, sans-serif',
+            fontWeight: 700, fontSize: 14,
+            color: '#ffffff',
+          }}>
+            {(profile?.full_name || 'U').charAt(0).toUpperCase()}
+          </div>
+
+          <div>
+            <p style={{
+              fontFamily: '"Inter", system-ui, sans-serif',
+              fontWeight: 600, fontSize: 13.5,
+              color: T.text1,
+              letterSpacing: '-0.01em',
+              lineHeight: 1.2,
+            }}>
+              {profile?.full_name || 'usuario'}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 4px rgba(16,185,129,0.5)', flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: T.text3, fontFamily: '"Inter", system-ui' }}>
+                {ROLE_LABEL[profile?.role] || '—'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Centro — logo */}
+        <div className="flex justify-center">
+          <motion.img
+            src="/logo.png"
+            alt="ALAS"
+            style={{
+              height: 32, width: 'auto',
+              filter: 'brightness(0) saturate(100%) invert(24%) sepia(61%) saturate(1200%) hue-rotate(183deg) brightness(85%)',
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, ease: EASE }}
+          />
+        </div>
+
+        {/* Derecha — botones */}
+        <motion.div
+          className="flex items-center gap-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.06, ease: EASE }}
+        >
+          {profile?.role === 'admin' && (
+            <Link to="/admin" className="surface-btn">
+              <Settings2 style={{ width: 14, height: 14 }} />
+              <span>Admin</span>
+            </Link>
+          )}
+          <button onClick={signOut} className="surface-btn danger">
+            <LogOut style={{ width: 14, height: 14 }} />
+            <span>Salir</span>
+          </button>
+        </motion.div>
+      </motion.header>
+
+      {/* ════ Main ══════════════════════════════════════════════════════ */}
+      <main className="relative z-10 flex-1 grid place-items-center">
+        {loading ? (
+          <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {[0, 1, 2].map(i => (
+              <motion.div
+                key={i}
+                style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(11,95,141,0.4)' }}
+                animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1, 0.8] }}
+                transition={{ duration: 1.2, delay: i * 0.18, repeat: Infinity }}
+              />
+            ))}
+          </motion.div>
+        ) : modules.length === 0 ? (
+          <motion.div
+            className="text-center space-y-1"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE }}
+          >
+            <p style={{ fontSize: 14, color: T.text2, fontFamily: '"Inter", system-ui' }}>
+              Sin módulos asignados.
+            </p>
+            <p style={{ fontSize: 12, color: T.text3 }}>
+              Pedí acceso al administrador.
+            </p>
+          </motion.div>
+        ) : (
+          <CircularLauncher modules={modules} onOpen={openModule} />
+        )}
+      </main>
+
+    </div>
+  )
+}

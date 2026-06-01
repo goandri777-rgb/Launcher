@@ -1,0 +1,699 @@
+import { useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  ArrowLeft, UserPlus, ShieldCheck, ShieldX, Ban, CheckCircle2,
+  X, Clock, Link2, Eye, EyeOff, Pencil, Check,
+  Users, Boxes, TrendingUp, AlertTriangle,
+} from 'lucide-react'
+import { adminApi } from '../lib/adminApi'
+import { getModuleIcon } from '../data/icons'
+
+const ROLES  = ['admin', 'supervisor', 'operador', 'invitado']
+const EASE   = [0.16, 1, 0.3, 1]
+const SPRING = { type: 'spring', stiffness: 400, damping: 30, mass: 0.5 }
+
+const C = {
+  brand:       '#0B5F8D',
+  brandDark:   '#08486A',
+  brandLight:  '#e8f4fd',
+  border:      'rgba(226,232,240,0.9)',
+  borderHov:   'rgba(11,95,141,0.28)',
+  borderFocus: 'rgba(11,95,141,0.45)',
+  bg:          '#eef2f7',
+  surface:     '#ffffff',
+  surfaceHov:  '#f8fafc',
+  text1:       '#0f172a',
+  text2:       '#334155',
+  text3:       '#64748b',
+  text4:       '#94a3b8',
+  green:       '#10b981',
+  amber:       '#f59e0b',
+  red:         '#ef4444',
+  glass:       'rgba(255,255,255,0.92)',
+}
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+const statusMap = {
+  active:   { bg:'#f0fdf4', fg:'#15803d', border:'rgba(21,128,61,0.18)',  dot:'#22c55e', label:'Activo'    },
+  blocked:  { bg:'#fff1f2', fg:'#dc2626', border:'rgba(220,38,38,0.18)',  dot:'#ef4444', label:'Bloqueado' },
+  inactive: { bg:'#fafafa', fg:'#64748b', border:'rgba(100,116,139,0.18)',dot:'#94a3b8', label:'Inactivo'  },
+}
+const roleMap = {
+  admin:      { bg:'#eff6ff', fg:C.brand,   border:'rgba(11,95,141,0.18)'  },
+  supervisor: { bg:'#faf5ff', fg:'#7c3aed', border:'rgba(124,58,237,0.18)' },
+  operador:   { bg:'#f8fafc', fg:C.text3,   border:C.border                },
+  invitado:   { bg:'#f8fafc', fg:C.text3,   border:C.border                },
+}
+
+function StatusPill({ status }) {
+  const s = statusMap[status] || statusMap.inactive
+  return (
+    <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:99,fontSize:11,fontWeight:500,background:s.bg,color:s.fg,border:`1px solid ${s.border}`}}>
+      <span style={{width:5,height:5,borderRadius:'50%',background:s.dot,flexShrink:0}}/>
+      {s.label}
+    </span>
+  )
+}
+function RolePill({ role }) {
+  const r = roleMap[role] || roleMap.operador
+  return (
+    <span style={{display:'inline-block',padding:'2px 9px',borderRadius:99,fontSize:11,fontWeight:500,background:r.bg,color:r.fg,border:`1px solid ${r.border}`,textTransform:'capitalize'}}>{role}</span>
+  )
+}
+function ActionPill({ action }) {
+  return (
+    <span style={{display:'inline-block',padding:'2px 9px',borderRadius:99,fontSize:11,fontWeight:500,background:C.brandLight,color:C.brand,border:`1px solid rgba(11,95,141,0.15)`,textTransform:'capitalize'}}>{action}</span>
+  )
+}
+
+// ─── base ─────────────────────────────────────────────────────────────────────
+function Card({ children, style }) {
+  return (
+    <div style={{
+      background: C.surface,
+      border: `1px solid ${C.border}`,
+      borderRadius: 16,
+      boxShadow: '0 1px 3px rgba(15,23,42,0.05), 0 0 0 1px rgba(226,232,240,0.4)',
+      overflow: 'hidden',
+      ...style,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function CardHeader({ title, right }) {
+  return (
+    <div style={{
+      display:'flex', alignItems:'center', justifyContent:'space-between',
+      padding:'14px 20px 12px',
+      borderBottom:`1px solid ${C.border}`,
+    }}>
+      <span style={{fontFamily:'"Sora",system-ui,sans-serif',fontWeight:700,fontSize:13,color:C.text1,letterSpacing:'-0.02em'}}>{title}</span>
+      {right && <div>{right}</div>}
+    </div>
+  )
+}
+
+function Th({ children, right }) {
+  return (
+    <th style={{padding:'9px 20px',textAlign:right?'right':'left',fontWeight:600,color:C.text4,fontSize:11,letterSpacing:'0.04em',textTransform:'uppercase',whiteSpace:'nowrap'}}>
+      {children}
+    </th>
+  )
+}
+
+function IconBtn({ title, onClick, icon: Icon, variant = 'default' }) {
+  const [hov, setHov] = useState(false)
+  const styles = {
+    default: { bg:'#f0f7ff', color:C.brand,  border:'rgba(11,95,141,0.22)'  },
+    danger:  { bg:'#fff1f2', color:C.red,    border:'rgba(239,68,68,0.22)'  },
+    success: { bg:'#f0fdf4', color:C.green,  border:'rgba(16,185,129,0.22)' },
+    ghost:   { bg:C.surfaceHov, color:C.text3, border:C.border              },
+  }
+  const s = styles[variant] || styles.default
+  return (
+    <motion.button title={title} onClick={onClick}
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      whileHover={{scale:1.1}} whileTap={{scale:0.9}} transition={SPRING}
+      style={{
+        display:'grid',placeItems:'center',width:34,height:34,borderRadius:9,
+        background: hov ? s.bg : 'transparent',
+        border: `1px solid ${hov ? s.border : 'transparent'}`,
+        color: hov ? s.color : C.text4,
+        cursor:'pointer', transition:'all 150ms ease',
+        flexShrink: 0,
+        boxShadow: hov ? `0 3px 10px ${s.border}` : 'none',
+      }}
+    >
+      <Icon style={{width:15,height:15}}/>
+    </motion.button>
+  )
+}
+
+// ─── modals ───────────────────────────────────────────────────────────────────
+function Overlay({ children, onClose }) {
+  return (
+    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+      transition={{duration:0.2,ease:EASE}}
+      style={{position:'fixed',inset:0,zIndex:50,display:'grid',placeItems:'center',background:'rgba(15,23,42,0.35)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',padding:16}}
+      onClick={onClose}
+    >
+      <motion.div initial={{scale:0.93,y:24,opacity:0}} animate={{scale:1,y:0,opacity:1}} exit={{scale:0.93,opacity:0}}
+        transition={{type:'spring',stiffness:350,damping:28,mass:0.55}}
+        onClick={e=>e.stopPropagation()}
+      >{children}</motion.div>
+    </motion.div>
+  )
+}
+
+function ModalCard({ children, width=440 }) {
+  return (
+    <div style={{background:`linear-gradient(145deg, ${C.surface}, #fafcff)`,border:`1px solid ${C.border}`,borderRadius:24,padding:32,width:'100%',maxWidth:width,boxShadow:'0 25px 80px rgba(15,23,42,0.18), 0 0 0 1px rgba(226,232,240,0.5)',fontFamily:'"Inter",system-ui,sans-serif'}}>
+      {children}
+    </div>
+  )
+}
+
+function ModalHead({ title, sub, onClose }) {
+  return (
+    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:24}}>
+      <div>
+        <h2 style={{fontFamily:'"Sora",system-ui,sans-serif',fontWeight:700,fontSize:17,color:C.text1,margin:0,letterSpacing:'-0.03em'}}>{title}</h2>
+        {sub && <p style={{fontSize:13,color:C.text3,margin:'5px 0 0',lineHeight:1.4}}>{sub}</p>}
+      </div>
+      <motion.button onClick={onClose}
+        whileHover={{scale:1.1,rotate:90}} whileTap={{scale:0.9}} transition={SPRING}
+        style={{background:C.surfaceHov,border:`1px solid ${C.border}`,cursor:'pointer',color:C.text4,padding:6,borderRadius:9,flexShrink:0,display:'grid',placeItems:'center',transition:'color 150ms ease'}}
+        onMouseEnter={e=>e.currentTarget.style.color=C.red}
+        onMouseLeave={e=>e.currentTarget.style.color=C.text4}
+      >
+        <X style={{width:16,height:16}}/>
+      </motion.button>
+    </div>
+  )
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label style={{fontSize:11,fontWeight:600,color:C.text3,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.06em'}}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function Input({ type='text', value, onChange, placeholder, mono }) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <input type={type} value={value} placeholder={placeholder} onChange={e=>onChange(e.target.value)}
+      onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)}
+      style={{width:'100%',borderRadius:12,background:C.surface,border:`1px solid ${focused?C.borderFocus:C.border}`,padding:'11px 14px',fontSize:13,color:C.text1,outline:'none',fontFamily:mono?'"JetBrains Mono","Fira Code",monospace':'"Inter",system-ui,sans-serif',boxSizing:'border-box',transition:'border-color 200ms ease, box-shadow 200ms ease',boxShadow:focused?'0 0 0 3px rgba(11,95,141,0.1)':'none'}}
+    />
+  )
+}
+
+function PrimaryBtn({ onClick, disabled, children, icon: Icon }) {
+  return (
+    <motion.button onClick={onClick} disabled={disabled}
+      whileHover={disabled?{}:{scale:1.03,y:-2}} whileTap={disabled?{}:{scale:0.96}} transition={SPRING}
+      style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 24px',borderRadius:12,background:disabled?'rgba(11,95,141,0.45)':`linear-gradient(135deg,${C.brand},${C.brandDark})`,border:'none',color:'#fff',fontSize:14,fontWeight:600,fontFamily:'"Inter",system-ui,sans-serif',cursor:disabled?'not-allowed':'pointer',boxShadow:disabled?'none':`0 4px 16px rgba(11,95,141,0.35)`,letterSpacing:'-0.01em'}}
+    >
+      {Icon && <Icon style={{width:15,height:15}}/>}{children}
+    </motion.button>
+  )
+}
+
+function GhostBtn({ onClick, children }) {
+  return (
+    <motion.button onClick={onClick}
+      whileHover={{scale:1.02}} whileTap={{scale:0.97}} transition={SPRING}
+      style={{padding:'11px 22px',borderRadius:12,background:'transparent',border:`1px solid ${C.border}`,color:C.text2,fontSize:14,cursor:'pointer',fontFamily:'"Inter",system-ui,sans-serif',transition:'all 150ms ease'}}
+      onMouseEnter={e=>{e.currentTarget.style.background=C.surfaceHov;e.currentTarget.style.borderColor=C.borderHov}}
+      onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.borderColor=C.border}}
+    >{children}</motion.button>
+  )
+}
+
+// ─── permissions modal ────────────────────────────────────────────────────────
+function PermissionsModal({ user, modules, onClose, notify }) {
+  const [granted, setGranted] = useState(new Set())
+  const [loading, setLoading] = useState(true)
+  const [saving,  setSaving]  = useState(null)
+
+  useEffect(()=>{
+    adminApi.getUserPermissions(user.id).then(({data})=>{
+      setGranted(new Set((data||[]).map(p=>p.module_id)))
+      setLoading(false)
+    })
+  },[user.id])
+
+  const toggle = async mod => {
+    setSaving(mod.id)
+    const grant = !granted.has(mod.id)
+    await adminApi.togglePermission(user.id, mod.id, grant)
+    setSaving(null)
+    setGranted(prev=>{ const n=new Set(prev); grant?n.add(mod.id):n.delete(mod.id); return n })
+    notify(grant?`Acceso a "${mod.name}" otorgado`:`Acceso a "${mod.name}" revocado`)
+  }
+
+  const userStatus = user.is_blocked?'blocked':user.is_active?'active':'inactive'
+
+  return (
+    <Overlay onClose={onClose}>
+      <ModalCard width={460}>
+        <ModalHead title="Permisos de acceso" sub={`${user.full_name||user.email}`} onClose={onClose}/>
+
+        {/* usuario info strip */}
+        <div style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:12,marginBottom:20,background:C.surfaceHov,border:`1px solid ${C.border}`}}>
+          <div style={{width:36,height:36,borderRadius:10,flexShrink:0,background:C.brand,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:700,fontSize:14,color:'#fff'}}>
+            {(user.full_name||user.email||'U').charAt(0).toUpperCase()}
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:600,color:C.text1}}>{user.full_name||'—'}</div>
+            <div style={{fontSize:11,color:C.text3}}>{user.email}</div>
+          </div>
+          <RolePill role={user.role}/>
+          <StatusPill status={userStatus}/>
+        </div>
+
+        {loading ? (
+          <div style={{padding:'32px 0',textAlign:'center',color:C.text4,fontSize:13}}>Cargando módulos…</div>
+        ) : (
+          <motion.div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:320,overflowY:'auto'}}
+            initial="h" animate="s" variants={{h:{},s:{transition:{staggerChildren:0.04}}}}
+          >
+            {modules.map(m=>{
+              const on=granted.has(m.id), busy=saving===m.id
+              const Icon=getModuleIcon(m.key)
+              return (
+                <motion.button key={m.id}
+                  variants={{h:{opacity:0,y:6},s:{opacity:1,y:0,transition:{duration:0.25,ease:EASE}}}}
+                  whileHover={{scale:1.01}} whileTap={{scale:0.99}} transition={SPRING}
+                  onClick={()=>!busy&&toggle(m)}
+                  style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',borderRadius:11,background:on?'#f0f7ff':C.surface,border:`1px solid ${on?'rgba(11,95,141,0.22)':C.border}`,cursor:busy?'wait':'pointer',transition:'background 150ms ease,border-color 150ms ease',fontFamily:'"Inter",system-ui,sans-serif',opacity:busy?0.5:1}}
+                >
+                  <div style={{width:32,height:32,borderRadius:9,background:on?C.brandLight:'#f8fafc',border:`1px solid ${on?'rgba(11,95,141,0.15)':C.border}`,display:'grid',placeItems:'center',flexShrink:0}}>
+                    <Icon style={{width:14,height:14,color:on?C.brand:C.text4}}/>
+                  </div>
+                  <span style={{flex:1,fontSize:13,color:C.text1,fontWeight:on?600:400,textAlign:'left'}}>{m.name}</span>
+                  <span style={{width:38,height:22,borderRadius:99,background:on?C.brand:'rgba(203,213,225,0.6)',position:'relative',flexShrink:0,transition:'background 220ms ease',display:'block'}}>
+                    <span style={{position:'absolute',top:3,left:on?19:3,width:16,height:16,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 4px rgba(0,0,0,0.18)',transition:'left 220ms ease',display:'block'}}/>
+                  </span>
+                </motion.button>
+              )
+            })}
+          </motion.div>
+        )}
+      </ModalCard>
+    </Overlay>
+  )
+}
+
+// ─── edit module modal ────────────────────────────────────────────────────────
+function EditModuleModal({ module: mod, onClose, onSaved, notify }) {
+  const [name, setName] = useState(mod.name||'')
+  const [url,  setUrl]  = useState(mod.url||'')
+  const [busy, setBusy] = useState(false)
+  const [err,  setErr]  = useState('')
+  const Icon = getModuleIcon(mod.key)
+
+  const save = async () => {
+    setErr(''); setBusy(true)
+    const updates = {}
+    if (name.trim()!==mod.name) updates.name=name.trim()
+    if (url.trim()!==mod.url)   updates.url=url.trim()
+    if (!Object.keys(updates).length) { setBusy(false); onClose(); return }
+    const {error} = await adminApi.updateModule(mod.id, updates)
+    setBusy(false)
+    if (error) { setErr(error.message||'Error al guardar'); return }
+    onSaved()
+  }
+
+  return (
+    <Overlay onClose={onClose}>
+      <ModalCard width={480}>
+        <ModalHead title="Editar módulo" onClose={onClose}/>
+
+        <div style={{display:'flex',alignItems:'center',gap:14,padding:'12px 16px',borderRadius:12,marginBottom:24,background:C.surfaceHov,border:`1px solid ${C.border}`}}>
+          <div style={{width:40,height:40,borderRadius:11,background:C.brandLight,border:'1px solid rgba(11,95,141,0.15)',display:'grid',placeItems:'center',flexShrink:0}}>
+            <Icon style={{width:18,height:18,color:C.brand}}/>
+          </div>
+          <div>
+            <p style={{fontSize:14,fontWeight:600,color:C.text1,margin:0}}>{mod.name}</p>
+            <code style={{fontSize:11,color:C.text3,background:'#f1f5f9',padding:'1px 6px',borderRadius:5,border:`1px solid ${C.border}`}}>{mod.key}</code>
+          </div>
+        </div>
+
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <Field label="Nombre del módulo"><Input value={name} onChange={setName}/></Field>
+          <Field label="URL de destino">
+            <div style={{position:'relative'}}>
+              <Link2 style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',width:13,height:13,color:C.text4,pointerEvents:'none'}}/>
+              <input type="text" value={url} placeholder="https://..." onChange={e=>setUrl(e.target.value)}
+                style={{width:'100%',borderRadius:10,background:C.surface,border:`1px solid ${C.border}`,padding:'9px 12px 9px 32px',fontSize:12,color:C.text1,outline:'none',fontFamily:'"JetBrains Mono","Fira Code",monospace',boxSizing:'border-box',transition:'border-color 150ms ease'}}
+                onFocus={e=>e.target.style.borderColor=C.borderFocus}
+                onBlur={e=>e.target.style.borderColor=C.border}
+              />
+            </div>
+            <p style={{fontSize:11,color:C.text4,margin:'5px 0 0'}}>URL que se abre al hacer clic en el módulo desde el Launcher.</p>
+          </Field>
+          {err && <p style={{color:C.red,fontSize:12,margin:0,padding:'8px 12px',background:'#fff1f2',borderRadius:8,border:'1px solid rgba(239,68,68,0.2)'}}>{err}</p>}
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end',paddingTop:4}}>
+            <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
+            <PrimaryBtn onClick={save} disabled={busy} icon={Check}>{busy?'Guardando…':'Guardar cambios'}</PrimaryBtn>
+          </div>
+        </div>
+      </ModalCard>
+    </Overlay>
+  )
+}
+
+// ─── create user modal ────────────────────────────────────────────────────────
+function CreateUserModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({email:'',password:'',fullName:'',role:'operador'})
+  const [busy, setBusy] = useState(false)
+  const [err,  setErr]  = useState('')
+
+  const submit = async () => {
+    setErr(''); setBusy(true)
+    const {error} = await adminApi.createUser(form.email.trim(),form.password,form.fullName.trim(),form.role)
+    setBusy(false)
+    if (error) { setErr(error.message); return }
+    onCreated()
+  }
+
+  return (
+    <Overlay onClose={onClose}>
+      <ModalCard width={440}>
+        <ModalHead title="Nuevo usuario" sub="Completá los datos para crear la cuenta" onClose={onClose}/>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Field label="Nombre completo"><Input value={form.fullName} onChange={v=>setForm({...form,fullName:v})} placeholder="Ej. Juan Pérez"/></Field>
+          <Field label="Correo electrónico"><Input type="email" value={form.email} onChange={v=>setForm({...form,email:v})} placeholder="usuario@empresa.com"/></Field>
+          <Field label="Contraseña"><Input type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="Mínimo 8 caracteres"/></Field>
+          <Field label="Rol">
+            <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}
+              style={{width:'100%',borderRadius:10,background:C.surface,border:`1px solid ${C.border}`,padding:'9px 12px',fontSize:13,color:C.text1,outline:'none',fontFamily:'"Inter",system-ui,sans-serif',textTransform:'capitalize',boxSizing:'border-box'}}
+              onFocus={e=>e.target.style.borderColor=C.borderFocus}
+              onBlur={e=>e.target.style.borderColor=C.border}
+            >
+              {ROLES.map(r=><option key={r} value={r} style={{textTransform:'capitalize'}}>{r}</option>)}
+            </select>
+          </Field>
+          {err && <p style={{color:C.red,fontSize:12,margin:0,padding:'8px 12px',background:'#fff1f2',borderRadius:8,border:'1px solid rgba(239,68,68,0.2)'}}>{err}</p>}
+          <div style={{paddingTop:4}}>
+            <PrimaryBtn onClick={submit} disabled={busy} icon={UserPlus}>{busy?'Creando cuenta…':'Crear usuario'}</PrimaryBtn>
+          </div>
+        </div>
+      </ModalCard>
+    </Overlay>
+  )
+}
+
+// ─── stat card ────────────────────────────────────────────────────────────────
+function StatCard({ icon: Icon, label, value, accent, delay=0 }) {
+  const a = {
+    blue:   { bg:'linear-gradient(135deg,#eff6ff,#dbeafe)', icon:C.brand,   ring:'rgba(11,95,141,0.15)'   },
+    green:  { bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)', icon:'#16a34a', ring:'rgba(22,163,74,0.15)'   },
+    amber:  { bg:'linear-gradient(135deg,#fffbeb,#fef3c7)', icon:'#d97706', ring:'rgba(217,119,6,0.15)'   },
+    purple: { bg:'linear-gradient(135deg,#faf5ff,#ede9fe)', icon:'#7c3aed', ring:'rgba(124,58,237,0.15)'  },
+  }[accent] || {}
+
+  return (
+    <motion.div
+      initial={{opacity:0,y:16,scale:0.97}} animate={{opacity:1,y:0,scale:1}}
+      transition={{duration:0.42,delay,ease:EASE}}
+      style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:'18px 20px',boxShadow:'0 1px 3px rgba(15,23,42,0.05)',display:'flex',alignItems:'center',gap:16}}
+    >
+      <div style={{width:46,height:46,borderRadius:13,flexShrink:0,background:a.bg,border:`1px solid ${a.ring}`,display:'grid',placeItems:'center'}}>
+        <Icon style={{width:20,height:20,color:a.icon}}/>
+      </div>
+      <div>
+        <p style={{fontSize:26,fontWeight:800,color:C.text1,margin:0,fontFamily:'"Sora",system-ui,sans-serif',letterSpacing:'-0.04em',lineHeight:1}}>{value}</p>
+        <p style={{fontSize:12,color:C.text3,margin:'4px 0 0',fontFamily:'"Inter",system-ui',fontWeight:400}}>{label}</p>
+      </div>
+    </motion.div>
+  )
+}
+
+// ─── url cell ─────────────────────────────────────────────────────────────────
+function UrlCell({ url }) {
+  const [vis, setVis] = useState(false)
+  if (!url) return <span style={{color:C.text4,fontSize:11,fontStyle:'italic'}}>Sin URL</span>
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:4}}>
+      <span style={{fontSize:11,color:C.text2,fontFamily:vis?'"JetBrains Mono",monospace':'"Inter",system-ui',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:150}}>
+        {vis?url:'••••••••••••••'}
+      </span>
+      <button onClick={()=>setVis(v=>!v)} style={{background:'none',border:'none',cursor:'pointer',color:C.text4,padding:2,flexShrink:0,display:'grid',placeItems:'center'}}>
+        {vis?<EyeOff style={{width:11,height:11}}/>:<Eye style={{width:11,height:11}}/>}
+      </button>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+export default function AdminPanel() {
+  const [users,      setUsers]      = useState([])
+  const [modules,    setModules]    = useState([])
+  const [logs,       setLogs]       = useState([])
+  const [selected,   setSelected]   = useState(null)
+  const [editing,    setEditing]    = useState(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [toast,      setToast]      = useState('')
+
+  const notify = msg => { setToast(msg); setTimeout(()=>setToast(''),2800) }
+
+  const loadUsers   = useCallback(async()=>{ const {data,error}=await adminApi.listUsers();   if(!error) setUsers(data||[]) },[])
+  const loadModules = useCallback(async()=>{ const {data,error}=await adminApi.listModules(); if(!error) setModules(data||[]) },[])
+  const loadLogs    = useCallback(async()=>{ const {data,error}=await adminApi.listLogs(8);   if(!error) setLogs(data||[]) },[])
+
+  useEffect(()=>{ loadUsers(); loadModules(); loadLogs() },[loadUsers,loadModules,loadLogs])
+
+  const toggleActive  = async u => { await adminApi.setActive(u.id,!u.is_active);   notify(u.is_active?'Usuario desactivado':'Usuario activado');    loadUsers() }
+  const toggleBlocked = async u => { await adminApi.setBlocked(u.id,!u.is_blocked); notify(u.is_blocked?'Usuario desbloqueado':'Usuario bloqueado'); loadUsers() }
+  const toggleModule  = async m => { await adminApi.updateModule(m.id,{is_active:!m.is_active}); notify(m.is_active?`"${m.name}" desactivado`:`"${m.name}" activado`); loadModules() }
+
+  const active  = users.filter(u=>u.is_active&&!u.is_blocked).length
+  const blocked = users.filter(u=>u.is_blocked).length
+  const activeMods = modules.filter(m=>m.is_active).length
+
+
+  return (
+    <div style={{minHeight:'100%',display:'flex',flexDirection:'column',fontFamily:'"Inter",system-ui,sans-serif',color:C.text1}}>
+      <style>{`
+        .alas-tr { transition: background 120ms ease; cursor: default; }
+        .alas-tr:hover { background: ${C.surfaceHov} !important; }
+        .alas-tr td { border-bottom: 1px solid ${C.border}; }
+        @keyframes row-in { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+        .alas-tr { animation: row-in 0.32s ease forwards; opacity: 0; }
+      `}</style>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <motion.header
+        initial={{opacity:0,y:-14}} animate={{opacity:1,y:0}}
+        transition={{duration:0.45,ease:EASE}}
+        style={{
+          background:C.glass, backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
+          borderBottom:`1px solid ${C.border}`,
+          boxShadow:'0 1px 0 rgba(226,232,240,0.8)',
+          display:'grid', gridTemplateColumns:'auto 1fr auto',
+          alignItems:'center', gap:16,
+          padding:'10px 28px',
+          position:'sticky', top:0, zIndex:20,
+        }}
+      >
+        <Link to="/" style={{display:'grid',placeItems:'center',width:34,height:34,borderRadius:10,background:C.surface,border:`1px solid ${C.border}`,color:C.text3,textDecoration:'none',flexShrink:0,boxShadow:'0 1px 3px rgba(15,23,42,0.05)',transition:'all 150ms ease'}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=C.borderHov;e.currentTarget.style.color=C.brand;e.currentTarget.style.background=C.brandLight}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background=C.surface}}
+        >
+          <ArrowLeft style={{width:15,height:15}}/>
+        </Link>
+
+        <div>
+          <h1 style={{fontFamily:'"Sora",system-ui,sans-serif',fontWeight:800,fontSize:15,color:C.text1,letterSpacing:'-0.03em',margin:0}}>
+            Panel de administración
+          </h1>
+          <p style={{fontSize:11,color:C.text4,margin:'1px 0 0',fontFamily:'"Inter",system-ui'}}>
+            {users.length} usuarios · {modules.length} módulos
+          </p>
+        </div>
+
+        <PrimaryBtn onClick={()=>setShowCreate(true)} icon={UserPlus}>Nuevo usuario</PrimaryBtn>
+      </motion.header>
+
+      {/* ── Content ────────────────────────────────────────────────────────── */}
+      <div style={{flex:1,padding:'24px 28px',display:'flex',flexDirection:'column',gap:20}}>
+
+        {/* Stats */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,minWidth:0}}>
+          <StatCard icon={Users}         label="Total usuarios"    value={users.length} accent="blue"   delay={0}    />
+          <StatCard icon={CheckCircle2}  label="Usuarios activos"  value={active}       accent="green"  delay={0.07} />
+          <StatCard icon={Boxes}         label="Módulos activos"   value={activeMods}   accent="purple" delay={0.14} />
+          <StatCard icon={AlertTriangle} label="Bloqueados"        value={blocked}      accent="amber"  delay={0.21} />
+        </div>
+
+        {/* Main grid */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:18,alignItems:'start'}}>
+
+          {/* ── Usuarios ───────────────────────────────────────────────────── */}
+          <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.26,ease:EASE}}>
+            <Card>
+              <CardHeader title="Usuarios" right={
+                <span style={{fontSize:11,color:C.text4,background:C.surfaceHov,padding:'3px 9px',borderRadius:99,border:`1px solid ${C.border}`}}>
+                  {users.length} total
+                </span>
+              }/>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,tableLayout:'fixed'}}>
+                <colgroup>
+                  <col style={{width:'30%'}}/>  {/* Usuario */}
+                  <col style={{width:'10%'}}/>  {/* Rol */}
+                  <col style={{width:'12%'}}/>  {/* Estado */}
+                  <col style={{width:'20%'}}/>  {/* Último acceso */}
+                  <col style={{width:'14%'}}/>  {/* Acceso */}
+                  <col style={{width:'14%'}}/>  {/* Acciones */}
+                </colgroup>
+                <thead style={{borderBottom:`1px solid ${C.border}`}}>
+                  <tr>
+                    <Th>Usuario</Th>
+                    <Th>Rol</Th>
+                    <Th>Estado</Th>
+                    <Th>Último acceso</Th>
+                    <Th>Permisos</Th>
+                    <Th right>Acciones</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u,i)=>{
+                    const st=u.is_blocked?'blocked':u.is_active?'active':'inactive'
+                    return (
+                      <tr key={u.id} className="alas-tr" style={{animationDelay:`${i*0.055}s`}}>
+                        <td style={{padding:'11px 16px'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
+                            <div style={{width:30,height:30,borderRadius:9,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:12,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
+                              {(u.full_name||u.email||'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div style={{minWidth:0}}>
+                              <div style={{fontWeight:600,color:C.text1,fontSize:13,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
+                              <div style={{fontSize:11,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{padding:'11px 16px'}}><RolePill role={u.role}/></td>
+                        <td style={{padding:'11px 16px'}}><StatusPill status={st}/></td>
+                        <td style={{padding:'11px 16px',color:C.text4,fontSize:11,whiteSpace:'nowrap'}}>
+                          {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'}
+                        </td>
+                        <td style={{padding:'11px 16px'}}>
+                          <button onClick={()=>setSelected(u)}
+                            style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:8,background:'transparent',border:`1px solid ${C.border}`,color:C.text3,fontSize:11,fontWeight:500,cursor:'pointer',transition:'all 150ms ease',whiteSpace:'nowrap'}}
+                            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.borderHov;e.currentTarget.style.color=C.brand;e.currentTarget.style.background=C.brandLight}}
+                            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background='transparent'}}
+                          >
+                            <ShieldCheck style={{width:11,height:11}}/> Módulos
+                          </button>
+                        </td>
+                        <td style={{padding:'11px 16px'}}>
+                          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:2}}>
+                            <IconBtn title={u.is_active?'Desactivar':'Activar'} onClick={()=>toggleActive(u)} icon={u.is_active?ShieldX:CheckCircle2} variant={u.is_active?'ghost':'success'}/>
+                            <IconBtn title={u.is_blocked?'Desbloquear':'Bloquear'} onClick={()=>toggleBlocked(u)} icon={u.is_blocked?CheckCircle2:Ban} variant={u.is_blocked?'success':'danger'}/>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {users.length===0 && (
+                    <tr>
+                      <td colSpan={6} style={{padding:'36px 20px',textAlign:'center',color:C.text4,fontSize:13,borderBottom:'none'}}>Sin usuarios registrados</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </Card>
+          </motion.div>
+
+          {/* ── Columna derecha ─────────────────────────────────────────────── */}
+          <div style={{display:'flex',flexDirection:'column',gap:18}}>
+
+            {/* Módulos */}
+            <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.32,ease:EASE}}>
+              <Card>
+                <CardHeader title="Módulos" right={
+                  <span style={{fontSize:11,color:C.text4,background:C.surfaceHov,padding:'3px 9px',borderRadius:99,border:`1px solid ${C.border}`}}>
+                    {activeMods}/{modules.length} activos
+                  </span>
+                }/>
+                <div>
+                  {modules.map((m,i)=>{
+                    const Icon=getModuleIcon(m.key)
+                    return (
+                      <motion.div key={m.id}
+                        initial={{opacity:0,x:8}} animate={{opacity:1,x:0}}
+                        transition={{duration:0.3,delay:0.36+i*0.05,ease:EASE}}
+                        whileHover={{backgroundColor:C.surfaceHov}}
+                        style={{display:'flex',alignItems:'center',gap:12,padding:'11px 18px',borderBottom:i<modules.length-1?`1px solid ${C.border}`:'none',transition:'background 120ms ease'}}
+                      >
+                        <div style={{width:32,height:32,borderRadius:9,flexShrink:0,background:m.is_active?C.brandLight:'#f1f5f9',border:`1px solid ${m.is_active?'rgba(11,95,141,0.15)':C.border}`,display:'grid',placeItems:'center',transition:'background 200ms ease'}}>
+                          <Icon style={{width:14,height:14,color:m.is_active?C.brand:C.text4}}/>
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:600,color:m.is_active?C.text1:C.text4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:'-0.01em'}}>{m.name}</div>
+                          <UrlCell url={m.url}/>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:2,flexShrink:0}}>
+                          <IconBtn title="Editar URL" onClick={()=>setEditing(m)} icon={Pencil} variant="default"/>
+                          <IconBtn title={m.is_active?'Desactivar':'Activar'} onClick={()=>toggleModule(m)} icon={m.is_active?EyeOff:Eye} variant={m.is_active?'danger':'success'}/>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Actividad */}
+            <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.38,ease:EASE}}>
+              <Card>
+                <CardHeader title="Actividad reciente"/>
+                <div>
+                  {logs.map((l,i)=>(
+                    <motion.div key={l.id}
+                      initial={{opacity:0,x:8}} animate={{opacity:1,x:0}}
+                      transition={{duration:0.28,delay:0.42+i*0.04,ease:EASE}}
+                      whileHover={{backgroundColor:C.surfaceHov}}
+                      style={{display:'flex',alignItems:'flex-start',gap:10,padding:'10px 18px',borderBottom:i<logs.length-1?`1px solid ${C.border}`:'none',transition:'background 120ms ease'}}
+                    >
+                      <div style={{width:28,height:28,borderRadius:8,flexShrink:0,background:'#f8fafc',border:`1px solid ${C.border}`,display:'grid',placeItems:'center',marginTop:1}}>
+                        <Clock style={{width:12,height:12,color:C.text4}}/>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
+                          <span style={{fontSize:12,fontWeight:600,color:C.text1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.email||'—'}</span>
+                          <ActionPill action={l.action}/>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          {l.module_name && <span style={{fontSize:11,color:C.text3}}>{l.module_name}</span>}
+                          {l.module_name && <span style={{color:C.border}}>·</span>}
+                          <span style={{fontSize:11,color:C.text4}}>{new Date(l.created_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {logs.length===0 && (
+                    <div style={{padding:'24px 18px',textAlign:'center',color:C.text4,fontSize:13}}>Sin actividad</div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {selected   && <PermissionsModal user={selected} modules={modules} onClose={()=>setSelected(null)} notify={notify}/>}
+      </AnimatePresence>
+      <AnimatePresence>
+        {editing    && <EditModuleModal module={editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);loadModules();notify('Módulo actualizado')}} notify={notify}/>}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCreate && <CreateUserModal onClose={()=>setShowCreate(false)} onCreated={()=>{setShowCreate(false);loadUsers();notify('Usuario creado')}}/>}
+      </AnimatePresence>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div initial={{opacity:0,y:16,scale:0.95}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:12,scale:0.95}}
+            transition={{duration:0.22,ease:EASE}}
+            style={{position:'fixed',bottom:24,left:'50%',transform:'translateX(-50%)',background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:'9px 20px',fontSize:13,fontWeight:500,color:C.text1,boxShadow:'0 8px 24px rgba(15,23,42,0.12)',fontFamily:'"Inter",system-ui,sans-serif',zIndex:9999,whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:8}}
+          >
+            <span style={{width:7,height:7,borderRadius:'50%',background:C.green,flexShrink:0}}/>
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
