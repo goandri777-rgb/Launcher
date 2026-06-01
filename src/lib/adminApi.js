@@ -73,7 +73,7 @@ export const adminApi = {
   // Lista todos los módulos.
   listModules: () => DEMO_MODE
     ? Promise.resolve(ok(DEMO_MODULES))
-    : supabase.from('modules').select('*').order('sort_order'),
+    : supabase.from('modules').select('id,key,name,url,is_active,is_blocked,sort_order').order('sort_order'),
 
   // Permisos de un usuario.
   getUserPermissions: (userId) => {
@@ -95,13 +95,19 @@ export const adminApi = {
   },
 
   // Actualiza campos de un módulo (url, name, is_active, sort_order).
-  updateModule: (id, updates) => {
+  updateModule: async (id, updates) => {
     if (DEMO_MODE) {
       const m = DEMO_MODULES.find(m => m.id === id)
       if (m) Object.assign(m, updates)
-      return Promise.resolve(ok(null))
+      return ok(null)
     }
-    return supabase.from('modules').update(updates).eq('id', id)
+    const { data, error } = await supabase
+      .from('modules')
+      .update(updates)
+      .eq('id', id)
+      .select()
+    if (error) return { data: null, error }
+    return ok(data)
   },
 
   // Historial de actividad reciente.
