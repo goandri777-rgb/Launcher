@@ -356,6 +356,7 @@ export default function CircularLauncher({ modules, onOpen }) {
       {/* 3D tilt wrapper — parallax rota este div, hijos viven en eje Z real */}
       <div
         ref={systemRef}
+        className="grid place-items-center"
         style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', willChange: 'transform' }}
       >
 
