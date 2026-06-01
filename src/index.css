@@ -96,8 +96,12 @@ body::before {
 }
 
 /* ── Animaciones ─────────────────────────────────────────────────────────── */
+@keyframes spin     { to { transform: rotate( 360deg); } }
 @keyframes spin-cw  { to { transform: rotate( 360deg); } }
 @keyframes spin-ccw { to { transform: rotate(-360deg); } }
+
+/* Orbit ring — rotación lenta 30s */
+@keyframes orbit-spin { to { transform: rotate(360deg); } }
 
 @keyframes energy-flow {
   from { stroke-dashoffset:  8; }
@@ -117,6 +121,38 @@ body::before {
 }
 
 /* hub-float reemplazado por GSAP (CircularLauncher.jsx) */
+
+/* Glow sutil del hub — estilo Linear/Arc */
+@keyframes hub-glow {
+  0%, 100% {
+    box-shadow:
+      0 4px 20px rgba(11,95,141,0.07),
+      0 1px 4px rgba(15,23,42,0.05),
+      inset 0 1px 0 rgba(255,255,255,1);
+  }
+  50% {
+    box-shadow:
+      0 6px 28px rgba(11,95,141,0.13),
+      0 2px 8px rgba(15,23,42,0.06),
+      0 0 0 5px rgba(11,95,141,0.035),
+      inset 0 1px 0 rgba(255,255,255,1);
+  }
+}
+
+/* ── Admin Panel — tabla de usuarios ─────────────────────────────────────── */
+.alas-tr {
+  transition: background 120ms ease;
+  cursor: default;
+  animation: row-in 0.32s ease forwards;
+  opacity: 0;
+}
+.alas-tr:hover { background: #f8fafc !important; }
+.alas-tr td { border-bottom: 1px solid rgba(226,232,240,0.9); }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* ── Scrollbar discreta ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 5px; height: 5px; }

@@ -34,7 +34,7 @@ export function useModules() {
     setLoading(true)
     const { data, error } = await supabase.rpc('get_allowed_modules')
     if (error) {
-      console.error('[ALAS] Error cargando módulos:', error.message)
+      if (import.meta.env.DEV) console.error('[ALAS] Error cargando módulos:', error.message)
       setModules([])
     } else {
       setModules(data || [])
@@ -50,7 +50,7 @@ export function useModules() {
   const openModule = useCallback(async (moduleKey) => {
     // ── Bloqueo de seguridad: sin sesión no se genera ningún token ──────
     if (!session) {
-      console.warn('[ALAS SSO] openModule bloqueado: sin sesión activa.')
+      if (import.meta.env.DEV) console.warn('[ALAS SSO] openModule bloqueado: sin sesión activa.')
       return { ok: false, reason: 'Sin sesión activa' }
     }
 
@@ -61,7 +61,7 @@ export function useModules() {
       const mod = modules.find(m => m.key === moduleKey)
       if (!mod) return { ok: false, reason: 'Módulo no encontrado' }
       if (!mod.url) {
-        console.info(`[ALAS SSO] El módulo "${moduleKey}" no tiene URL configurada aún.`)
+        if (import.meta.env.DEV) console.info(`[ALAS SSO] El módulo "${moduleKey}" no tiene URL configurada aún.`)
         return { ok: false, reason: 'URL del módulo no configurada' }
       }
       destUrl = mod.url
@@ -88,7 +88,7 @@ export function useModules() {
           .map(m => m.key),
       })
     } catch (e) {
-      console.error('[ALAS SSO] Error generando token:', e.message)
+      if (import.meta.env.DEV) console.error('[ALAS SSO] Error generando token:', e.message)
       return { ok: false, reason: 'Error generando sesión' }
     }
 
@@ -96,7 +96,7 @@ export function useModules() {
     const separator = destUrl.includes('?') ? '&' : '?'
     const finalUrl  = `${destUrl}${separator}alas_token=${encodeURIComponent(tokenStr)}`
 
-    console.info(`[ALAS SSO] Navegando a ${moduleKey} con token firmado.`)
+    if (import.meta.env.DEV) console.info(`[ALAS SSO] Navegando a ${moduleKey} con token firmado.`)
     // Esperar 360ms para que el pulso visual de GSAP sea visible antes de salir
     await new Promise(r => setTimeout(r, 360))
     window.location.href = finalUrl

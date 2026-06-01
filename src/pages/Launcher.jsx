@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LogOut, Settings2 } from 'lucide-react'
@@ -14,13 +15,18 @@ const ROLE_LABEL = {
 
 const EASE = [0.16, 1, 0.3, 1]
 
+const btnItem = {
+  hidden:  { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.4, ease: EASE } },
+}
+
 // ── Tokens inline para no depender de clases dark ────────────────────────
 const T = {
   border:   'rgba(226,232,240,0.85)',
   brand:    '#0B5F8D',
   text1:    '#1e293b',
   text2:    '#475569',
-  text3:    '#94a3b8',
+  text3:    '#64748b',
   surface:  '#ffffff',
   bg:       'rgba(255,255,255,0.88)',
 }
@@ -28,9 +34,20 @@ const T = {
 export default function Launcher() {
   const { profile, signOut } = useAuth()
   const { modules, loading, openModule } = useModules()
+  const [isExiting, setIsExiting] = useState(false)
+
+  const handleSignOut = () => {
+    setIsExiting(true)
+  }
 
   return (
-    <div className="h-full flex flex-col">
+    <motion.div
+      className="h-full flex flex-col"
+      initial={{ opacity: 1 }}
+      animate={isExiting ? { opacity: 0, scale: 0.98, y: 8 } : { opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: [0.4, 0, 1, 1] }}
+      onAnimationComplete={() => { if (isExiting) signOut() }}
+    >
 
       {/* ════ Header ════════════════════════════════════════════════════ */}
       <motion.header
@@ -97,8 +114,8 @@ export default function Launcher() {
               height: 32, width: 'auto',
               filter: 'brightness(0) saturate(100%) invert(24%) sepia(61%) saturate(1200%) hue-rotate(183deg) brightness(85%)',
             }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, ease: EASE }}
           />
         </div>
@@ -106,20 +123,24 @@ export default function Launcher() {
         {/* Derecha — botones */}
         <motion.div
           className="flex items-center gap-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.06, ease: EASE }}
+          initial="hidden"
+          animate="visible"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.06 } } }}
         >
           {profile?.role === 'admin' && (
-            <Link to="/admin" className="surface-btn">
-              <Settings2 style={{ width: 14, height: 14 }} />
-              <span>Admin</span>
-            </Link>
+            <motion.div variants={btnItem}>
+              <Link to="/admin" className="surface-btn">
+                <Settings2 style={{ width: 14, height: 14 }} />
+                <span>Admin</span>
+              </Link>
+            </motion.div>
           )}
-          <button onClick={signOut} className="surface-btn danger">
-            <LogOut style={{ width: 14, height: 14 }} />
-            <span>Salir</span>
-          </button>
+          <motion.div variants={btnItem}>
+            <button onClick={handleSignOut} className="surface-btn danger">
+              <LogOut style={{ width: 14, height: 14 }} />
+              <span>Salir</span>
+            </button>
+          </motion.div>
         </motion.div>
       </motion.header>
 
@@ -154,6 +175,6 @@ export default function Launcher() {
         )}
       </main>
 
-    </div>
+    </motion.div>
   )
 }

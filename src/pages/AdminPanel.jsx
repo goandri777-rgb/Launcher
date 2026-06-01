@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -139,10 +139,15 @@ function Overlay({ children, onClose }) {
       transition={{duration:0.2,ease:EASE}}
       style={{position:'fixed',inset:0,zIndex:50,display:'grid',placeItems:'center',background:'rgba(15,23,42,0.35)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',padding:16}}
       onClick={onClose}
+      aria-hidden="true"
     >
-      <motion.div initial={{scale:0.93,y:24,opacity:0}} animate={{scale:1,y:0,opacity:1}} exit={{scale:0.93,opacity:0}}
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        initial={{scale:0.93,y:24,opacity:0}} animate={{scale:1,y:0,opacity:1}} exit={{scale:0.93,opacity:0}}
         transition={{type:'spring',stiffness:350,damping:28,mass:0.55}}
         onClick={e=>e.stopPropagation()}
+        aria-hidden="false"
       >{children}</motion.div>
     </motion.div>
   )
@@ -450,8 +455,15 @@ export default function AdminPanel() {
   const [editing,    setEditing]    = useState(null)
   const [showCreate, setShowCreate] = useState(false)
   const [toast,      setToast]      = useState('')
+  const toastTimer = useRef(null)
 
-  const notify = msg => { setToast(msg); setTimeout(()=>setToast(''),2800) }
+  const notify = msg => {
+    clearTimeout(toastTimer.current)
+    setToast(msg)
+    toastTimer.current = setTimeout(() => setToast(''), 2800)
+  }
+
+  useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   const loadUsers   = useCallback(async()=>{ const {data,error}=await adminApi.listUsers();   if(!error) setUsers(data||[]) },[])
   const loadModules = useCallback(async()=>{ const {data,error}=await adminApi.listModules(); if(!error) setModules(data||[]) },[])
@@ -470,14 +482,6 @@ export default function AdminPanel() {
 
   return (
     <div style={{minHeight:'100%',display:'flex',flexDirection:'column',fontFamily:'"Inter",system-ui,sans-serif',color:C.text1}}>
-      <style>{`
-        .alas-tr { transition: background 120ms ease; cursor: default; }
-        .alas-tr:hover { background: ${C.surfaceHov} !important; }
-        .alas-tr td { border-bottom: 1px solid ${C.border}; }
-        @keyframes row-in { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
-        .alas-tr { animation: row-in 0.32s ease forwards; opacity: 0; }
-      `}</style>
-
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <motion.header
         initial={{opacity:0,y:-14}} animate={{opacity:1,y:0}}

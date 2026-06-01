@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import gsap from 'gsap'
 import { getModuleIcon } from '../data/icons'
 
@@ -105,6 +105,7 @@ export default function CircularLauncher({ modules, onOpen }) {
   const pulseRefs   = useRef([])    // click pulse circles
   const nodeRefs    = useRef([])    // module node wrappers
   const floatTween  = useRef(null)  // hub float tween (kept for pause/resume)
+  const systemRef   = useRef(null)  // 3D tilt wrapper — mouse parallax target
 
   // ── 1. GSAP entrance timeline (runs once on mount) ────────────────────────
   useEffect(() => {
@@ -112,7 +113,7 @@ export default function CircularLauncher({ modules, onOpen }) {
 
     const ctx = gsap.context(() => {
       // ── Set initial states (GSAP owns these from here on) ─────────────────
-      gsap.set(hubRef.current, { scale: 0.72, opacity: 0, transformOrigin: 'center center' })
+      gsap.set(hubRef.current, { scale: 0.72, opacity: 0, transformOrigin: 'center center', z: 24 })
       gsap.set(orbitRef.current, { opacity: 0 })
 
       // Lines: setup stroke-dashoffset for draw-in effect
@@ -126,10 +127,11 @@ export default function CircularLauncher({ modules, onOpen }) {
       gsap.set(lineDashRefs.current.filter(Boolean), { opacity: 0 })
 
       // Nodes: start slightly below, invisible
-      gsap.set(nodeRefs.current.filter(Boolean), { y: 18, opacity: 0 })
+      gsap.set(nodeRefs.current.filter(Boolean), { y: 18, opacity: 0, z: 8 })
 
       // ── Main timeline ────────────────────────────────────────────────────
       const tl = gsap.timeline({
+        delay: 0.32,
         defaults: { ease: 'power3.out' },
         onComplete: () => {
           // Hub float starts after entrance completes
@@ -173,7 +175,11 @@ export default function CircularLauncher({ modules, onOpen }) {
         }, '-=0.18')
     })
 
-    return () => ctx.revert()
+    return () => {
+      ctx.revert()
+      floatTween.current?.kill()
+      floatTween.current = null
+    }
   }, [modules.length]) // eslint-disable-line
 
   // ── 2. Hub reacts to module hover ────────────────────────────────────────
@@ -239,7 +245,79 @@ export default function CircularLauncher({ modules, onOpen }) {
     })
   }, [hoveredKey, modules])
 
-  // ── 4. Click pulse — dot travels hub → node ───────────────────────────────
+  // ── 4. Busy state — dim everything except the active module ──────────────
+  useEffect(() => {
+    if (busyKey) {
+      nodeRefs.current.forEach((el, i) => {
+        if (!el) return
+        const isBusyNode = modules[i]?.key === busyKey
+        gsap.to(el, {
+          opacity: isBusyNode ? 1 : 0.22,
+          scale:   isBusyNode ? 1.02 : 0.97,
+          duration: 0.28, ease: 'power2.out', overwrite: 'auto',
+        })
+      })
+      lineBaseRefs.current.forEach((el, i) => {
+        if (!el) return
+        gsap.to(el, {
+          opacity: modules[i]?.key === busyKey ? 1 : 0.08,
+          duration: 0.25, ease: 'power2.out', overwrite: 'auto',
+        })
+      })
+    } else {
+      gsap.to(nodeRefs.current.filter(Boolean), {
+        opacity: 1, scale: 1,
+        duration: 0.35, ease: 'power2.out', overwrite: 'auto',
+      })
+      lineBaseRefs.current.forEach((el, i) => {
+        if (!el) return
+        gsap.to(el, {
+          opacity: 1, duration: 0.3, ease: 'power2.out', overwrite: 'auto',
+        })
+      })
+    }
+  }, [busyKey, modules])
+
+  // ── 6. Mouse parallax — 3D tilt (desktop only) ───────────────────────────
+  useEffect(() => {
+    const system    = systemRef.current
+    const container = system?.parentElement
+    if (!system || !container) return
+    if (window.matchMedia('(hover: none)').matches) return   // no touch
+
+    const onMove = (e) => {
+      const r  = container.getBoundingClientRect()
+      const nx = (e.clientX - r.left  - r.width  / 2) / (r.width  / 2)
+      const ny = (e.clientY - r.top   - r.height / 2) / (r.height / 2)
+      gsap.to(system, {
+        rotateY:  nx * 5,
+        rotateX: -ny * 4,
+        duration: 1.8,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      })
+    }
+
+    const onLeave = () => {
+      gsap.to(system, {
+        rotateY: 0,
+        rotateX: 0,
+        duration: 2.4,
+        ease: 'elastic.out(1, 0.55)',
+        overwrite: 'auto',
+      })
+    }
+
+    container.addEventListener('mousemove', onMove)
+    container.addEventListener('mouseleave', onLeave)
+    return () => {
+      container.removeEventListener('mousemove', onMove)
+      container.removeEventListener('mouseleave', onLeave)
+      gsap.killTweensOf(system)
+    }
+  }, [])
+
+  // ── 5. Click pulse — dot travels hub → node ───────────────────────────────
   const firePulse = useCallback((moduleIndex) => {
     const pulseEl = pulseRefs.current[moduleIndex]
     if (!pulseEl) return
@@ -273,8 +351,13 @@ export default function CircularLauncher({ modules, onOpen }) {
   return (
     <div
       className="relative grid place-items-center select-none"
-      style={{ width: SIZE, height: SIZE, maxWidth: '92vw' }}
+      style={{ width: SIZE, height: SIZE, maxWidth: '92vw', perspective: '900px' }}
     >
+      {/* 3D tilt wrapper — parallax rota este div, hijos viven en eje Z real */}
+      <div
+        ref={systemRef}
+        style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', willChange: 'transform' }}
+      >
 
       {/* ── SVG layer ────────────────────────────────────────────────── */}
       <svg
@@ -296,7 +379,12 @@ export default function CircularLauncher({ modules, onOpen }) {
           stroke="rgba(203,213,225,0.5)"
           strokeWidth="1"
           strokeDasharray="3 16"
-          style={{ opacity: 0 }}
+          style={{
+            opacity: 0,
+            animation: 'orbit-spin 30s linear infinite',
+            transformBox: 'fill-box',
+            transformOrigin: 'center center',
+          }}
         />
 
         {/* Connector lines */}
@@ -379,7 +467,7 @@ export default function CircularLauncher({ modules, onOpen }) {
         <div className="absolute inset-0 rounded-full" style={{
           background: 'linear-gradient(145deg, #ffffff 0%, #f4f8ff 100%)',
           border: '1px solid rgba(203,213,225,0.75)',
-          boxShadow: '0 4px 20px rgba(11,95,141,0.08), 0 1px 4px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,1)',
+          animation: 'hub-glow 4s ease-in-out infinite',
         }} />
 
         {/* Specular */}
@@ -403,15 +491,45 @@ export default function CircularLauncher({ modules, onOpen }) {
         />
 
         {/* Hub text */}
-        <div className="relative z-10 text-center px-5" style={{ lineHeight: 1.3 }}>
-          {['Gestión de', 'Logística'].map(line => (
-            <p key={line} style={{
-              fontFamily: '"Sora", system-ui, sans-serif',
-              fontWeight: 600, fontSize: '10px',
-              letterSpacing: '0.16em', textTransform: 'uppercase',
-              color: '#94a3b8',
-            }}>{line}</p>
-          ))}
+        <div className="relative z-10 text-center px-5" style={{ lineHeight: 1.3, minHeight: 28 }}>
+          <AnimatePresence mode="wait">
+            {busyKey ? (
+              <motion.p
+                key="busy"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  fontFamily: '"Sora", system-ui, sans-serif',
+                  fontWeight: 600, fontSize: '10px',
+                  letterSpacing: '0.16em', textTransform: 'uppercase',
+                  color: '#0B5F8D',
+                  margin: 0,
+                }}
+              >
+                Abriendo…
+              </motion.p>
+            ) : (
+              <motion.div
+                key="idle"
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 5 }}
+                transition={{ duration: 0.18 }}
+              >
+                {['Gestión de', 'Logística'].map(line => (
+                  <p key={line} style={{
+                    fontFamily: '"Sora", system-ui, sans-serif',
+                    fontWeight: 600, fontSize: '10px',
+                    letterSpacing: '0.16em', textTransform: 'uppercase',
+                    color: '#64748b',
+                    margin: 0,
+                  }}>{line}</p>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -504,6 +622,8 @@ export default function CircularLauncher({ modules, onOpen }) {
           </div>
         )
       })}
+
+      </div>{/* /systemRef — 3D tilt wrapper */}
     </div>
   )
 }

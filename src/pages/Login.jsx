@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useAnimation } from 'framer-motion'
 import { User, Lock, LogIn, LoaderCircle } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -45,6 +45,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
   const [busy,     setBusy]     = useState(false)
+  const shakeControls = useAnimation()
 
   // Ya tiene sesión → volver al Launcher
   if (session) return <Navigate to="/" replace />
@@ -66,6 +67,10 @@ export default function Login() {
     setBusy(false)
     if (error) {
       setError('Contraseña incorrecta o cuenta no disponible.')
+      shakeControls.start({
+        x: [0, -9, 9, -6, 6, -3, 3, 0],
+        transition: { duration: 0.38, ease: 'easeInOut' },
+      })
       return
     }
     navigate(to, { replace: true })
@@ -101,6 +106,8 @@ export default function Login() {
           boxShadow: '0 4px 24px rgba(15,23,42,0.08), 0 1px 4px rgba(15,23,42,0.04)',
         }}
       >
+        <motion.div animate={shakeControls}>
+
         {/* Logo + título */}
         <div style={{ textAlign: 'center', marginBottom: 30 }}>
           <img
@@ -218,6 +225,8 @@ export default function Login() {
             </motion.div>
           </motion.form>
         )}
+
+        </motion.div>{/* /shakeControls */}
       </motion.div>
     </div>
   )
@@ -238,6 +247,7 @@ function LoginField({ icon: Icon, type, placeholder, value, onChange }) {
         type={type}
         required
         placeholder={placeholder}
+        aria-label={placeholder}
         value={value}
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
