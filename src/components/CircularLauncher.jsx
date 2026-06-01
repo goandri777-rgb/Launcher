@@ -108,9 +108,7 @@ export default function CircularLauncher({ modules, onOpen }) {
   const nodeRefs    = useRef([])    // module node wrappers
   const buttonRefs  = useRef([])    // module button surfaces
   const floatTween  = useRef(null)  // hub float tween (kept for pause/resume)
-  const hoveredKeyRef = useRef(null)
-
-  const systemRef   = useRef(null)  // 3D tilt wrapper — mouse parallax target
+  const systemRef   = useRef(null)
 
   // ── 1. GSAP entrance — System Online (runs on every mount) ─────────────
   useEffect(() => {
@@ -274,47 +272,6 @@ export default function CircularLauncher({ modules, onOpen }) {
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
 
-  // ── 6. Mouse parallax — 3D tilt (desktop only) ───────────────────────────
-  useEffect(() => {
-    const system    = systemRef.current
-    const container = system?.parentElement
-    if (!system || !container) return
-    if (window.matchMedia('(hover: none)').matches) return   // no touch
-
-    const onMove = (e) => {
-      if (hoveredKeyRef.current) return
-
-      const r  = container.getBoundingClientRect()
-      const nx = (e.clientX - r.left  - r.width  / 2) / (r.width  / 2)
-      const ny = (e.clientY - r.top   - r.height / 2) / (r.height / 2)
-      gsap.to(system, {
-        rotateY:  nx * 5,
-        rotateX: -ny * 4,
-        duration: 1.8,
-        ease: 'power2.out',
-        overwrite: 'auto',
-      })
-    }
-
-    const onLeave = () => {
-      gsap.to(system, {
-        rotateY: 0,
-        rotateX: 0,
-        duration: 1.2,
-        ease: INTRO_EASE,
-        overwrite: 'auto',
-      })
-    }
-
-    container.addEventListener('mousemove', onMove)
-    container.addEventListener('mouseleave', onLeave)
-    return () => {
-      container.removeEventListener('mousemove', onMove)
-      container.removeEventListener('mouseleave', onLeave)
-      gsap.killTweensOf(system)
-    }
-  }, [])
-
   // ── 5. Click pulse — dot travels hub → node ───────────────────────────────
   const firePulse = useCallback((moduleIndex) => {
     const pulseEl = pulseRefs.current[moduleIndex]
@@ -339,97 +296,32 @@ export default function CircularLauncher({ modules, onOpen }) {
   const animateModuleHover = useCallback((moduleIndex, module, on) => {
     if (getState(module) !== 'active') return
 
-    if (on) {
-      hoveredKeyRef.current = module.key
-    } else if (hoveredKeyRef.current === module.key) {
-      hoveredKeyRef.current = null
-    }
-
     const buttonEl = buttonRefs.current[moduleIndex]
     const nodeEl = nodeRefs.current[moduleIndex]
     if (nodeEl) gsap.set(nodeEl, { zIndex: on ? 32 : 20 })
-
-    if (systemRef.current && on) {
-      gsap.to(systemRef.current, {
-        rotateX: 0,
-        rotateY: 0,
-        duration: 0.28,
-        ease: INTRO_EASE,
-        overwrite: 'auto',
-      })
-    }
-
-    if (hubRef.current) {
-      gsap.to(hubRef.current, {
-        scale: on ? 1.045 : 1,
-        duration: on ? 0.30 : 0.34,
-        ease: INTRO_EASE,
-        overwrite: 'auto',
-      })
-    }
-    if (hubRingRef.current) {
-      gsap.to(hubRingRef.current, {
-        borderColor: on ? 'rgba(11,95,141,0.28)' : 'rgba(11,95,141,0.14)',
-        duration: 0.24,
-        ease: 'power2.out',
-        overwrite: 'auto',
-      })
-    }
-
-    lineBaseRefs.current.forEach((lineEl, i) => {
-      if (!lineEl) return
-      const mod = modules[i]
-      const state = mod ? getState(mod) : 'inactive'
-      const isTarget = i === moduleIndex
-      gsap.to(lineEl, {
-        opacity: on ? (isTarget ? 1 : state === 'active' ? 0.18 : 0.10) : 1,
-        strokeWidth: on && isTarget ? 1.2 : 0.8,
-        duration: 0.18,
-        ease: 'power2.out',
-        overwrite: 'auto',
-      })
-    })
-
-    lineDashRefs.current.forEach((lineEl, i) => {
-      if (!lineEl) return
-      const isTarget = i === moduleIndex
-      gsap.to(lineEl, {
-        opacity: on ? (isTarget ? 1 : 0.45) : 1,
-        strokeWidth: on && isTarget ? 1.5 : 1.2,
-        duration: 0.18,
-        ease: 'power2.out',
-        overwrite: 'auto',
-      })
-    })
-
     if (!buttonEl) return
 
     const iconEl = nodeEl?.querySelector('[data-module-icon]')
     const labelEl = nodeEl?.querySelector('[data-module-label]')
 
-    gsap.killTweensOf(buttonEl)
+    gsap.killTweensOf([buttonEl, iconEl, labelEl].filter(Boolean))
     gsap.to(buttonEl, {
-      scale: on ? 1.1 : 1,
-      y: on ? -3 : 0,
-      duration: on ? 0.34 : 0.24,
-      ease: on ? 'back.out(1.7)' : INTRO_EASE,
-      overwrite: 'auto',
-      force3D: true,
-    })
-    gsap.to(buttonEl, {
+      scale: on ? 1.07 : 1,
+      y: on ? -2 : 0,
       backgroundColor: on ? C.surfaceHov : C.surface,
       borderColor: on ? C.borderHov : C.border,
       boxShadow: on
-        ? '0 16px 40px rgba(11,95,141,0.14), 0 6px 16px rgba(11,95,141,0.07), 0 1px 4px rgba(15,23,42,0.05)'
+        ? '0 14px 34px rgba(11,95,141,0.13), 0 4px 12px rgba(15,23,42,0.06)'
         : '0 1px 4px rgba(15,23,42,0.06), 0 0 0 1px rgba(226,232,240,0.4)',
-      duration: 0.18,
+      duration: on ? 0.24 : 0.20,
       ease: 'power2.out',
       overwrite: 'auto',
+      force3D: true,
     })
     if (iconEl) {
       gsap.to(iconEl, {
         color: on ? C.brand : '#475569',
-        duration: 0.16,
+        duration: 0.18,
         ease: 'power2.out',
         overwrite: 'auto',
       })
@@ -437,12 +329,12 @@ export default function CircularLauncher({ modules, onOpen }) {
     if (labelEl) {
       gsap.to(labelEl, {
         color: on ? C.brand : C.text2,
-        duration: 0.16,
+        duration: 0.18,
         ease: 'power2.out',
         overwrite: 'auto',
       })
     }
-  }, [modules])
+  }, [])
 
   const handleClick = async (m) => {
     if (getState(m) !== 'active') return
@@ -459,7 +351,7 @@ export default function CircularLauncher({ modules, onOpen }) {
       className="relative grid place-items-center select-none"
       style={{ width: SIZE, height: SIZE, maxWidth: '92vw', perspective: '900px' }}
     >
-      {/* 3D tilt wrapper — parallax rota este div, hijos viven en eje Z real */}
+      {/* System wrapper */}
       <div
         ref={systemRef}
         className="grid place-items-center"
@@ -737,7 +629,7 @@ export default function CircularLauncher({ modules, onOpen }) {
         )
       })}
 
-      </div>{/* /systemRef — 3D tilt wrapper */}
+      </div>{/* /systemRef */}
     </div>
   )
 }
