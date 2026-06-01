@@ -20,6 +20,7 @@ y los abre con sesión automática vía SSO.
 | React 18 + Vite | Framework principal |
 | Tailwind CSS | Estilos base |
 | Framer Motion | Animaciones (Hyde-style) |
+| GSAP | Timeline de intro y microinteracciones del launcher |
 | Supabase Auth | Autenticación de usuarios (en producción) |
 | Web Crypto API | Firma HMAC-SHA-256 de tokens SSO |
 | React Router DOM | Rutas: `/` (Launcher), `/admin` (Panel) |
@@ -113,7 +114,10 @@ text3:      '#94a3b8'
 - Botones de módulo: `88px` cuadrado, `borderRadius 20`
 - Hub central: gradiente blanco + float animation + logo ALAS de fondo (opacity 0.07)
 - Líneas SVG: base sólida gris + dashes marchantes azules para módulos activos
-- Animaciones: `hub-float 5s`, `hub-ring 4s`, `dash-march` (0.9s hover / 1.8s normal)
+- Intro: timeline GSAP con hub, órbita, líneas y módulos en cascada; cleanup con `gsap.context()`
+- Hover actual: animación imperativa simple solo sobre el botón del módulo (`scale 1.07`, `y -2`, sombra/color)
+- Importante: no usar estado React para hover del launcher ni parallax del sistema; provocaba re-render/flicker del SVG
+- Animaciones CSS residuales: `hub-float 5s`, `hub-ring 4s`, `dash-march 1.8s`
 
 ### AdminPanel
 - Dashboard de una sola vista (sin tabs)
@@ -226,6 +230,9 @@ Con `DEMO_MODE = false` llama RPCs de Supabase protegidos por `is_admin()`.
 
 ### UI / Diseño
 - [x] Launcher circular con animaciones Hyde-style
+- [x] CircularLauncher refinado con GSAP: intro fluida, hover estable sin parallax ni re-render SVG
+- [x] Fix pantalla blanca: `isBusy` definido en connector lines SVG
+- [x] Hover de módulos simplificado a zoom animado estable para evitar parpadeo del cursor
 - [x] Tema light (Linear/Stripe/Raycast feel)
 - [x] Logo ALAS en hub central (watermark sutil, opacity 0.07)
 - [x] Líneas SVG con dashes marchantes (azul → módulo)
@@ -306,4 +313,4 @@ npx http-server -p 8080 --cors -c-1 .   # → http://localhost:8080
 
 ---
 
-*Última actualización: Junio 2026 — Etapa 5 completada (endurecimiento SSO)*
+*Última actualización: Junio 2026 — Motion del Launcher estabilizado (intro GSAP + hover sin parpadeo).*
