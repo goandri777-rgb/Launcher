@@ -107,42 +107,25 @@ export default function CircularLauncher({ modules, onOpen }) {
   const floatTween  = useRef(null)  // hub float tween (kept for pause/resume)
   const systemRef   = useRef(null)  // 3D tilt wrapper — mouse parallax target
 
-  // ── 1. GSAP entrance timeline (runs once on mount) ────────────────────────
+  // ── 1. GSAP entrance timeline (runs on every mount) ─────────────────────
   useEffect(() => {
     if (!modules.length || !hubRef.current) return
-
-    // Primera visita en esta sesión → cinematografía completa.
-    // Visitas repetidas (misma pestaña) → fade-in abreviado ~0.35s.
-    const INTRO_KEY   = 'alas.launcher.intro'
-    const isFirstVisit = !sessionStorage.getItem(INTRO_KEY)
-    if (isFirstVisit) sessionStorage.setItem(INTRO_KEY, '1')
 
     const ctx = gsap.context(() => {
 
       // ── Estados iniciales ──────────────────────────────────────────────────
-      gsap.set(hubRef.current, {
-        scale: isFirstVisit ? 0.5 : 1,
-        opacity: 0, transformOrigin: 'center center', z: 24,
-      })
+      gsap.set(hubRef.current, { scale: 0.5, opacity: 0, transformOrigin: 'center center', z: 24 })
       gsap.set(orbitRef.current, { opacity: 0 })
 
       lineBaseRefs.current.forEach(path => {
         if (!path) return
         const len = path.getTotalLength ? path.getTotalLength() : 200
-        gsap.set(path, {
-          strokeDasharray: len,
-          strokeDashoffset: isFirstVisit ? len : 0,
-          opacity: 1,
-        })
+        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 })
       })
 
       gsap.set(lineDashRefs.current.filter(Boolean), { opacity: 0 })
-      gsap.set(nodeRefs.current.filter(Boolean), {
-        scale: isFirstVisit ? 0.62 : 1,
-        opacity: 0, z: 8,
-      })
+      gsap.set(nodeRefs.current.filter(Boolean), { scale: 0.62, opacity: 0, z: 8 })
 
-      // goLive: inicia float + activa dashes (compartido entre ambas rutas)
       const goLive = () => {
         floatTween.current = gsap.to(hubRef.current, {
           y: -5, duration: 2.6, repeat: -1, yoyo: true,
@@ -153,19 +136,7 @@ export default function CircularLauncher({ modules, onOpen }) {
         })
       }
 
-      // ── Ruta abreviada — visitas repetidas ─────────────────────────────────
-      if (!isFirstVisit) {
-        const quick = gsap.timeline({ delay: 0.1, onComplete: goLive })
-        quick
-          .to(hubRef.current,  { opacity: 1, duration: 0.30, ease: 'power2.out' })
-          .to(orbitRef.current, { opacity: 1, duration: 0.28, ease: 'power2.out' }, '-=0.20')
-          .to(nodeRefs.current.filter(Boolean), {
-            opacity: 1, duration: 0.26, stagger: 0.04, ease: 'power2.out',
-          }, '-=0.14')
-        return
-      }
-
-      // ── Ruta cinematográfica — primera visita ──────────────────────────────
+      // ── Cinematografía — se ejecuta siempre ───────────────────────────────
       const tl = gsap.timeline({ delay: 0.30, onComplete: goLive })
 
       // 1. Hub carga: power4.out (expansión intensa) → settle (power2.out)
