@@ -5,6 +5,7 @@ import { LogOut, Settings2 } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 import { useModules } from '../hooks/useModules'
 import CircularLauncher from '../components/CircularLauncher'
+import AlasTransitionLoader from '../components/AlasTransitionLoader'
 
 const ROLE_LABEL = {
   admin:      'Administrador',
@@ -41,8 +42,14 @@ export default function Launcher() {
 
   const handleOpenModule = useCallback(async (key) => {
     setIsLaunching(true)
-    await openModule(key)
-    setIsLaunching(false)   // fallback si la navegación falla
+    try {
+      const result = await openModule(key)
+      if (!result?.ok) setIsLaunching(false)
+      return result
+    } catch (error) {
+      setIsLaunching(false)
+      throw error
+    }
   }, [openModule])
 
   const exitState = isExiting
@@ -52,6 +59,7 @@ export default function Launcher() {
     : { opacity: 1, scale: 1,     y:  0 }
 
   return (
+    <>
     <motion.div
       className="h-full flex flex-col"
       initial={{ opacity: 0, y: 10, scale: 0.985 }}
@@ -163,27 +171,21 @@ export default function Launcher() {
       <main className="relative z-10 flex-1 grid place-items-center">
         {loading ? (
           <motion.div
-            className="flex flex-col items-center gap-3"
+            role="status"
+            aria-label="Cargando sistema"
+            className="flex items-center gap-1.5"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.42, ease: EASE }}
           >
-            <div className="flex items-center gap-1.5">
-              {[0, 1, 2].map(i => (
-                <motion.div
-                  key={i}
-                  style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(11,95,141,0.45)' }}
-                  animate={{ opacity: [0.25, 1, 0.25], scale: [0.75, 1, 0.75] }}
-                  transition={{ duration: 1.4, delay: i * 0.20, repeat: Infinity, ease: 'easeInOut' }}
-                />
-              ))}
-            </div>
-            <p style={{
-              fontSize: 11, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase',
-              color: 'rgba(11,95,141,0.45)', fontFamily: '"Inter", system-ui',
-            }}>
-              Cargando sistema
-            </p>
+            {[0, 1, 2].map(i => (
+              <motion.div
+                key={i}
+                style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(11,95,141,0.45)' }}
+                animate={{ opacity: [0.25, 1, 0.25], scale: [0.75, 1, 0.75] }}
+                transition={{ duration: 1.4, delay: i * 0.20, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            ))}
           </motion.div>
         ) : modules.length === 0 ? (
           <motion.div
@@ -204,5 +206,7 @@ export default function Launcher() {
       </main>
 
     </motion.div>
+    <AlasTransitionLoader active={isLaunching} />
+    </>
   )
 }

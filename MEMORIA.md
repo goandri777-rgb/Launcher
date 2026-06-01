@@ -116,6 +116,8 @@ text3:      '#94a3b8'
 - Líneas SVG: base sólida gris + dashes marchantes azules para módulos activos
 - Intro: timeline GSAP con hub, órbita, líneas y módulos en cascada; cleanup con `gsap.context()`
 - Hover actual: animación imperativa simple solo sobre el botón del módulo (`scale 1.07`, `y -2`, sombra/color)
+- Loader de salida: `AlasTransitionLoader.jsx`, overlay institucional sin texto visible, logo central + anillos GSAP
+- Al abrir módulo: delay breve `LAUNCH_TRANSITION_MS = 680` para cubrir la salida y evitar flashes blancos
 - Importante: no usar estado React para hover del launcher ni parallax del sistema; provocaba re-render/flicker del SVG
 - Animaciones CSS residuales: `hub-float 5s`, `hub-ring 4s`, `dash-march 1.8s`
 
@@ -233,6 +235,7 @@ Con `DEMO_MODE = false` llama RPCs de Supabase protegidos por `is_admin()`.
 - [x] CircularLauncher refinado con GSAP: intro fluida, hover estable sin parallax ni re-render SVG
 - [x] Fix pantalla blanca: `isBusy` definido en connector lines SVG
 - [x] Hover de módulos simplificado a zoom animado estable para evitar parpadeo del cursor
+- [x] Loader institucional sin palabras al abrir módulos: logo central, anillos GSAP y overlay anti-flash
 - [x] Tema light (Linear/Stripe/Raycast feel)
 - [x] Logo ALAS en hub central (watermark sutil, opacity 0.07)
 - [x] Líneas SVG con dashes marchantes (azul → módulo)
@@ -313,4 +316,4 @@ npx http-server -p 8080 --cors -c-1 .   # → http://localhost:8080
 
 ---
 
-*Última actualización: Junio 2026 — Motion del Launcher estabilizado (intro GSAP + hover sin parpadeo).*
+*Última actualización: Junio 2026 — Loader institucional sin palabras agregado al flujo de apertura de módulos.*

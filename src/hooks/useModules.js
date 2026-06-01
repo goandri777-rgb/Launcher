@@ -11,6 +11,7 @@ const DEMO_MODE = false
 // Desarrollo: localhost. Producción: reemplazar con URLs de Vercel/dominio real.
 // En producción con DEMO_MODE=false, la URL viene del RPC `open_module` de Supabase.
 const IS_DEV = import.meta.env.DEV
+const LAUNCH_TRANSITION_MS = 680
 const DEMO_MODULES = [
   { key: 'calendario', name: 'Calendario Tareas',     url: IS_DEV ? 'http://localhost:8080'  : import.meta.env.VITE_URL_CALENDARIO  || '', is_active: true, is_blocked: false },
   { key: 'acuses',     name: 'Acuses de Recibo',      url: IS_DEV ? ''                       : import.meta.env.VITE_URL_ACUSES       || '', is_active: true, is_blocked: false },
@@ -97,8 +98,8 @@ export function useModules() {
     const finalUrl  = `${destUrl}${separator}alas_token=${encodeURIComponent(tokenStr)}`
 
     if (import.meta.env.DEV) console.info(`[ALAS SSO] Navegando a ${moduleKey} con token firmado.`)
-    // Esperar 360ms para que el pulso visual de GSAP sea visible antes de salir
-    await new Promise(r => setTimeout(r, 360))
+    // Espera breve para que el loader institucional cubra la salida sin flashes.
+    await new Promise(r => setTimeout(r, LAUNCH_TRANSITION_MS))
     window.location.href = finalUrl
     return { ok: true }
   }, [modules, profile, session])

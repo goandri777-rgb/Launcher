@@ -341,8 +341,13 @@ export default function CircularLauncher({ modules, onOpen }) {
     const idx = modules.findIndex(mod => mod.key === m.key)
     firePulse(idx)
     setBusyKey(m.key)
-    await onOpen(m.key)
-    setBusyKey(null)
+    try {
+      const result = await onOpen(m.key)
+      if (!result?.ok) setBusyKey(null)
+    } catch (error) {
+      setBusyKey(null)
+      throw error
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -498,22 +503,32 @@ export default function CircularLauncher({ modules, onOpen }) {
         <div className="relative z-10 text-center px-5" style={{ lineHeight: 1.3, minHeight: 28 }}>
           <AnimatePresence mode="wait">
             {busyKey ? (
-              <motion.p
+              <motion.div
                 key="busy"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -5 }}
                 transition={{ duration: 0.18 }}
+                aria-hidden="true"
                 style={{
-                  fontFamily: '"Sora", system-ui, sans-serif',
-                  fontWeight: 600, fontSize: '10px',
-                  letterSpacing: '0.16em', textTransform: 'uppercase',
-                  color: '#0B5F8D',
-                  margin: 0,
+                  width: 38,
+                  height: 22,
+                  display: 'grid',
+                  placeItems: 'center',
+                  margin: '0 auto',
                 }}
               >
-                Abriendo…
-              </motion.p>
+                <div
+                  className="animate-spin"
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    border: '2px solid rgba(11,95,141,0.14)',
+                    borderTopColor: '#0B5F8D',
+                  }}
+                />
+              </motion.div>
             ) : (
               <motion.div
                 key="idle"
