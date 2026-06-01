@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Mail, Lock, LogIn, LoaderCircle } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE !== 'false'
+const DEMO_MODE = false
 const EASE = [0.16, 1, 0.3, 1]
 
 const T = {
