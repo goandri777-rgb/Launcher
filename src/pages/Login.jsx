@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, LogIn, LoaderCircle } from 'lucide-react'
+import { User, Lock, LogIn, LoaderCircle } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
+import { supabase } from '../lib/supabase'
 
 const DEMO_MODE = false
 const EASE = [0.16, 1, 0.3, 1]
@@ -24,7 +25,7 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [email,    setEmail]    = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
   const [busy,     setBusy]     = useState(false)
@@ -38,10 +39,17 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setBusy(true)
-    const { error } = await signIn(email.trim(), password)
+    // Resolver username → email interno vía RPC
+    const { data: email, error: rpcErr } = await supabase.rpc('get_email_by_username', { p_username: username.trim() })
+    if (rpcErr || !email) {
+      setBusy(false)
+      setError('Usuario no encontrado.')
+      return
+    }
+    const { error } = await signIn(email, password)
     setBusy(false)
     if (error) {
-      setError('Credenciales inválidas o cuenta no disponible.')
+      setError('Contraseña incorrecta o cuenta no disponible.')
       return
     }
     navigate(to, { replace: true })
@@ -134,11 +142,11 @@ export default function Login() {
           /* Formulario real (producción con Supabase) */
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <LoginField
-              icon={Mail}
-              type="email"
-              placeholder="Correo electrónico"
-              value={email}
-              onChange={setEmail}
+              icon={User}
+              type="text"
+              placeholder="Usuario"
+              value={username}
+              onChange={setUsername}
             />
             <LoginField
               icon={Lock}

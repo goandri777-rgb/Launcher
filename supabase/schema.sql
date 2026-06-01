@@ -14,6 +14,7 @@ exception when duplicate_object then null; end $$;
 -- Perfil 1:1 con auth.users. Guarda rol y estado de la cuenta.
 create table if not exists public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
+  username    text unique,               -- nombre de usuario para login (sin email)
   full_name   text,
   role        user_role not null default 'invitado',
   is_active   boolean not null default true,
@@ -253,7 +254,6 @@ returns json language plpgsql security definer set search_path = public as $$
 declare v_id uuid;
 begin
   if not public.is_admin() then raise exception 'no autorizado'; end if;
-  -- Intenta localizar un usuario auth ya creado con ese email.
   select id into v_id from auth.users where email = p_email;
   if v_id is null then
     return json_build_object('ok', false,
@@ -263,6 +263,20 @@ begin
   values (v_id, p_full_name, p_role)
   on conflict (id) do update set full_name = excluded.full_name, role = excluded.role;
   return json_build_object('ok', true, 'id', v_id);
+end; $$;
+
+-- Devuelve el email interno a partir del username (para login sin email visible).
+-- SECURITY DEFINER: el cliente no puede listar todos los usernames.
+create or replace function public.get_email_by_username(p_username text)
+returns text
+language plpgsql stable security definer set search_path = public as $$
+declare v_email text;
+begin
+  select u.email into v_email
+  from public.profiles p
+  join auth.users u on u.id = p.id
+  where lower(p.username) = lower(p_username);
+  return v_email;
 end; $$;
 
 -- ---------- TRIGGER: crear perfil automático al registrarse ----------
