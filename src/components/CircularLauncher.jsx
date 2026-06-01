@@ -26,7 +26,6 @@ const NODE_W   = 120
 const BTN_SIZE = 88
 
 // ── Motion ────────────────────────────────────────────────────────────────
-const SPRING = { type: 'spring', stiffness: 380, damping: 28, mass: 0.55 }
 const INTRO_EASE = 'power3.out'
 const SETTLE_EASE = 'expo.out'
 const FLOAT_EASE = 'sine.inOut'
@@ -107,7 +106,13 @@ export default function CircularLauncher({ modules, onOpen }) {
   const lineDashRefs = useRef([])   // marching dash overlays
   const pulseRefs   = useRef([])    // click pulse circles
   const nodeRefs    = useRef([])    // module node wrappers
+  const buttonRefs  = useRef([])    // module button surfaces
   const floatTween  = useRef(null)  // hub float tween (kept for pause/resume)
+  const hoveredKeyRef = useRef(null)
+
+  useEffect(() => {
+    hoveredKeyRef.current = hoveredKey
+  }, [hoveredKey])
   const systemRef   = useRef(null)  // 3D tilt wrapper — mouse parallax target
 
   // ── 1. GSAP entrance — System Online (runs on every mount) ─────────────
@@ -230,6 +235,16 @@ export default function CircularLauncher({ modules, onOpen }) {
     if (!hubRef.current) return
 
     if (hoveredKey) {
+      if (systemRef.current) {
+        gsap.to(systemRef.current, {
+          rotateX: 0,
+          rotateY: 0,
+          duration: 0.38,
+          ease: INTRO_EASE,
+          overwrite: 'auto',
+        })
+      }
+
       // Hub subtly expands — pauses float temporarily with overwrite:auto
       gsap.to(hubRef.current, {
         scale: 1.045,
@@ -340,6 +355,8 @@ export default function CircularLauncher({ modules, onOpen }) {
     if (window.matchMedia('(hover: none)').matches) return   // no touch
 
     const onMove = (e) => {
+      if (hoveredKeyRef.current) return
+
       const r  = container.getBoundingClientRect()
       const nx = (e.clientX - r.left  - r.width  / 2) / (r.width  / 2)
       const ny = (e.clientY - r.top   - r.height / 2) / (r.height / 2)
@@ -391,6 +408,33 @@ export default function CircularLauncher({ modules, onOpen }) {
       ease: 'power2.out',
     })
   }, [modules.length])
+
+  const animateModuleHover = useCallback((moduleIndex, module, on) => {
+    if (getState(module) !== 'active') return
+
+    if (on) {
+      hoveredKeyRef.current = module.key
+      setHoveredKey(prev => prev === module.key ? prev : module.key)
+    } else if (hoveredKeyRef.current === module.key) {
+      hoveredKeyRef.current = null
+      setHoveredKey(null)
+    }
+
+    const buttonEl = buttonRefs.current[moduleIndex]
+    const nodeEl = nodeRefs.current[moduleIndex]
+    if (nodeEl) gsap.set(nodeEl, { zIndex: on ? 32 : 20 })
+    if (!buttonEl) return
+
+    gsap.killTweensOf(buttonEl)
+    gsap.to(buttonEl, {
+      scale: on ? 1.1 : 1,
+      y: on ? -3 : 0,
+      duration: on ? 0.34 : 0.24,
+      ease: on ? 'back.out(1.7)' : INTRO_EASE,
+      overwrite: 'auto',
+      force3D: true,
+    })
+  }, [])
 
   const handleClick = async (m) => {
     if (getState(m) !== 'active') return
@@ -604,7 +648,7 @@ export default function CircularLauncher({ modules, onOpen }) {
 
         return (
           // Regular div — GSAP animates entrance (y + opacity)
-          // Framer Motion handles only whileHover/whileTap on the button inside
+          // GSAP handles hover zoom without moving the hitbox.
           <div
             key={m.key}
             ref={el => { nodeRefs.current[i] = el }}
@@ -612,23 +656,25 @@ export default function CircularLauncher({ modules, onOpen }) {
             style={{
               // CSS absolute positioning (replaces Framer Motion x/y)
               left: `calc(50% + ${x - NODE_W / 2}px)`,
-              top:  `calc(50% + ${y - BTN_SIZE / 2}px)`,
+              top:  `calc(50% + ${y - BTN_SIZE / 2 - 8}px)`,
               width: NODE_W,
+              height: BTN_SIZE + 56,
+              paddingTop: 8,
+              boxSizing: 'border-box',
               gap: 8,
+              zIndex: isHov ? 32 : 20,
               willChange: 'transform, opacity',
             }}
-            onMouseEnter={() => isActive && setHoveredKey(m.key)}
-            onMouseLeave={() => setHoveredKey(null)}
+            onPointerEnter={() => isActive && !isBusy && animateModuleHover(i, m, true)}
+            onPointerLeave={() => animateModuleHover(i, m, false)}
           >
-            {/* Framer Motion only for hover/tap spring on the button */}
-            <motion.button
+            {/* Button surface: GSAP animates hover zoom without moving the hitbox */}
+            <button
+              ref={el => { buttonRefs.current[i] = el }}
               onClick={() => handleClick(m)}
               disabled={!isActive || isBusy}
               className="relative grid place-items-center flex-shrink-0"
               style={nodeStyles(state, isHov)}
-              whileHover={isActive ? { scale: 1.06, y: -3 } : {}}
-              whileTap={  isActive ? { scale: 0.94       } : {}}
-              transition={SPRING}
             >
               {/* Top specular */}
               <div style={{
@@ -663,7 +709,7 @@ export default function CircularLauncher({ modules, onOpen }) {
                   }} />
                 </div>
               )}
-            </motion.button>
+            </button>
 
             {/* Label */}
             <span style={{
