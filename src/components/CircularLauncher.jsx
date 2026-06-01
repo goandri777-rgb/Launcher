@@ -27,6 +27,9 @@ const BTN_SIZE = 88
 
 // ── Motion ────────────────────────────────────────────────────────────────
 const SPRING = { type: 'spring', stiffness: 380, damping: 28, mass: 0.55 }
+const INTRO_EASE = 'power3.out'
+const SETTLE_EASE = 'expo.out'
+const FLOAT_EASE = 'sine.inOut'
 
 // ── Design tokens ─────────────────────────────────────────────────────────
 const C = {
@@ -112,51 +115,106 @@ export default function CircularLauncher({ modules, onOpen }) {
     if (!modules.length || !hubRef.current) return
 
     const ctx = gsap.context(() => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const nodes = nodeRefs.current.filter(Boolean)
+      const dashLines = lineDashRefs.current.filter(Boolean)
+
+      floatTween.current?.kill()
+      floatTween.current = null
 
       // ── Estados iniciales ──────────────────────────────────────────────────
-      gsap.set(hubRef.current,  { scale: 0.5, opacity: 0, transformOrigin: 'center center', z: 24 })
-      gsap.set(orbitRef.current, { opacity: 0 })
+      gsap.set(hubRef.current, {
+        autoAlpha: 0,
+        scale: 0.78,
+        y: 10,
+        transformOrigin: 'center center',
+        force3D: true,
+      })
+      gsap.set(orbitRef.current, {
+        autoAlpha: 0,
+        scale: 0.96,
+        transformOrigin: 'center center',
+        force3D: true,
+      })
 
       lineBaseRefs.current.forEach(path => {
         if (!path) return
         const len = path.getTotalLength ? path.getTotalLength() : 200
-        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 })
+        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 0.92 })
       })
 
-      gsap.set(lineDashRefs.current.filter(Boolean), { opacity: 0 })
-      gsap.set(nodeRefs.current.filter(Boolean), { scale: 0.62, opacity: 0, z: 8 })
+      gsap.set(dashLines, { opacity: 0 })
+      gsap.set(nodes, {
+        autoAlpha: 0,
+        scale: 0.78,
+        y: 14,
+        transformOrigin: '50% 50%',
+        force3D: true,
+      })
+
+      if (reduceMotion) {
+        gsap.set(hubRef.current, { autoAlpha: 1, scale: 1, y: 0 })
+        gsap.set(orbitRef.current, { autoAlpha: 1, scale: 1 })
+        lineBaseRefs.current.forEach(path => path && gsap.set(path, { strokeDashoffset: 0 }))
+        gsap.set(dashLines, { opacity: 1 })
+        gsap.set(nodes, { autoAlpha: 1, scale: 1, y: 0 })
+        return
+      }
 
       const goLive = () => {
         floatTween.current = gsap.to(hubRef.current, {
-          y: -5, duration: 2.6, repeat: -1, yoyo: true,
-          ease: 'sine.inOut', overwrite: false,
+          y: -4,
+          duration: 3.2,
+          repeat: -1,
+          yoyo: true,
+          ease: FLOAT_EASE,
+          overwrite: false,
         })
-        gsap.to(lineDashRefs.current.filter(Boolean), { opacity: 1, duration: 0.4, stagger: 0.04 })
+        gsap.to(dashLines, {
+          opacity: 1,
+          duration: 0.72,
+          stagger: 0.055,
+          ease: 'sine.out',
+        })
       }
 
-      const tl = gsap.timeline({ delay: 0.30, onComplete: goLive })
+      const tl = gsap.timeline({
+        delay: 0.18,
+        defaults: { ease: INTRO_EASE },
+        onComplete: goLive,
+      })
 
       // 1. Hub carga — explosión power4.out → settle elegante
       tl
-        .to(hubRef.current, { scale: 1.06, opacity: 1, duration: 0.55, ease: 'power4.out' })
-        .to(hubRef.current, { scale: 1.0,  duration: 0.18, ease: 'power2.out' })
+        .to(hubRef.current, { autoAlpha: 1, scale: 1, y: 0, duration: 0.78, ease: SETTLE_EASE })
+        .to(orbitRef.current, { autoAlpha: 1, scale: 1, duration: 0.65, ease: 'power2.out' }, '-=0.52')
 
       // 2. Orbit ring aparece con el settle del hub
-      tl.to(orbitRef.current, { opacity: 1, duration: 0.30, ease: 'power3.out' }, '-=0.28')
+      // Orbit ring now overlaps the hub reveal to avoid a hard phase break.
 
       // 3. Módulos se conectan uno a uno — clockwise, con pulso de energía
       for (let i = 0; i < modules.length; i++) {
         if (!lineBaseRefs.current[i] || !nodeRefs.current[i]) continue
-        const t = 0.85 + i * 0.14
+        const t = 0.48 + i * 0.115
 
         // Línea se dibuja hub → nodo
-        tl.to(lineBaseRefs.current[i], { strokeDashoffset: 0, duration: 0.22, ease: 'power2.out' }, t)
+        tl.to(lineBaseRefs.current[i], {
+          strokeDashoffset: 0,
+          duration: 0.44,
+          ease: 'power2.inOut',
+        }, t)
 
         // Pulso viaja por la línea
         tl.call(() => firePulse(i), [], t + 0.10)
 
         // Nodo materializa
-        tl.to(nodeRefs.current[i], { scale: 1, opacity: 1, duration: 0.26, ease: 'expo.out' }, t + 0.16)
+        tl.to(nodeRefs.current[i], {
+          autoAlpha: 1,
+          scale: 1,
+          y: 0,
+          duration: 0.50,
+          ease: 'back.out(1.16)',
+        }, t + 0.20)
       }
     })
 
@@ -175,8 +233,8 @@ export default function CircularLauncher({ modules, onOpen }) {
       // Hub subtly expands — pauses float temporarily with overwrite:auto
       gsap.to(hubRef.current, {
         scale: 1.045,
-        duration: 0.32,
-        ease: 'power2.out',
+        duration: 0.38,
+        ease: INTRO_EASE,
         overwrite: 'auto',
       })
       // Ring glows a bit more
@@ -190,8 +248,8 @@ export default function CircularLauncher({ modules, onOpen }) {
       // Elastic return + resume float
       gsap.to(hubRef.current, {
         scale: 1,
-        duration: 0.55,
-        ease: 'elastic.out(1, 0.55)',
+        duration: 0.48,
+        ease: INTRO_EASE,
         overwrite: 'auto',
       })
       if (hubRingRef.current) {
@@ -298,8 +356,8 @@ export default function CircularLauncher({ modules, onOpen }) {
       gsap.to(system, {
         rotateY: 0,
         rotateX: 0,
-        duration: 2.4,
-        ease: 'elastic.out(1, 0.55)',
+        duration: 1.2,
+        ease: INTRO_EASE,
         overwrite: 'auto',
       })
     }
@@ -329,8 +387,8 @@ export default function CircularLauncher({ modules, onOpen }) {
     gsap.to(pulseEl, {
       attr: { cx: x2, cy: y2, r: 2.5 },
       opacity: 0,
-      duration: 0.42,
-      ease: 'power2.in',
+      duration: 0.56,
+      ease: 'power2.out',
     })
   }, [modules.length])
 
