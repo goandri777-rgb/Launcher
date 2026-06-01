@@ -70,7 +70,7 @@ function nodeStyles(state, hov) {
     background: hov ? C.surfaceHov : C.surface,
     border: `1px solid ${hov ? C.borderHov : C.border}`,
     boxShadow: hov
-      ? '0 8px 24px rgba(11,95,141,0.13), 0 2px 6px rgba(15,23,42,0.06)'
+      ? '0 16px 40px rgba(11,95,141,0.14), 0 6px 16px rgba(11,95,141,0.07), 0 1px 4px rgba(15,23,42,0.05)'
       : '0 1px 4px rgba(15,23,42,0.06), 0 0 0 1px rgba(226,232,240,0.4)',
     cursor: 'pointer',
   }
@@ -448,8 +448,8 @@ export default function CircularLauncher({ modules, onOpen }) {
               disabled={!isActive || isBusy}
               className="relative grid place-items-center flex-shrink-0"
               style={nodeStyles(state, isHov)}
-              whileHover={isActive ? { scale: 1.10, y: -6 } : {}}
-              whileTap={  isActive ? { scale: 0.93       } : {}}
+              whileHover={isActive ? { scale: 1.06, y: -3 } : {}}
+              whileTap={  isActive ? { scale: 0.94       } : {}}
               transition={SPRING}
             >
               {/* Top specular */}

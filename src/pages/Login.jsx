@@ -8,6 +8,22 @@ import { supabase } from '../lib/supabase'
 const DEMO_MODE = false
 const EASE = [0.16, 1, 0.3, 1]
 
+const pageVariants = {
+  hidden:  { opacity: 0, y: 20, scale: 0.97 },
+  visible: { opacity: 1, y: 0,  scale: 1,   transition: { duration: 0.48, ease: EASE } },
+  exit:    { opacity: 0, y: -12, scale: 0.98, transition: { duration: 0.28, ease: [0.4, 0, 1, 1] } },
+}
+
+const listVariants = {
+  hidden:  {},
+  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.18 } },
+}
+
+const itemVariants = {
+  hidden:  { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.36, ease: EASE } },
+}
+
 const T = {
   brand:       '#0B5F8D',
   brandDark:   '#08486A',
@@ -71,9 +87,10 @@ export default function Login() {
       }}
     >
       <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.5, ease: EASE }}
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
         style={{
           background: T.surface,
           border: `1px solid ${T.border}`,
@@ -117,7 +134,6 @@ export default function Login() {
               fontSize: 12.5, color: T.brand, lineHeight: 1.5,
             }}>
               <strong>Modo demo activo.</strong> No se requiere contraseña.
-              En producción, desactivar <code style={{ fontSize: 11 }}>DEMO_MODE</code>.
             </div>
             <motion.button
               onClick={handleDemo}
@@ -139,22 +155,33 @@ export default function Login() {
             </motion.button>
           </div>
         ) : (
-          /* Formulario real (producción con Supabase) */
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <LoginField
-              icon={User}
-              type="text"
-              placeholder="Usuario"
-              value={username}
-              onChange={setUsername}
-            />
-            <LoginField
-              icon={Lock}
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={setPassword}
-            />
+          /* Formulario real — campos con stagger */
+          <motion.form
+            onSubmit={handleSubmit}
+            variants={listVariants}
+            initial="hidden"
+            animate="visible"
+            style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+          >
+            <motion.div variants={itemVariants}>
+              <LoginField
+                icon={User}
+                type="text"
+                placeholder="Usuario"
+                value={username}
+                onChange={setUsername}
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <LoginField
+                icon={Lock}
+                type="password"
+                placeholder="Contraseña"
+                value={password}
+                onChange={setPassword}
+              />
+            </motion.div>
 
             {error && (
               <motion.p
@@ -165,29 +192,31 @@ export default function Login() {
               </motion.p>
             )}
 
-            <motion.button
-              type="submit"
-              disabled={busy}
-              whileHover={busy ? {} : { scale: 1.02, y: -1 }}
-              whileTap={busy ? {} : { scale: 0.97 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '12px 0', borderRadius: 12, border: 'none',
-                background: busy ? 'rgba(11,95,141,0.5)' : `linear-gradient(135deg, ${T.brand}, ${T.brandDark})`,
-                color: '#fff', fontSize: 14, fontWeight: 600,
-                fontFamily: '"Inter", system-ui, sans-serif',
-                cursor: busy ? 'not-allowed' : 'pointer',
-                letterSpacing: '-0.01em',
-                boxShadow: busy ? 'none' : '0 3px 12px rgba(11,95,141,0.28)',
-              }}
-            >
-              {busy
-                ? <><LoaderCircle style={{ width: 15, height: 15, animation: 'spin 1s linear infinite' }} /> Entrando…</>
-                : <><LogIn style={{ width: 15, height: 15 }} /> Iniciar sesión</>
-              }
-            </motion.button>
-          </form>
+            <motion.div variants={itemVariants}>
+              <motion.button
+                type="submit"
+                disabled={busy}
+                whileHover={busy ? {} : { scale: 1.02, y: -1 }}
+                whileTap={busy ? {} : { scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '12px 0', borderRadius: 12, border: 'none', width: '100%',
+                  background: busy ? 'rgba(11,95,141,0.5)' : `linear-gradient(135deg, ${T.brand}, ${T.brandDark})`,
+                  color: '#fff', fontSize: 14, fontWeight: 600,
+                  fontFamily: '"Inter", system-ui, sans-serif',
+                  cursor: busy ? 'not-allowed' : 'pointer',
+                  letterSpacing: '-0.01em',
+                  boxShadow: busy ? 'none' : '0 3px 12px rgba(11,95,141,0.28)',
+                }}
+              >
+                {busy
+                  ? <><LoaderCircle style={{ width: 15, height: 15, animation: 'spin 1s linear infinite' }} /> Entrando…</>
+                  : <><LogIn style={{ width: 15, height: 15 }} /> Iniciar sesión</>
+                }
+              </motion.button>
+            </motion.div>
+          </motion.form>
         )}
       </motion.div>
     </div>
