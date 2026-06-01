@@ -263,6 +263,17 @@ export default function CircularLauncher({ modules, onOpen }) {
     }
   }, [busyKey, modules])
 
+  // ── 5b. Page Visibility — pausa float cuando la pestaña está en background ──
+  useEffect(() => {
+    const onVisibility = () => {
+      if (!floatTween.current) return
+      if (document.hidden) floatTween.current.pause()
+      else                  floatTween.current.resume()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
   // ── 6. Mouse parallax — 3D tilt (desktop only) ───────────────────────────
   useEffect(() => {
     const system    = systemRef.current
@@ -400,15 +411,19 @@ export default function CircularLauncher({ modules, onOpen }) {
                 <path
                   ref={el => { lineDashRefs.current[i] = el }}
                   d={`M ${x1} ${y1} L ${x2} ${y2}`}
-                  stroke={isHov ? 'rgba(11,95,141,0.55)' : 'rgba(11,95,141,0.22)'}
-                  strokeWidth={isHov ? 1.5 : 1.2}
+                  stroke={
+                    isBusy ? 'rgba(11,95,141,0.7)'
+                    : isHov ? 'rgba(11,95,141,0.55)'
+                    : 'rgba(11,95,141,0.22)'
+                  }
+                  strokeWidth={isBusy ? 1.8 : isHov ? 1.5 : 1.2}
                   strokeLinecap="round"
                   fill="none"
                   strokeDasharray="2 11"
                   style={{
-                    animation: `dash-march ${isHov ? 0.9 : 1.8}s linear infinite`,
+                    animation: `dash-march ${isBusy ? 0.45 : isHov ? 0.9 : 1.8}s linear infinite`,
                     animationDelay: `${i * 0.22}s`,
-                    transition: 'stroke 200ms ease',
+                    transition: 'stroke 200ms ease, stroke-width 200ms ease',
                     opacity: 0, // GSAP fades in after entrance
                   }}
                 />

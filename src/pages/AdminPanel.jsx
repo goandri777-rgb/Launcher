@@ -481,11 +481,17 @@ export default function AdminPanel() {
 
 
   return (
-    <div style={{minHeight:'100%',display:'flex',flexDirection:'column',fontFamily:'"Inter",system-ui,sans-serif',color:C.text1}}>
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0,  scale: 1 }}
+      exit={{    opacity: 0, y: -7, scale: 0.992, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+      transition={{ duration: 0.42, ease: EASE }}
+      style={{minHeight:'100%',display:'flex',flexDirection:'column',fontFamily:'"Inter",system-ui,sans-serif',color:C.text1}}
+    >
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <motion.header
         initial={{opacity:0,y:-14}} animate={{opacity:1,y:0}}
-        transition={{duration:0.45,ease:EASE}}
+        transition={{duration:0.45, delay:0.10, ease:EASE}}
         style={{
           background:C.glass, backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
           borderBottom:`1px solid ${C.border}`,
@@ -560,7 +566,7 @@ export default function AdminPanel() {
                   {users.map((u,i)=>{
                     const st=u.is_blocked?'blocked':u.is_active?'active':'inactive'
                     return (
-                      <tr key={u.id} className="alas-tr" style={{animationDelay:`${i*0.055}s`}}>
+                      <tr key={u.id} className="alas-tr" style={{animationDelay:`${Math.min(i, 7) * 0.055}s`}}>
                         <td style={{padding:'11px 16px'}}>
                           <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
                             <div style={{width:30,height:30,borderRadius:9,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:12,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
@@ -706,6 +712,6 @@ export default function AdminPanel() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   )
 }

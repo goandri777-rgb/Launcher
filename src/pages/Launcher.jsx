@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LogOut, Settings2 } from 'lucide-react'
@@ -34,18 +34,33 @@ const T = {
 export default function Launcher() {
   const { profile, signOut } = useAuth()
   const { modules, loading, openModule } = useModules()
-  const [isExiting, setIsExiting] = useState(false)
+  const [isExiting,   setIsExiting]   = useState(false)
+  const [isLaunching, setIsLaunching] = useState(false)
 
-  const handleSignOut = () => {
-    setIsExiting(true)
-  }
+  const handleSignOut = () => setIsExiting(true)
+
+  const handleOpenModule = useCallback(async (key) => {
+    setIsLaunching(true)
+    await openModule(key)
+    setIsLaunching(false)   // fallback si la navegación falla
+  }, [openModule])
+
+  const exitState = isExiting
+    ? { opacity: 0, scale: 0.98,  y:  8 }
+    : isLaunching
+    ? { opacity: 0, scale: 0.992, y: -6 }
+    : { opacity: 1, scale: 1,     y:  0 }
 
   return (
     <motion.div
       className="h-full flex flex-col"
-      initial={{ opacity: 1 }}
-      animate={isExiting ? { opacity: 0, scale: 0.98, y: 8 } : { opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: [0.4, 0, 1, 1] }}
+      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+      animate={exitState}
+      exit={{ opacity: 0, y: -7, scale: 0.992, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+      transition={{
+        duration: (isExiting || isLaunching) ? 0.28 : 0.42,
+        ease:     (isExiting || isLaunching) ? [0.4, 0, 1, 1] : [0.16, 1, 0.3, 1],
+      }}
       onAnimationComplete={() => { if (isExiting) signOut() }}
     >
 
@@ -147,15 +162,28 @@ export default function Launcher() {
       {/* ════ Main ══════════════════════════════════════════════════════ */}
       <main className="relative z-10 flex-1 grid place-items-center">
         {loading ? (
-          <motion.div className="flex items-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            {[0, 1, 2].map(i => (
-              <motion.div
-                key={i}
-                style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(11,95,141,0.4)' }}
-                animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1, 0.8] }}
-                transition={{ duration: 1.2, delay: i * 0.18, repeat: Infinity }}
-              />
-            ))}
+          <motion.div
+            className="flex flex-col items-center gap-3"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.42, ease: EASE }}
+          >
+            <div className="flex items-center gap-1.5">
+              {[0, 1, 2].map(i => (
+                <motion.div
+                  key={i}
+                  style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(11,95,141,0.45)' }}
+                  animate={{ opacity: [0.25, 1, 0.25], scale: [0.75, 1, 0.75] }}
+                  transition={{ duration: 1.4, delay: i * 0.20, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              ))}
+            </div>
+            <p style={{
+              fontSize: 11, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: 'rgba(11,95,141,0.45)', fontFamily: '"Inter", system-ui',
+            }}>
+              Cargando sistema
+            </p>
           </motion.div>
         ) : modules.length === 0 ? (
           <motion.div
@@ -171,7 +199,7 @@ export default function Launcher() {
             </p>
           </motion.div>
         ) : (
-          <CircularLauncher modules={modules} onOpen={openModule} />
+          <CircularLauncher modules={modules} onOpen={handleOpenModule} />
         )}
       </main>
 
