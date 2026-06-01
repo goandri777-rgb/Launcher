@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase'
 
 // ── DEMO MODE ──────────────────────────────────────────────────────────────
-const DEMO_MODE = true
+const DEMO_MODE = false
 
 const DEMO_USERS = [
   { id: 'u1', full_name: 'Admin ALAS',    email: 'admin@alas.com',    role: 'admin',      is_active: true,  is_blocked: false, last_login: new Date().toISOString() },

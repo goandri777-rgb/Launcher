@@ -281,17 +281,22 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- =====================================================================
--- DATOS DEMO (módulos). Los usuarios se crean desde Authentication.
+-- MÓDULOS DEL SISTEMA ALAS
+-- URLs: actualizar desde el Panel Admin una vez desplegado,
+--       o reemplazar los placeholder antes de ejecutar.
 -- =====================================================================
-insert into public.modules(key, name, url, sort_order) values
-  ('acuses',      'Gestión de Acuses',          'https://acuses.example.vercel.app',       1),
-  ('reposicion',  'Reposición entre almacenes', 'https://reposicion.example.vercel.app',   2),
-  ('kpi',         'Dashboard KPI',              'https://kpi.example.vercel.app',          3),
-  ('reportes',    'Reportes',                   'https://reportes.example.vercel.app',     4),
-  ('facturacion', 'Facturación',                'https://facturacion.example.vercel.app',  5),
-  ('admin',       'Admin',                      'https://admin.example.vercel.app',        6)
+insert into public.modules(key, name, url, is_active, sort_order) values
+  ('calendario', 'Calendario Tareas',     'https://PENDIENTE.vercel.app', true,  1),
+  ('pedidos',    'Pedidos Caja Venta',    'https://PENDIENTE.vercel.app', true,  2),
+  ('acuses',     'Acuses de Recibo',      'https://PENDIENTE.vercel.app', false, 3),
+  ('borrados',   'Items Borrados',        'https://PENDIENTE.vercel.app', false, 4),
+  ('recepcion',  'Recepción Mercaderías', 'https://PENDIENTE.vercel.app', false, 5),
+  ('inventario', 'Inventario',            'https://PENDIENTE.vercel.app', false, 6)
 on conflict (key) do nothing;
 
--- Para convertir tu primer usuario en admin (tras registrarte), ejecuta:
---   update public.profiles set role='admin' where id =
---     (select id from auth.users where email='tu-correo@ejemplo.com');
+-- =====================================================================
+-- PASO FINAL: convertir tu usuario en admin
+-- Ejecutar DESPUÉS de registrarte en el Launcher por primera vez.
+-- =====================================================================
+-- update public.profiles set role='admin' where id =
+--   (select id from auth.users where email='TU-EMAIL@ejemplo.com');

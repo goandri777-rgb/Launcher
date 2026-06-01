@@ -5,7 +5,7 @@ import { generateToken } from '../lib/sessionBridge'
 
 // ── DEMO MODE ──────────────────────────────────────────────────────────────
 // IMPORTANTE: Cambiar a false en producción para usar usuarios reales de Supabase.
-const DEMO_MODE = true
+const DEMO_MODE = false
 
 // URLs de los módulos por entorno.
 // Desarrollo: localhost. Producción: reemplazar con URLs de Vercel/dominio real.

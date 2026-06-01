@@ -4,7 +4,7 @@ import { supabase } from './supabase'
 // ── DEMO MODE ──────────────────────────────────────────────────────────────
 // PRODUCCIÓN: Cambiar a false y configurar VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY en .env
 // Con DEMO_MODE=true: cualquiera puede ingresar sin credenciales — solo para desarrollo local.
-const DEMO_MODE = true
+const DEMO_MODE = false
 const DEMO_SESSION = { user: { id: 'demo-user', email: 'demo@alas.com' } }
 const DEMO_PROFILE = { id: 'demo-user', full_name: 'Usuario Demo', role: 'admin', is_active: true, is_blocked: false }
 // ──────────────────────────────────────────────────────────────────────────
