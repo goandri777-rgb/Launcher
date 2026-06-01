@@ -111,68 +111,100 @@ export default function CircularLauncher({ modules, onOpen }) {
   useEffect(() => {
     if (!modules.length || !hubRef.current) return
 
+    // Primera visita en esta sesión → cinematografía completa.
+    // Visitas repetidas (misma pestaña) → fade-in abreviado ~0.35s.
+    const INTRO_KEY   = 'alas.launcher.intro'
+    const isFirstVisit = !sessionStorage.getItem(INTRO_KEY)
+    if (isFirstVisit) sessionStorage.setItem(INTRO_KEY, '1')
+
     const ctx = gsap.context(() => {
-      // ── Set initial states (GSAP owns these from here on) ─────────────────
-      gsap.set(hubRef.current, { scale: 0.72, opacity: 0, transformOrigin: 'center center', z: 24 })
+
+      // ── Estados iniciales ──────────────────────────────────────────────────
+      gsap.set(hubRef.current, {
+        scale: isFirstVisit ? 0.5 : 1,
+        opacity: 0, transformOrigin: 'center center', z: 24,
+      })
       gsap.set(orbitRef.current, { opacity: 0 })
 
-      // Lines: setup stroke-dashoffset for draw-in effect
       lineBaseRefs.current.forEach(path => {
         if (!path) return
         const len = path.getTotalLength ? path.getTotalLength() : 200
-        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 })
-      })
-
-      // Marching dashes: hidden until base lines finish
-      gsap.set(lineDashRefs.current.filter(Boolean), { opacity: 0 })
-
-      // Nodes: start slightly below, invisible
-      gsap.set(nodeRefs.current.filter(Boolean), { y: 18, opacity: 0, z: 8 })
-
-      // ── Main timeline ────────────────────────────────────────────────────
-      const tl = gsap.timeline({
-        delay: 0.32,
-        defaults: { ease: 'power3.out' },
-        onComplete: () => {
-          // Hub float starts after entrance completes
-          floatTween.current = gsap.to(hubRef.current, {
-            y: -5, duration: 2.6,
-            repeat: -1, yoyo: true,
-            ease: 'sine.inOut',
-            overwrite: false,
-          })
-          // Fade in marching dashes
-          gsap.to(lineDashRefs.current.filter(Boolean), {
-            opacity: 1, duration: 0.4, stagger: 0.04
-          })
-        }
-      })
-
-      tl
-        // Hub scales in from 72% with a subtle elastic pop
-        .to(hubRef.current, {
-          scale: 1, opacity: 1,
-          duration: 0.65,
-          ease: 'back.out(1.4)',
+        gsap.set(path, {
+          strokeDasharray: len,
+          strokeDashoffset: isFirstVisit ? len : 0,
+          opacity: 1,
         })
-        // Orbit ring fades in while hub is still arriving
-        .to(orbitRef.current, {
-          opacity: 1, duration: 0.5,
-        }, '-=0.4')
-        // Lines draw from hub outward, staggered
-        .to(lineBaseRefs.current.filter(Boolean), {
+      })
+
+      gsap.set(lineDashRefs.current.filter(Boolean), { opacity: 0 })
+      gsap.set(nodeRefs.current.filter(Boolean), {
+        scale: isFirstVisit ? 0.62 : 1,
+        opacity: 0, z: 8,
+      })
+
+      // goLive: inicia float + activa dashes (compartido entre ambas rutas)
+      const goLive = () => {
+        floatTween.current = gsap.to(hubRef.current, {
+          y: -5, duration: 2.6, repeat: -1, yoyo: true,
+          ease: 'sine.inOut', overwrite: false,
+        })
+        gsap.to(lineDashRefs.current.filter(Boolean), {
+          opacity: 1, duration: 0.4, stagger: 0.04,
+        })
+      }
+
+      // ── Ruta abreviada — visitas repetidas ─────────────────────────────────
+      if (!isFirstVisit) {
+        const quick = gsap.timeline({ delay: 0.1, onComplete: goLive })
+        quick
+          .to(hubRef.current,  { opacity: 1, duration: 0.30, ease: 'power2.out' })
+          .to(orbitRef.current, { opacity: 1, duration: 0.28, ease: 'power2.out' }, '-=0.20')
+          .to(nodeRefs.current.filter(Boolean), {
+            opacity: 1, duration: 0.26, stagger: 0.04, ease: 'power2.out',
+          }, '-=0.14')
+        return
+      }
+
+      // ── Ruta cinematográfica — primera visita ──────────────────────────────
+      const tl = gsap.timeline({ delay: 0.30, onComplete: goLive })
+
+      // 1. Hub carga: power4.out (expansión intensa) → settle (power2.out)
+      tl
+        .to(hubRef.current, {
+          scale: 1.06, opacity: 1,
+          duration: 0.55, ease: 'power4.out',
+        })
+        .to(hubRef.current, {
+          scale: 1.0,
+          duration: 0.18, ease: 'power2.out',
+        })
+
+      // 2. Orbit ring aparece mientras el hub completa el settle
+      tl.to(orbitRef.current, {
+        opacity: 1, duration: 0.30, ease: 'power3.out',
+      }, '-=0.28')
+
+      // 3. Pausa narrativa implícita (tl head ~0.75s, módulos arrancan en 0.85s → 0.10s de beat)
+      // 4. Conexión módulo a módulo — secuencial, clockwise
+      for (let i = 0; i < modules.length; i++) {
+        if (!lineBaseRefs.current[i] || !nodeRefs.current[i]) continue
+        const t = 0.85 + i * 0.14
+
+        // Línea se dibuja hub → nodo
+        tl.to(lineBaseRefs.current[i], {
           strokeDashoffset: 0,
-          duration: 0.48,
-          stagger: { amount: 0.28, from: 'start' },
-          ease: 'power2.inOut',
-        }, '-=0.2')
-        // Nodes rise into position after lines are mostly done
-        .to(nodeRefs.current.filter(Boolean), {
-          y: 0, opacity: 1,
-          duration: 0.38,
-          stagger: { amount: 0.3, from: 'start' },
-          ease: 'back.out(1.2)',
-        }, '-=0.18')
+          duration: 0.22, ease: 'power2.out',
+        }, t)
+
+        // Pulso de energía viaja por la línea (usa el mecanismo de click)
+        tl.call(() => firePulse(i), [], t + 0.10)
+
+        // Nodo materializa al final de la línea
+        tl.to(nodeRefs.current[i], {
+          scale: 1, opacity: 1,
+          duration: 0.26, ease: 'expo.out',
+        }, t + 0.16)
+      }
     })
 
     return () => {
