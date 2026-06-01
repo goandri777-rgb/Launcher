@@ -299,15 +299,23 @@ function EditModuleModal({ module: mod, onClose, onSaved, notify }) {
   const [err,  setErr]  = useState('')
   const Icon = getModuleIcon(mod.key)
 
+  const normalizeUrl = (raw) => {
+    const u = raw.trim()
+    if (!u) return u
+    if (/^https?:\/\//i.test(u)) return u
+    return 'https://' + u
+  }
+
   const save = async () => {
     setErr(''); setBusy(true)
     const updates = {}
-    if (name.trim()!==mod.name) updates.name=name.trim()
-    if (url.trim()!==mod.url)   updates.url=url.trim()
+    if (name.trim() !== mod.name) updates.name = name.trim()
+    const cleanUrl = normalizeUrl(url)
+    if (cleanUrl !== mod.url) updates.url = cleanUrl
     if (!Object.keys(updates).length) { setBusy(false); onClose(); return }
-    const {error} = await adminApi.updateModule(mod.id, updates)
+    const { error } = await adminApi.updateModule(mod.id, updates)
     setBusy(false)
-    if (error) { setErr(error.message||'Error al guardar'); return }
+    if (error) { setErr(error.message || 'Error al guardar'); return }
     onSaved()
   }
 
