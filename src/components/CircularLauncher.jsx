@@ -53,8 +53,10 @@ function lineBaseColor(state) {
 function nodeStyles(state, hov) {
   const base = {
     borderRadius: 20, width: BTN_SIZE, height: BTN_SIZE,
-    transition: 'background 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
-    willChange: 'transform',
+    transition: 'none',
+    transformOrigin: '50% 50%',
+    backfaceVisibility: 'hidden',
+    willChange: 'transform, background-color, border-color, box-shadow',
   }
   if (state === 'inactive') return {
     ...base, background: C.surface,
@@ -95,9 +97,7 @@ function dotStyle(state) {
 }
 
 export default function CircularLauncher({ modules, onOpen }) {
-  const [busyKey,    setBusyKey]    = useState(null)
-  const [hoveredKey, setHoveredKey] = useState(null)
-
+  const [busyKey, setBusyKey] = useState(null)
   // ── Refs for GSAP ────────────────────────────────────────────────────────
   const hubRef      = useRef(null)
   const hubRingRef  = useRef(null)
@@ -110,9 +110,6 @@ export default function CircularLauncher({ modules, onOpen }) {
   const floatTween  = useRef(null)  // hub float tween (kept for pause/resume)
   const hoveredKeyRef = useRef(null)
 
-  useEffect(() => {
-    hoveredKeyRef.current = hoveredKey
-  }, [hoveredKey])
   const systemRef   = useRef(null)  // 3D tilt wrapper — mouse parallax target
 
   // ── 1. GSAP entrance — System Online (runs on every mount) ─────────────
@@ -231,77 +228,7 @@ export default function CircularLauncher({ modules, onOpen }) {
   }, [modules.length]) // eslint-disable-line
 
   // ── 2. Hub reacts to module hover ────────────────────────────────────────
-  useEffect(() => {
-    if (!hubRef.current) return
-
-    if (hoveredKey) {
-      if (systemRef.current) {
-        gsap.to(systemRef.current, {
-          rotateX: 0,
-          rotateY: 0,
-          duration: 0.38,
-          ease: INTRO_EASE,
-          overwrite: 'auto',
-        })
-      }
-
-      // Hub subtly expands — pauses float temporarily with overwrite:auto
-      gsap.to(hubRef.current, {
-        scale: 1.045,
-        duration: 0.38,
-        ease: INTRO_EASE,
-        overwrite: 'auto',
-      })
-      // Ring glows a bit more
-      if (hubRingRef.current) {
-        gsap.to(hubRingRef.current, {
-          borderColor: 'rgba(11,95,141,0.28)',
-          duration: 0.25,
-        })
-      }
-    } else {
-      // Elastic return + resume float
-      gsap.to(hubRef.current, {
-        scale: 1,
-        duration: 0.48,
-        ease: INTRO_EASE,
-        overwrite: 'auto',
-      })
-      if (hubRingRef.current) {
-        gsap.to(hubRingRef.current, {
-          borderColor: 'rgba(11,95,141,0.14)',
-          duration: 0.35,
-        })
-      }
-    }
-  }, [hoveredKey])
-
-  // ── 3. Focus effect — dim non-hovered lines ───────────────────────────────
-  useEffect(() => {
-    lineBaseRefs.current.forEach((lineEl, i) => {
-      if (!lineEl) return
-      const m     = modules[i]
-      if (!m) return
-      const state = getState(m)
-      const isHov = hoveredKey === m.key
-
-      let target
-      if (!hoveredKey) {
-        target = 1                          // No hover: all full
-      } else if (isHov) {
-        target = 1                          // Hovered line: full
-      } else {
-        target = state === 'active' ? 0.18 : 0.10  // Others: dimmed
-      }
-
-      gsap.to(lineEl, {
-        opacity: target,
-        duration: 0.22,
-        ease: 'power2.out',
-        overwrite: 'auto',
-      })
-    })
-  }, [hoveredKey, modules])
+  // Hover is handled imperatively in animateModuleHover to avoid SVG re-renders.
 
   // ── 4. Busy state — dim everything except the active module ──────────────
   useEffect(() => {
@@ -414,16 +341,71 @@ export default function CircularLauncher({ modules, onOpen }) {
 
     if (on) {
       hoveredKeyRef.current = module.key
-      setHoveredKey(prev => prev === module.key ? prev : module.key)
     } else if (hoveredKeyRef.current === module.key) {
       hoveredKeyRef.current = null
-      setHoveredKey(null)
     }
 
     const buttonEl = buttonRefs.current[moduleIndex]
     const nodeEl = nodeRefs.current[moduleIndex]
     if (nodeEl) gsap.set(nodeEl, { zIndex: on ? 32 : 20 })
+
+    if (systemRef.current && on) {
+      gsap.to(systemRef.current, {
+        rotateX: 0,
+        rotateY: 0,
+        duration: 0.28,
+        ease: INTRO_EASE,
+        overwrite: 'auto',
+      })
+    }
+
+    if (hubRef.current) {
+      gsap.to(hubRef.current, {
+        scale: on ? 1.045 : 1,
+        duration: on ? 0.30 : 0.34,
+        ease: INTRO_EASE,
+        overwrite: 'auto',
+      })
+    }
+    if (hubRingRef.current) {
+      gsap.to(hubRingRef.current, {
+        borderColor: on ? 'rgba(11,95,141,0.28)' : 'rgba(11,95,141,0.14)',
+        duration: 0.24,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      })
+    }
+
+    lineBaseRefs.current.forEach((lineEl, i) => {
+      if (!lineEl) return
+      const mod = modules[i]
+      const state = mod ? getState(mod) : 'inactive'
+      const isTarget = i === moduleIndex
+      gsap.to(lineEl, {
+        opacity: on ? (isTarget ? 1 : state === 'active' ? 0.18 : 0.10) : 1,
+        strokeWidth: on && isTarget ? 1.2 : 0.8,
+        duration: 0.18,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      })
+    })
+
+    lineDashRefs.current.forEach((lineEl, i) => {
+      if (!lineEl) return
+      const isTarget = i === moduleIndex
+      gsap.to(lineEl, {
+        opacity: on ? (isTarget ? 1 : 0.45) : 1,
+        strokeWidth: on && isTarget ? 1.5 : 1.2,
+        duration: 0.18,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      })
+    })
+
     if (!buttonEl) return
+
+    const iconEl = nodeEl?.querySelector('[data-module-icon]')
+    const labelEl = nodeEl?.querySelector('[data-module-label]')
 
     gsap.killTweensOf(buttonEl)
     gsap.to(buttonEl, {
@@ -434,7 +416,33 @@ export default function CircularLauncher({ modules, onOpen }) {
       overwrite: 'auto',
       force3D: true,
     })
-  }, [])
+    gsap.to(buttonEl, {
+      backgroundColor: on ? C.surfaceHov : C.surface,
+      borderColor: on ? C.borderHov : C.border,
+      boxShadow: on
+        ? '0 16px 40px rgba(11,95,141,0.14), 0 6px 16px rgba(11,95,141,0.07), 0 1px 4px rgba(15,23,42,0.05)'
+        : '0 1px 4px rgba(15,23,42,0.06), 0 0 0 1px rgba(226,232,240,0.4)',
+      duration: 0.18,
+      ease: 'power2.out',
+      overwrite: 'auto',
+    })
+    if (iconEl) {
+      gsap.to(iconEl, {
+        color: on ? C.brand : '#475569',
+        duration: 0.16,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      })
+    }
+    if (labelEl) {
+      gsap.to(labelEl, {
+        color: on ? C.brand : C.text2,
+        duration: 0.16,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      })
+    }
+  }, [modules])
 
   const handleClick = async (m) => {
     if (getState(m) !== 'active') return
@@ -494,7 +502,7 @@ export default function CircularLauncher({ modules, onOpen }) {
           const x2 = CX + Math.cos(angle) * L_END
           const y2 = CY + Math.sin(angle) * L_END
           const state = getState(m)
-          const isHov = hoveredKey === m.key
+          const isHov = false
           const isBusy = busyKey === m.key
 
           return (
@@ -643,7 +651,7 @@ export default function CircularLauncher({ modules, onOpen }) {
         const state    = getState(m)
         const Icon     = getModuleIcon(m.key)
         const isBusy   = busyKey    === m.key
-        const isHov    = hoveredKey === m.key
+        const isHov    = false
         const isActive = state === 'active'
 
         return (
@@ -688,10 +696,10 @@ export default function CircularLauncher({ modules, onOpen }) {
               <span style={dotStyle(state)} />
 
               {/* Icon */}
-              <Icon style={{
+              <Icon data-module-icon style={{
                 width: 26, height: 26,
                 color: iconColor(state, isHov),
-                transition: 'color 140ms ease',
+                transition: 'none',
                 flexShrink: 0,
               }} />
 
@@ -712,11 +720,11 @@ export default function CircularLauncher({ modules, onOpen }) {
             </button>
 
             {/* Label */}
-            <span style={{
+            <span data-module-label style={{
               fontSize: '12px', fontWeight: 500, letterSpacing: '-0.01em',
               fontFamily: '"Inter", system-ui, sans-serif',
               color: labelColor(state, isHov),
-              transition: 'color 140ms ease',
+              transition: 'none',
               textAlign: 'center', whiteSpace: 'normal', lineHeight: 1.35,
               width: NODE_W,
               display: '-webkit-box',
