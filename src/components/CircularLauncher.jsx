@@ -106,30 +106,25 @@ export default function CircularLauncher({ modules, onOpen }) {
   const nodeRefs    = useRef([])    // module node wrappers
   const floatTween  = useRef(null)  // hub float tween (kept for pause/resume)
   const systemRef   = useRef(null)  // 3D tilt wrapper — mouse parallax target
-  const orbitDrawRef = useRef(null) // clockwork draw circle — entrance only
 
-  // ── 1. GSAP entrance — Clockwork (runs on every mount) ──────────────────
+  // ── 1. GSAP entrance — System Online (runs on every mount) ─────────────
   useEffect(() => {
     if (!modules.length || !hubRef.current) return
-
-    const CIRCUMFERENCE = 2 * Math.PI * ORBIT_R  // ≈ 1621px
-    const DRAW_DUR      = 0.82                    // duración del barrido del anillo
 
     const ctx = gsap.context(() => {
 
       // ── Estados iniciales ──────────────────────────────────────────────────
       gsap.set(hubRef.current,  { scale: 0.5, opacity: 0, transformOrigin: 'center center', z: 24 })
       gsap.set(orbitRef.current, { opacity: 0 })
-      gsap.set(orbitDrawRef.current, {
-        opacity: 0,
-        strokeDasharray: CIRCUMFERENCE,
-        strokeDashoffset: CIRCUMFERENCE,
+
+      lineBaseRefs.current.forEach(path => {
+        if (!path) return
+        const len = path.getTotalLength ? path.getTotalLength() : 200
+        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 })
       })
 
-      // Líneas: solo ocultas — se revelan con fade al final (no stroke-dashoffset)
-      lineBaseRefs.current.forEach(path => { if (path) gsap.set(path, { opacity: 0 }) })
       gsap.set(lineDashRefs.current.filter(Boolean), { opacity: 0 })
-      gsap.set(nodeRefs.current.filter(Boolean), { scale: 0.72, opacity: 0, z: 8 })
+      gsap.set(nodeRefs.current.filter(Boolean), { scale: 0.62, opacity: 0, z: 8 })
 
       const goLive = () => {
         floatTween.current = gsap.to(hubRef.current, {
@@ -141,35 +136,28 @@ export default function CircularLauncher({ modules, onOpen }) {
 
       const tl = gsap.timeline({ delay: 0.30, onComplete: goLive })
 
-      // 1. Hub carga — dos tiempos: explosión → settle
+      // 1. Hub carga — explosión power4.out → settle elegante
       tl
         .to(hubRef.current, { scale: 1.06, opacity: 1, duration: 0.55, ease: 'power4.out' })
         .to(hubRef.current, { scale: 1.0,  duration: 0.18, ease: 'power2.out' })
-        .addLabel('hubReady')
 
-      // 2. Anillo sólido barre clockwise desde las 12:00
-      tl
-        .to(orbitDrawRef.current, { opacity: 1, duration: 0.08, ease: 'none' }, 'hubReady+=0.05')
-        .to(orbitDrawRef.current, { strokeDashoffset: 0, duration: DRAW_DUR, ease: 'none' }, 'hubReady+=0.05')
+      // 2. Orbit ring aparece con el settle del hub
+      tl.to(orbitRef.current, { opacity: 1, duration: 0.30, ease: 'power3.out' }, '-=0.28')
 
-      // 3. Cada módulo aparece cuando el trazo lo alcanza
+      // 3. Módulos se conectan uno a uno — clockwise, con pulso de energía
       for (let i = 0; i < modules.length; i++) {
-        if (!nodeRefs.current[i]) continue
-        const offset = (0.05 + (i / modules.length) * DRAW_DUR + 0.04).toFixed(3)
-        tl.to(nodeRefs.current[i], {
-          scale: 1, opacity: 1,
-          duration: 0.20, ease: 'back.out(1.15)',
-        }, `hubReady+=${offset}`)
-      }
+        if (!lineBaseRefs.current[i] || !nodeRefs.current[i]) continue
+        const t = 0.85 + i * 0.14
 
-      // 4. Barrido completo → líneas aparecen + crossfade sólido → punteado
-      const doneOffset = (0.05 + DRAW_DUR + 0.05).toFixed(3)
-      tl
-        .to(lineBaseRefs.current.filter(Boolean), {
-          opacity: 1, duration: 0.25, stagger: 0.04, ease: 'power2.out',
-        }, `hubReady+=${doneOffset}`)
-        .to(orbitDrawRef.current, { opacity: 0, duration: 0.30, ease: 'power2.out' }, `hubReady+=${doneOffset}`)
-        .to(orbitRef.current,     { opacity: 1, duration: 0.30, ease: 'power2.out' }, `hubReady+=${doneOffset}`)
+        // Línea se dibuja hub → nodo
+        tl.to(lineBaseRefs.current[i], { strokeDashoffset: 0, duration: 0.22, ease: 'power2.out' }, t)
+
+        // Pulso viaja por la línea
+        tl.call(() => firePulse(i), [], t + 0.10)
+
+        // Nodo materializa
+        tl.to(nodeRefs.current[i], { scale: 1, opacity: 1, duration: 0.26, ease: 'expo.out' }, t + 0.16)
+      }
     })
 
     return () => {
@@ -382,22 +370,6 @@ export default function CircularLauncher({ modules, onOpen }) {
             animation: 'orbit-spin 30s linear infinite',
             transformBox: 'fill-box',
             transformOrigin: 'center center',
-          }}
-        />
-
-        {/* Clockwork draw circle — sólido, solo durante la entrada */}
-        <circle
-          ref={orbitDrawRef}
-          cx={CX} cy={CY} r={ORBIT_R}
-          fill="none"
-          stroke="rgba(11,95,141,0.28)"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          style={{
-            opacity: 0,
-            transformBox: 'fill-box',
-            transformOrigin: 'center center',
-            transform: 'rotate(-90deg)',
           }}
         />
 
