@@ -300,12 +300,13 @@ create trigger on_auth_user_created
 --       o reemplazar los placeholder antes de ejecutar.
 -- =====================================================================
 insert into public.modules(key, name, url, is_active, sort_order) values
-  ('calendario', 'Calendario Tareas',     'https://PENDIENTE.vercel.app', true,  1),
-  ('pedidos',    'Pedidos Caja Venta',    'https://PENDIENTE.vercel.app', true,  2),
-  ('acuses',     'Acuses de Recibo',      'https://PENDIENTE.vercel.app', false, 3),
-  ('borrados',   'Items Borrados',        'https://PENDIENTE.vercel.app', false, 4),
-  ('recepcion',  'Recepción Mercaderías', 'https://PENDIENTE.vercel.app', false, 5),
-  ('inventario', 'Inventario',            'https://PENDIENTE.vercel.app', false, 6)
+  ('calendario',  'Calendario Tareas',     'https://PENDIENTE.vercel.app', true,  1),
+  ('pedidos',     'Pedidos Caja Venta',    'https://PENDIENTE.vercel.app', true,  2),
+  ('acuses',      'Acuses de Recibo',      'https://PENDIENTE.vercel.app', false, 3),
+  ('borrados',    'Items Borrados',        'https://PENDIENTE.vercel.app', false, 4),
+  ('recepcion',   'Recepción Mercaderías', 'https://PENDIENTE.vercel.app', false, 5),
+  ('inventario',  'Inventario',            'https://PENDIENTE.vercel.app', false, 6),
+  ('facturacion', 'Facturacion',           'https://PENDIENTE.vercel.app', false, 7)
 on conflict (key) do nothing;
 
 -- =====================================================================
