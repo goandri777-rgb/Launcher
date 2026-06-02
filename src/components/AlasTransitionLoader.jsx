@@ -8,15 +8,15 @@ const ARC_R  = HUB_D / 2 + 18               // radio del arco: 92px (fuera del h
 const C      = 2 * Math.PI * ARC_R          // circunferencia ≈ 578px
 const SIZE   = ARC_R * 2 + 44               // canvas SVG: 228px (arco + margen)
 
-export default function AlasTransitionLoader({ active }) {
+export default function AlasTransitionLoader({ active, label = 'Abriendo módulo' }) {
   return (
     <AnimatePresence>
-      {active && <LoaderStage />}
+      {active && <LoaderStage label={label} />}
     </AnimatePresence>
   )
 }
 
-function LoaderStage() {
+function LoaderStage({ label }) {
   const shellRef    = useRef(null)
   const stageRef    = useRef(null)   // contenedor del hub+arco — sube suavemente
   const coreRef     = useRef(null)
@@ -97,7 +97,7 @@ function LoaderStage() {
       ref={shellRef}
       role="status"
       aria-live="polite"
-      aria-label="Abriendo módulo"
+      aria-label={label}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, y: -6, transition: { duration: 0.26, ease: [0.4, 0, 1, 1] } }}

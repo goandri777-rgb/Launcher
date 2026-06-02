@@ -37,7 +37,7 @@ const T = {
 }
 
 export default function Login() {
-  const { signIn, loginAsDemo, session } = useAuth()
+  const { signIn, loginAsDemo, session, startEntry } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -73,6 +73,7 @@ export default function Login() {
       })
       return
     }
+    startEntry()
     navigate(to, { replace: true })
   }
 

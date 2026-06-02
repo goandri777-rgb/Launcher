@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
 
 // ── DEMO MODE ──────────────────────────────────────────────────────────────
@@ -13,9 +13,17 @@ const DEMO_PROFILE = { id: 'demo-user', full_name: 'Usuario Demo', role: 'admin'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(DEMO_MODE ? DEMO_SESSION : null)
-  const [profile, setProfile] = useState(DEMO_MODE ? DEMO_PROFILE : null)
-  const [loading, setLoading] = useState(!DEMO_MODE)
+  const [session,      setSession]      = useState(DEMO_MODE ? DEMO_SESSION : null)
+  const [profile,      setProfile]      = useState(DEMO_MODE ? DEMO_PROFILE : null)
+  const [loading,      setLoading]      = useState(!DEMO_MODE)
+  const [transitioning, setTransitioning] = useState(false)
+  const transitionTimer = useRef(null)
+
+  const startEntry = useCallback(() => setTransitioning(true), [])
+  const stopEntry  = useCallback(() => {
+    clearTimeout(transitionTimer.current)
+    setTransitioning(false)
+  }, [])
 
   // Carga el perfil del usuario desde la tabla `profiles` (protegida por RLS).
   const loadProfile = useCallback(async (userId) => {
@@ -77,7 +85,7 @@ export function AuthProvider({ children }) {
     setProfile(DEMO_PROFILE)
   }
 
-  const value = { session, profile, loading, signIn, signOut, loginAsDemo, reloadProfile: () => loadProfile(session?.user?.id) }
+  const value = { session, profile, loading, transitioning, startEntry, stopEntry, signIn, signOut, loginAsDemo, reloadProfile: () => loadProfile(session?.user?.id) }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

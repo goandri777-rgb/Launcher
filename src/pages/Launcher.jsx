@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LogOut, Settings2 } from 'lucide-react'
@@ -33,8 +33,16 @@ const T = {
 }
 
 export default function Launcher() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, stopEntry } = useAuth()
   const { modules, loading, openModule } = useModules()
+
+  // Cuando los módulos cargan, da 400ms de margen para que System Online arranque
+  // debajo del AppLoader, luego señaliza que el loader puede salir.
+  useEffect(() => {
+    if (loading) return
+    const t = setTimeout(() => stopEntry(), 400)
+    return () => clearTimeout(t)
+  }, [loading, stopEntry])
   const [isExiting,   setIsExiting]   = useState(false)
   const [isLaunching, setIsLaunching] = useState(false)
 
