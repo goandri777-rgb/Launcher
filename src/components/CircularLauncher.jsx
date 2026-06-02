@@ -99,6 +99,7 @@ function dotStyle(state) {
 export default function CircularLauncher({ modules, onOpen }) {
   const [busyKey, setBusyKey] = useState(null)
   // ── Refs for GSAP ────────────────────────────────────────────────────────
+  const containerRef = useRef(null)
   const hubRef      = useRef(null)
   const hubRingRef  = useRef(null)
   const orbitRef    = useRef(null)
@@ -125,14 +126,14 @@ export default function CircularLauncher({ modules, onOpen }) {
       // ── Estados iniciales ──────────────────────────────────────────────────
       gsap.set(hubRef.current, {
         autoAlpha: 0,
-        scale: 0.78,
-        y: 10,
+        scale: 0.75,
+        y: 12,
         transformOrigin: 'center center',
         force3D: true,
       })
       gsap.set(orbitRef.current, {
         autoAlpha: 0,
-        scale: 0.96,
+        scale: 0.95,
         transformOrigin: 'center center',
         force3D: true,
       })
@@ -146,8 +147,8 @@ export default function CircularLauncher({ modules, onOpen }) {
       gsap.set(dashLines, { opacity: 0 })
       gsap.set(nodes, {
         autoAlpha: 0,
-        scale: 0.78,
-        y: 14,
+        scale: 0.75,
+        y: 16,
         transformOrigin: '50% 50%',
         force3D: true,
       })
@@ -163,7 +164,7 @@ export default function CircularLauncher({ modules, onOpen }) {
 
       const goLive = () => {
         floatTween.current = gsap.to(hubRef.current, {
-          y: -4,
+          y: -5,
           duration: 3.2,
           repeat: -1,
           yoyo: true,
@@ -173,49 +174,60 @@ export default function CircularLauncher({ modules, onOpen }) {
         gsap.to(dashLines, {
           opacity: 1,
           duration: 0.72,
-          stagger: 0.055,
-          ease: 'sine.out',
+          stagger: {
+            each: 0.055,
+            from: "center",
+          },
+          ease: 'power2.out',
         })
       }
 
       const tl = gsap.timeline({
-        delay: 0.18,
-        defaults: { ease: INTRO_EASE },
+        delay: 0.12,
+        defaults: { ease: 'expo.out' },
         onComplete: goLive,
       })
 
-      // 1. Hub carga — explosión power4.out → settle elegante
-      tl
-        .to(hubRef.current, { autoAlpha: 1, scale: 1, y: 0, duration: 0.78, ease: SETTLE_EASE })
-        .to(orbitRef.current, { autoAlpha: 1, scale: 1, duration: 0.65, ease: 'power2.out' }, '-=0.52')
+      // 1. Hub central emerge con elasticidad amortiguada premium
+      tl.to(hubRef.current, {
+        autoAlpha: 1,
+        scale: 1,
+        y: 0,
+        duration: 0.85,
+        ease: 'back.out(1.28)',
+      })
 
-      // 2. Orbit ring aparece con el settle del hub
-      // Orbit ring now overlaps the hub reveal to avoid a hard phase break.
+      // 2. Órbita circular se dibuja en espiral y entra en solapamiento
+      tl.to(orbitRef.current, {
+        autoAlpha: 1,
+        scale: 1,
+        duration: 0.75,
+      }, '-=0.68')
 
-      // 3. Módulos se conectan uno a uno — clockwise, con pulso de energía
-      for (let i = 0; i < modules.length; i++) {
-        if (!lineBaseRefs.current[i] || !nodeRefs.current[i]) continue
-        const t = 0.48 + i * 0.115
+      // 3. Módulos y líneas con stagger coordinado
+      const filterLines = lineBaseRefs.current.filter(Boolean)
+      tl.to(filterLines, {
+        strokeDashoffset: 0,
+        duration: 0.58,
+        stagger: {
+          each: 0.065,
+          from: "start"
+        }
+      }, '-=0.55')
 
-        // Línea se dibuja hub → nodo
-        tl.to(lineBaseRefs.current[i], {
-          strokeDashoffset: 0,
-          duration: 0.44,
-          ease: 'power2.inOut',
-        }, t)
-
-        // Pulso viaja por la línea
-        tl.call(() => firePulse(i), [], t + 0.10)
-
-        // Nodo materializa
+      // Disparo de energía consecutiva y entrada elástica de nodos
+      modules.forEach((_, i) => {
+        if (!nodeRefs.current[i]) return
+        const triggerTime = 0.35 + i * 0.065
+        tl.call(() => firePulse(i), [], triggerTime)
         tl.to(nodeRefs.current[i], {
           autoAlpha: 1,
           scale: 1,
           y: 0,
-          duration: 0.50,
-          ease: 'back.out(1.16)',
-        }, t + 0.20)
-      }
+          duration: 0.65,
+          ease: 'back.out(1.35)',
+        }, triggerTime + 0.12)
+      })
     })
 
     return () => {
@@ -225,39 +237,104 @@ export default function CircularLauncher({ modules, onOpen }) {
     }
   }, [modules.length]) // eslint-disable-line
 
+  // ── 1b. Parallax 3D interactivo con cursor ─────────────────────────────
+  useEffect(() => {
+    const container = containerRef.current
+    const system = systemRef.current
+    if (!container || !system || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    // quickTo setters para 60 FPS sin sobrecarga en el DOM
+    const xTo = gsap.quickTo(system, "rotationY", { duration: 0.6, ease: "power3.out" })
+    const yTo = gsap.quickTo(system, "rotationX", { duration: 0.6, ease: "power3.out" })
+    
+    // El Hub reacciona en dirección contraria para acentuar la profundidad 3D
+    const hubX = gsap.quickTo(hubRef.current, "x", { duration: 0.7, ease: "power3.out" })
+    const hubY = gsap.quickTo(hubRef.current, "y", { duration: 0.7, ease: "power3.out" })
+
+    const handleMouseMove = (e) => {
+      if (busyKey) return // Desactivar parallax si hay navegación en curso
+      const rect = container.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      
+      const normX = (e.clientX - centerX) / (rect.width / 2)
+      const normY = (e.clientY - centerY) / (rect.height / 2)
+      
+      xTo(normX * 8) // Rotación máxima en eje Y
+      yTo(-normY * 8) // Rotación máxima en eje X
+      
+      hubX(normX * 11) // Desplazamiento leve de parallax en hub
+      hubY(normY * 11)
+    }
+
+    const handleMouseLeave = () => {
+      xTo(0)
+      yTo(0)
+      hubX(0)
+      hubY(0)
+    }
+
+    container.addEventListener('mousemove', handleMouseMove)
+    container.addEventListener('mouseleave', handleMouseLeave)
+
+    return () => {
+      container.removeEventListener('mousemove', handleMouseMove)
+      container.removeEventListener('mouseleave', handleMouseLeave)
+    }
+  }, [modules, busyKey])
+
   // ── 2. Hub reacts to module hover ────────────────────────────────────────
   // Hover is handled imperatively in animateModuleHover to avoid SVG re-renders.
 
   // ── 4. Busy state — dim everything except the active module ──────────────
   useEffect(() => {
+    const ease = 'expo.out'
     if (busyKey) {
+      // Retornar la perspectiva 3D al punto neutro de inmediato al navegar
+      gsap.to(systemRef.current, { rotationX: 0, rotationY: 0, duration: 0.5, ease })
+      gsap.to(hubRef.current, { x: 0, y: 0, duration: 0.5, ease })
+
       nodeRefs.current.forEach((el, i) => {
         if (!el) return
         const isBusyNode = modules[i]?.key === busyKey
         gsap.to(el, {
-          opacity: isBusyNode ? 1 : 0.22,
-          scale:   isBusyNode ? 1.02 : 0.97,
-          duration: 0.28, ease: 'power2.out', overwrite: 'auto',
+          opacity: isBusyNode ? 1 : 0.15, // Mayor enfoque en el nodo seleccionado
+          scale:   isBusyNode ? 1.04 : 0.94,
+          duration: 0.45, ease, overwrite: 'auto',
         })
       })
       lineBaseRefs.current.forEach((el, i) => {
         if (!el) return
         gsap.to(el, {
-          opacity: modules[i]?.key === busyKey ? 1 : 0.08,
-          duration: 0.25, ease: 'power2.out', overwrite: 'auto',
+          opacity: modules[i]?.key === busyKey ? 0.9 : 0.04,
+          duration: 0.4, ease, overwrite: 'auto',
         })
       })
+      if (orbitRef.current) {
+        gsap.to(orbitRef.current, {
+          opacity: 0.15,
+          duration: 0.4,
+          ease,
+        })
+      }
     } else {
       gsap.to(nodeRefs.current.filter(Boolean), {
         opacity: 1, scale: 1,
-        duration: 0.35, ease: 'power2.out', overwrite: 'auto',
+        duration: 0.5, ease, overwrite: 'auto',
       })
       lineBaseRefs.current.forEach((el, i) => {
         if (!el) return
         gsap.to(el, {
-          opacity: 1, duration: 0.3, ease: 'power2.out', overwrite: 'auto',
+          opacity: 1, duration: 0.45, ease, overwrite: 'auto',
         })
       })
+      if (orbitRef.current) {
+        gsap.to(orbitRef.current, {
+          opacity: 1,
+          duration: 0.5,
+          ease,
+        })
+      }
     }
   }, [busyKey, modules])
 
@@ -284,13 +361,19 @@ export default function CircularLauncher({ modules, onOpen }) {
     const y2 = CY + Math.sin(angle) * L_END
 
     gsap.killTweensOf(pulseEl)
-    gsap.set(pulseEl, { attr: { cx: x1, cy: y1, r: 4 }, opacity: 0.9 })
-    gsap.to(pulseEl, {
-      attr: { cx: x2, cy: y2, r: 2.5 },
-      opacity: 0,
-      duration: 0.56,
-      ease: 'power2.out',
+    gsap.set(pulseEl, { attr: { cx: x1, cy: y1, r: 6 }, opacity: 1, fill: '#3B82F6' })
+    
+    const tl = gsap.timeline()
+    tl.to(pulseEl, {
+      attr: { cx: x2, cy: y2, r: 3 },
+      duration: 0.48,
+      ease: 'power3.out',
     })
+    tl.to(pulseEl, {
+      opacity: 0,
+      duration: 0.35,
+      ease: 'power2.in',
+    }, '-=0.35')
   }, [modules.length])
 
   const animateModuleHover = useCallback((moduleIndex, module, on) => {
@@ -306,22 +389,22 @@ export default function CircularLauncher({ modules, onOpen }) {
 
     gsap.killTweensOf([buttonEl, iconEl, labelEl].filter(Boolean))
     gsap.to(buttonEl, {
-      scale: on ? 1.07 : 1,
-      y: on ? -2 : 0,
+      scale: on ? 1.08 : 1,
+      y: on ? -3 : 0,
       backgroundColor: on ? C.surfaceHov : C.surface,
       borderColor: on ? C.borderHov : C.border,
       boxShadow: on
-        ? '0 14px 34px rgba(11,95,141,0.13), 0 4px 12px rgba(15,23,42,0.06)'
+        ? '0 16px 36px rgba(11,95,141,0.15), 0 4px 12px rgba(15,23,42,0.06)'
         : '0 1px 4px rgba(15,23,42,0.06), 0 0 0 1px rgba(226,232,240,0.4)',
-      duration: on ? 0.24 : 0.20,
-      ease: 'power2.out',
+      duration: on ? 0.32 : 0.24,
+      ease: on ? 'expo.out' : 'power3.out',
       overwrite: 'auto',
       force3D: true,
     })
     if (iconEl) {
       gsap.to(iconEl, {
         color: on ? C.brand : '#475569',
-        duration: 0.18,
+        duration: 0.22,
         ease: 'power2.out',
         overwrite: 'auto',
       })
@@ -329,7 +412,7 @@ export default function CircularLauncher({ modules, onOpen }) {
     if (labelEl) {
       gsap.to(labelEl, {
         color: on ? C.brand : C.text2,
-        duration: 0.18,
+        duration: 0.22,
         ease: 'power2.out',
         overwrite: 'auto',
       })
@@ -353,6 +436,7 @@ export default function CircularLauncher({ modules, onOpen }) {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
+      ref={containerRef}
       className="relative grid place-items-center select-none"
       style={{ width: SIZE, height: SIZE, maxWidth: '92vw', perspective: '900px' }}
     >

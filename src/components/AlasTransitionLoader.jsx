@@ -32,8 +32,8 @@ function LoaderStage({ label }) {
       const noMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
       // ── Estados iniciales ────────────────────────────────────────────────
-      gsap.set(stageRef.current,    { y: 12 })   // empieza 12px abajo, sube suavemente
-      gsap.set(coreRef.current,     { autoAlpha: 0, scale: 0.5, transformOrigin: '50% 50%', force3D: true })
+      gsap.set(stageRef.current,    { y: 16 })   // empieza 16px abajo, sube suavemente con inercia
+      gsap.set(coreRef.current,     { autoAlpha: 0, scale: 0.7, transformOrigin: '50% 50%', force3D: true })
       gsap.set(logoRef.current,     { autoAlpha: 0,              transformOrigin: '50% 50%', force3D: true })
       gsap.set(arcGroupRef.current, { autoAlpha: 0 })
       gsap.set(trackRef.current,    { autoAlpha: 0 })
@@ -53,33 +53,40 @@ function LoaderStage({ label }) {
       const CY = SIZE / 2
 
       // ── Entrada: stage flota + hub/arco materializan en cascada suave ────
-      gsap.timeline()
-        // Stage sube desde abajo — todo el conjunto en movimiento unificado
-        .to(stageRef.current,    { y: 0, duration: 0.70, ease: 'power3.out' }, 0)
-        // Hub materializa (mismo ritmo que System Online del launcher)
-        .to(coreRef.current,     { autoAlpha: 1, scale: 1.05, duration: 0.52, ease: 'power4.out' }, 0.06)
-        .to(coreRef.current,     { scale: 1.0,              duration: 0.20, ease: 'power2.out' })
-        // Track y logo aparecen juntos durante el settle del hub
-        .to([trackRef.current, logoRef.current], { autoAlpha: 1, duration: 0.40, ease: 'power2.out' }, '-=0.34')
-        // Arco florece al final — el último elemento en aparecer
-        .to(arcGroupRef.current, { autoAlpha: 1, duration: 0.48, ease: 'power3.out' }, '-=0.22')
+      const introTl = gsap.timeline({
+        defaults: { ease: 'expo.out' }
+      })
+      
+      introTl
+        // Stage sube desde abajo con aceleración expo
+        .to(stageRef.current,    { y: 0, duration: 0.80, ease: 'expo.out' }, 0)
+        // Hub central emerge con elasticidad amortiguada
+        .to(coreRef.current,     { autoAlpha: 1, scale: 1.06, duration: 0.55, ease: 'back.out(1.3)' }, 0.05)
+        .to(coreRef.current,     { scale: 1.0,              duration: 0.22, ease: 'power2.out' })
+        // Track y logo aparecen juntos durante la desaceleración del hub
+        .to([trackRef.current, logoRef.current], { autoAlpha: 1, duration: 0.45 }, '-=0.35')
+        // Arco florece en la fase final
+        .to(arcGroupRef.current, { autoAlpha: 1, duration: 0.50 }, '-=0.25')
 
-      // ── Idle: hub flota (igual que el launcher) ──────────────────────────
+      // ── Idle: hub flota y respira sutilmente ─────────────────────────────
       gsap.to(coreRef.current, {
-        y: -5, duration: 2.6, repeat: -1, yoyo: true, ease: 'sine.inOut',
+        y: -6, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut',
+      })
+      gsap.to(coreRef.current, {
+        scale: 1.025, duration: 1.4, repeat: -1, yoyo: true, ease: 'sine.inOut'
       })
 
-      // ── Arco: giro continuo + respiración del largo (spinner iOS) ────────
+      // ── Arco: giro continuo y dinámico de alta velocidad ─────────────────
       gsap.to(arcGroupRef.current, {
         rotate: 360,
-        duration: 1.3,
+        duration: 0.95, // Rotación más rápida para mayor sensación de actividad
         repeat: -1,
         ease: 'none',
         svgOrigin: `${CX} ${CY}`,
       })
       gsap.to(arcRef.current, {
-        strokeDashoffset: C * 0.76,   // oscila entre ~215° y ~86° de arco visible
-        duration: 0.90,
+        strokeDashoffset: C * 0.82,   // oscila con mayor rango para simular carga fluida
+        duration: 0.75,
         repeat: -1,
         yoyo: true,
         ease: 'sine.inOut',

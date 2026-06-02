@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { motion, useAnimation } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { User, Lock, LogIn, LoaderCircle } from 'lucide-react'
+import gsap from 'gsap'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
 
@@ -45,7 +46,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
   const [busy,     setBusy]     = useState(false)
-  const shakeControls = useAnimation()
+  const cardRef = useRef(null)
 
   // Ya tiene sesión → volver al Launcher
   if (session) return <Navigate to="/" replace />
@@ -67,10 +68,12 @@ export default function Login() {
     setBusy(false)
     if (error) {
       setError('Contraseña incorrecta o cuenta no disponible.')
-      shakeControls.start({
-        x: [0, -9, 9, -6, 6, -3, 3, 0],
-        transition: { duration: 0.38, ease: 'easeInOut' },
-      })
+      // Vibración criptográfica elástica de alta fidelidad
+      gsap.killTweensOf(cardRef.current)
+      gsap.fromTo(cardRef.current,
+        { x: -10 },
+        { x: 0, duration: 0.48, ease: 'elastic.out(1, 0.28)', clearProps: 'x' }
+      )
       return
     }
     startEntry()
@@ -107,7 +110,7 @@ export default function Login() {
           boxShadow: '0 4px 24px rgba(15,23,42,0.08), 0 1px 4px rgba(15,23,42,0.04)',
         }}
       >
-        <motion.div animate={shakeControls}>
+        <div ref={cardRef}>
 
         {/* Logo + título */}
         <div style={{ textAlign: 'center', marginBottom: 30 }}>
@@ -227,7 +230,7 @@ export default function Login() {
           </motion.form>
         )}
 
-        </motion.div>{/* /shakeControls */}
+        </div>
       </motion.div>
     </div>
   )

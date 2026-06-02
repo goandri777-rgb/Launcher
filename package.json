@@ -11,6 +11,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.61.0",
     "@supabase/supabase-js": "^2.45.4",
     "framer-motion": "^11.5.4",
     "gsap": "^3.15.0",
