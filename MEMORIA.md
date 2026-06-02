@@ -228,7 +228,50 @@ Con `DEMO_MODE = false` llama RPCs de Supabase protegidos por `is_admin()`.
 
 ---
 
-## 11. HISTORIAL DE CAMBIOS
+## 11. ALASmotionbridge — TRANSICIÓN ESTÁNDAR DEL ECOSISTEMA
+
+Patrón oficial de transición visual entre el Launcher y todos los módulos ALAS.
+
+### Archivo de referencia
+`logistic-launcher/public/alas-transition.js` — fuente canónica. Copiar a cada proyecto.
+
+### API
+```js
+ALASTransition.init({ root: '.selector-raíz' })   // oculta el contenedor inmediatamente
+ALASTransition.enterProject()                       // anima entrada desde izquierda (420ms)
+ALASTransition.exitToLauncher(url)                  // anima salida hacia derecha (260ms) → navega
+```
+
+### Animaciones
+| Dirección | Transform | Easing |
+|---|---|---|
+| Entrada (desde Launcher) | X(-24px)→none + blur(3px)→0 + opacity 0→1 | `cubic-bezier(0.16,1,0.3,1)` expo.out |
+| Salida (hacia Launcher) | none→X(24px) + blur(0)→3px + opacity 1→0 | `cubic-bezier(0.4,0,1,1)` ease-in |
+
+### Integración por proyecto
+
+| Proyecto | Script | Root | `enterProject()` | `exitToLauncher()` |
+|---|---|---|---|---|
+| **CajaVenta pedidos** | `/js/alas-transition.js` | `#layout-root` | `alas-layout.js` post-render | intercepta `<a>` sidebar |
+| **CajaVenta dashboard** | `/js/alas-transition.js` | `.dashboard-card` | `DOMContentLoaded` | intercepta `#btnSidebarHome` |
+| **Calendario** | `alas-transition.js` (raíz) | `.app-container` | fin de `bootstrap()` en `app-boot.js` | `alasGoToLauncher()` en botones |
+
+### Receta para futuros proyectos
+1. Copiar `alas-transition.js` al proyecto
+2. Cargar antes de `sso-config.js`: `<script src="/js/alas-transition.js"></script>`
+3. Llamar `ALASTransition.init({ root: '.contenedor-principal' })`
+4. Llamar `ALASTransition.enterProject()` cuando el contenido esté listo
+5. En botón "Volver": `ALASTransition.exitToLauncher(launcherUrl)`
+
+### Garantías del bridge
+- No toca SSO, tokens, Supabase ni lógica de negocio
+- Respeta `prefers-reduced-motion` (sin animación si está activo)
+- Fallback graceful si JS falla (elemento visible por defecto)
+- Compatible: HTML puro, Vanilla JS, Vite, React
+
+---
+
+## 12. HISTORIAL DE CAMBIOS
 
 ### UI / Diseño
 - [x] Launcher circular con animaciones Hyde-style
