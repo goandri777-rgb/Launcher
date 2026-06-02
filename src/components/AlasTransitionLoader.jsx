@@ -18,6 +18,7 @@ export default function AlasTransitionLoader({ active }) {
 
 function LoaderStage() {
   const shellRef    = useRef(null)
+  const stageRef    = useRef(null)   // contenedor del hub+arco — sube suavemente
   const coreRef     = useRef(null)
   const logoRef     = useRef(null)
   const arcGroupRef = useRef(null)
@@ -31,6 +32,7 @@ function LoaderStage() {
       const noMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
       // ── Estados iniciales ────────────────────────────────────────────────
+      gsap.set(stageRef.current,    { y: 12 })   // empieza 12px abajo, sube suavemente
       gsap.set(coreRef.current,     { autoAlpha: 0, scale: 0.5, transformOrigin: '50% 50%', force3D: true })
       gsap.set(logoRef.current,     { autoAlpha: 0,              transformOrigin: '50% 50%', force3D: true })
       gsap.set(arcGroupRef.current, { autoAlpha: 0 })
@@ -39,6 +41,7 @@ function LoaderStage() {
       gsap.set(arcRef.current, { strokeDasharray: C, strokeDashoffset: C * 0.40 })
 
       if (noMotion) {
+        gsap.set(stageRef.current, { y: 0 })
         gsap.set(
           [coreRef.current, logoRef.current, arcGroupRef.current, trackRef.current],
           { autoAlpha: 1, scale: 1 },
@@ -49,13 +52,17 @@ function LoaderStage() {
       const CX = SIZE / 2
       const CY = SIZE / 2
 
-      // ── Entrada: hub como System Online, luego arco aparece ─────────────
+      // ── Entrada: stage flota + hub/arco materializan en cascada suave ────
       gsap.timeline()
-        .to(coreRef.current,     { autoAlpha: 1, scale: 1.05, duration: 0.45, ease: 'power4.out' })
-        .to(coreRef.current,     { scale: 1.0,               duration: 0.16, ease: 'power2.out' })
-        .to(trackRef.current,    { autoAlpha: 1, duration: 0.22, ease: 'power2.out' }, '-=0.18')
-        .to(logoRef.current,     { autoAlpha: 1, duration: 0.26, ease: 'expo.out' },   '-=0.18')
-        .to(arcGroupRef.current, { autoAlpha: 1, duration: 0.30, ease: 'power2.out' }, '-=0.16')
+        // Stage sube desde abajo — todo el conjunto en movimiento unificado
+        .to(stageRef.current,    { y: 0, duration: 0.70, ease: 'power3.out' }, 0)
+        // Hub materializa (mismo ritmo que System Online del launcher)
+        .to(coreRef.current,     { autoAlpha: 1, scale: 1.05, duration: 0.52, ease: 'power4.out' }, 0.06)
+        .to(coreRef.current,     { scale: 1.0,              duration: 0.20, ease: 'power2.out' })
+        // Track y logo aparecen juntos durante el settle del hub
+        .to([trackRef.current, logoRef.current], { autoAlpha: 1, duration: 0.40, ease: 'power2.out' }, '-=0.34')
+        // Arco florece al final — el último elemento en aparecer
+        .to(arcGroupRef.current, { autoAlpha: 1, duration: 0.48, ease: 'power3.out' }, '-=0.22')
 
       // ── Idle: hub flota (igual que el launcher) ──────────────────────────
       gsap.to(coreRef.current, {
@@ -93,8 +100,8 @@ function LoaderStage() {
       aria-label="Abriendo módulo"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      exit={{ opacity: 0, y: -6, transition: { duration: 0.26, ease: [0.4, 0, 1, 1] } }}
+      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
       style={{
         position: 'fixed',
         inset: 0,
@@ -112,7 +119,7 @@ function LoaderStage() {
       }}
     >
       {/* Stage centrado */}
-      <div style={{ position: 'relative', width: SIZE, height: SIZE, display: 'grid', placeItems: 'center' }}>
+      <div ref={stageRef} style={{ position: 'relative', width: SIZE, height: SIZE, display: 'grid', placeItems: 'center' }}>
 
         {/* ── SVG: track + arco giratorio ────────────────────────────────── */}
         <svg
@@ -189,7 +196,7 @@ function LoaderStage() {
             draggable="false"
             style={{
               position: 'relative',
-              width: 64,
+              width: Math.round(HUB_D * 0.62),  // 62% del hub — igual que en el launcher
               height: 'auto',
               userSelect: 'none',
               pointerEvents: 'none',
