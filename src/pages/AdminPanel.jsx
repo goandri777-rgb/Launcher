@@ -118,7 +118,7 @@ function IconBtn({ title, onClick, icon: Icon, variant = 'default' }) {
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       whileHover={{scale:1.1}} whileTap={{scale:0.9}} transition={SPRING}
       style={{
-        display:'grid',placeItems:'center',width:34,height:34,borderRadius:9,
+        display:'grid',placeItems:'center',width:40,height:40,borderRadius:10,
         background: hov ? s.bg : 'transparent',
         border: `1px solid ${hov ? s.border : 'transparent'}`,
         color: hov ? s.color : C.text4,
@@ -127,7 +127,7 @@ function IconBtn({ title, onClick, icon: Icon, variant = 'default' }) {
         boxShadow: hov ? `0 3px 10px ${s.border}` : 'none',
       }}
     >
-      <Icon style={{width:15,height:15}}/>
+      <Icon style={{width:17,height:17}}/>
     </motion.button>
   )
 }
@@ -247,8 +247,8 @@ function PermissionsModal({ user, modules, onClose, notify }) {
 
   return (
     <Overlay onClose={onClose}>
-      <ModalCard width={460}>
-        <ModalHead title="Permisos de acceso" sub={`${user.full_name||user.email}`} onClose={onClose}/>
+      <ModalCard width={580}>
+        <ModalHead title="Permisos de acceso" sub={`${user.full_name||user.username||user.email}`} onClose={onClose}/>
 
         {/* usuario info strip */}
         <div style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:12,marginBottom:20,background:C.surfaceHov,border:`1px solid ${C.border}`}}>
@@ -257,7 +257,7 @@ function PermissionsModal({ user, modules, onClose, notify }) {
           </div>
           <div style={{flex:1}}>
             <div style={{fontSize:13,fontWeight:600,color:C.text1}}>{user.full_name||'—'}</div>
-            <div style={{fontSize:11,color:C.text3}}>{user.email}</div>
+            <div style={{fontSize:11,color:C.text3}}>{user.username || user.email}</div>
           </div>
           <RolePill role={user.role}/>
           <StatusPill status={userStatus}/>
@@ -533,7 +533,7 @@ export default function AdminPanel() {
         </div>
 
         {/* Main grid */}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:18,alignItems:'start'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 420px',gap:18,alignItems:'start'}}>
 
           {/* ── Usuarios ───────────────────────────────────────────────────── */}
           <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.26,ease:EASE}}>
@@ -574,7 +574,7 @@ export default function AdminPanel() {
                             </div>
                             <div style={{minWidth:0}}>
                               <div style={{fontWeight:600,color:C.text1,fontSize:13,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
-                              <div style={{fontSize:11,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email}</div>
+                              <div style={{fontSize:11,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.username || u.email}</div>
                             </div>
                           </div>
                         </td>
