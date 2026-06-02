@@ -478,6 +478,7 @@ export default function AdminPanel() {
   const active  = users.filter(u=>u.is_active&&!u.is_blocked).length
   const blocked = users.filter(u=>u.is_blocked).length
   const activeMods = modules.filter(m=>m.is_active).length
+  const emailToName = Object.fromEntries(users.map(u => [u.email, u.full_name || u.username || u.email]))
 
 
   return (
@@ -667,7 +668,7 @@ export default function AdminPanel() {
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
-                          <span style={{fontSize:12,fontWeight:600,color:C.text1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.email||'—'}</span>
+                          <span style={{fontSize:12,fontWeight:600,color:C.text1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{emailToName[l.email] || l.email || '—'}</span>
                           <ActionPill action={l.action}/>
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:6}}>

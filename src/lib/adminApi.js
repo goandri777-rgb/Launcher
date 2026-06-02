@@ -40,8 +40,21 @@ const ok  = (data)  => ({ data, error: null })
 const err = (msg)   => ({ data: null, error: { message: msg } })
 
 export const adminApi = {
-  // Lista usuarios con su perfil y estado.
-  listUsers: () => DEMO_MODE ? Promise.resolve(ok(DEMO_USERS)) : supabase.rpc('admin_list_users'),
+  // Lista usuarios con su perfil y estado, enriquecido con username desde profiles.
+  listUsers: async () => {
+    if (DEMO_MODE) return Promise.resolve(ok(DEMO_USERS))
+    const { data, error } = await supabase.rpc('admin_list_users')
+    if (error || !data?.length) return { data: data ?? [], error }
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', data.map(u => u.id))
+    if (profiles?.length) {
+      const byId = Object.fromEntries(profiles.map(p => [p.id, p.username]))
+      data.forEach(u => { u.username = byId[u.id] ?? null })
+    }
+    return ok(data)
+  },
 
   // Crea un usuario (vía función SECURITY DEFINER que usa el admin API interno).
   createUser: (email, password, fullName, role) => {
