@@ -379,22 +379,16 @@ function EditModuleModal({ module: mod, onClose, onSaved, notify }) {
 
 // ─── create user modal ────────────────────────────────────────────────────────
 function CreateUserModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({username:'',email:'',password:'',fullName:'',role:'operador'})
+  const [form, setForm] = useState({username:'',password:'',fullName:'',role:'operador'})
   const [busy, setBusy] = useState(false)
   const [err,  setErr]  = useState('')
 
   const submit = async () => {
     setErr(''); setBusy(true)
     const username = normalizeUsernameInput(form.username)
-    const email = form.email.trim()
     if (username.length < 3) {
       setBusy(false)
       setErr('Usuario inválido: usá al menos 3 caracteres.')
-      return
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setBusy(false)
-      setErr('Correo electrónico inválido.')
       return
     }
     if (form.password.length < 8) {
@@ -402,7 +396,7 @@ function CreateUserModal({ onClose, onCreated }) {
       setErr('La contraseña debe tener al menos 8 caracteres.')
       return
     }
-    const {error} = await adminApi.createUser(username,email,form.password,form.fullName.trim(),form.role)
+    const {error} = await adminApi.createUser(username,form.password,form.fullName.trim(),form.role)
     setBusy(false)
     if (error) { setErr(error.message); return }
     onCreated()
@@ -415,7 +409,6 @@ function CreateUserModal({ onClose, onCreated }) {
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
           <Field label="Usuario"><Input value={form.username} onChange={v=>setForm({...form,username:normalizeUsernameInput(v)})} placeholder="miguel_casco" mono/></Field>
           <Field label="Nombre completo"><Input value={form.fullName} onChange={v=>setForm({...form,fullName:v})} placeholder="Ej. Juan Pérez"/></Field>
-          <Field label="Correo electrónico"><Input type="email" value={form.email} onChange={v=>setForm({...form,email:v})} placeholder="usuario@empresa.com"/></Field>
           <Field label="Contraseña"><Input type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="Mínimo 8 caracteres"/></Field>
           <Field label="Rol">
             <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}

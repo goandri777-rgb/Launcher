@@ -43,7 +43,8 @@ npm run dev               # http://localhost:5173
 
 ## 5. Crear más usuarios
 
-El panel admin ahora crea la cuenta completa: `username`, email, contraseña, nombre y rol.
+El panel admin ahora crea la cuenta completa con `username`, contraseña, nombre y rol.
+Supabase Auth necesita un email internamente, pero el sistema lo genera automáticamente a partir del `username`; el operador nunca lo carga ni lo usa para entrar.
 Para que funcione, desplegá la Edge Function que usa `auth.admin.createUser` del lado servidor:
 
 ```bash

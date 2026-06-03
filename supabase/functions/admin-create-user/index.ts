@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   }
 
   const username = normalizeUsername(body.username)
-  const email = String(body.email ?? '').trim().toLowerCase()
+  const requestedEmail = String(body.email ?? '').trim().toLowerCase()
   const password = String(body.password ?? '')
   const fullName = String(body.fullName ?? '').trim()
   const role = String(body.role ?? 'operador')
@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
   if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
     return json(200, { ok: false, reason: 'Usuario invalido: usa 3 a 32 caracteres con letras, numeros, punto, guion o guion bajo' })
   }
+  const email = requestedEmail || `${username}@launcher.alas.example`
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json(200, { ok: false, reason: 'Correo electronico invalido' })
   }

@@ -227,7 +227,8 @@ Accesible en `/admin`. Solo visible para usuarios con `role === 'admin'`.
 ### AdminAPI (`src/lib/adminApi.js`)
 Con `DEMO_MODE = false` llama RPCs de Supabase protegidos por `is_admin()`.
 El login operativo es por `username`; el email queda interno para Supabase Auth.
-El panel crea usuarios Auth completos con `username`, email, contraseña, nombre y rol mediante la Edge Function `admin-create-user`.
+El panel crea usuarios Auth completos con `username`, contraseña, nombre y rol mediante la Edge Function `admin-create-user`.
+Si no se envía email, la función genera uno interno a partir del `username`.
 El RPC `admin_create_user` queda como respaldo para enlazar usuarios Auth existentes.
 
 ---

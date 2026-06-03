@@ -58,13 +58,14 @@ export const adminApi = {
   },
 
   // Crea el usuario Auth con password desde una Edge Function con service_role.
-  createUser: async (username, email, password, fullName, role) => {
+  createUser: async (username, password, fullName, role) => {
     if (DEMO_MODE) {
+      const email = `${username}@launcher.alas.example`
       DEMO_USERS.push({ id: `u${Date.now()}`, username, full_name: fullName, email, role, is_active: true, is_blocked: false, last_login: null })
       return Promise.resolve(ok(null))
     }
     const { data, error } = await supabase.functions.invoke('admin-create-user', {
-      body: { username, email, password, fullName, role },
+      body: { username, password, fullName, role },
     })
     if (error) return err(await functionErrorMessage(error, 'No se pudo crear el usuario'))
     if (data?.ok === false) return err(data.reason || data.error || 'No se pudo crear el usuario')
