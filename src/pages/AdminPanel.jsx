@@ -47,6 +47,17 @@ const roleMap = {
   invitado:   { bg:'rgba(100, 116, 139, 0.06)', fg:'#64748b',   border:'rgba(100, 116, 139, 0.18)'  },
 }
 
+function normalizeUsernameInput(value) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[._-]+|[._-]+$/g, '')
+    .slice(0, 32)
+}
+
 function StatusPill({ status }) {
   const s = statusMap[status] || statusMap.inactive
   return (
@@ -374,7 +385,13 @@ function CreateUserModal({ onClose, onCreated }) {
 
   const submit = async () => {
     setErr(''); setBusy(true)
-    const {error} = await adminApi.createUser(form.username.trim(),form.email.trim(),form.fullName.trim(),form.role)
+    const username = normalizeUsernameInput(form.username)
+    if (username.length < 3) {
+      setBusy(false)
+      setErr('Usuario inválido: usá al menos 3 caracteres.')
+      return
+    }
+    const {error} = await adminApi.createUser(username,form.email.trim(),form.fullName.trim(),form.role)
     setBusy(false)
     if (error) { setErr(error.message); return }
     onCreated()
@@ -383,9 +400,9 @@ function CreateUserModal({ onClose, onCreated }) {
   return (
     <Overlay onClose={onClose}>
       <ModalCard width={440}>
-        <ModalHead title="Nuevo usuario" sub="Completá los datos para enlazar la cuenta" onClose={onClose}/>
+        <ModalHead title="Nuevo usuario" sub="Vinculá una cuenta ya creada en Supabase Auth" onClose={onClose}/>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          <Field label="Usuario"><Input value={form.username} onChange={v=>setForm({...form,username:v})} placeholder="Ej. jperez" mono/></Field>
+          <Field label="Usuario"><Input value={form.username} onChange={v=>setForm({...form,username:normalizeUsernameInput(v)})} placeholder="miguel_casco" mono/></Field>
           <Field label="Nombre completo"><Input value={form.fullName} onChange={v=>setForm({...form,fullName:v})} placeholder="Ej. Juan Pérez"/></Field>
           <Field label="Correo electrónico"><Input type="email" value={form.email} onChange={v=>setForm({...form,email:v})} placeholder="usuario@empresa.com"/></Field>
           <Field label="Rol">
@@ -475,7 +492,8 @@ function EditUserModal({ user, onClose, onSaved, notify }) {
   const save = async () => {
     setErr(''); setBusy(true)
     const updates = {}
-    if (username.trim() && username.trim() !== user.username) updates.username = username.trim()
+    const cleanUsername = normalizeUsernameInput(username)
+    if (cleanUsername && cleanUsername !== user.username) updates.username = cleanUsername
     if (fullName.trim() && fullName.trim() !== user.full_name) updates.full_name = fullName.trim()
     if (role !== user.role) updates.role = role
     if (!Object.keys(updates).length) { setBusy(false); onClose(); return }
@@ -491,7 +509,7 @@ function EditUserModal({ user, onClose, onSaved, notify }) {
         <ModalHead title="Editar usuario" sub={user.full_name || user.email} onClose={onClose}/>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
           <Field label="Usuario">
-            <Input value={username} onChange={setUsername} placeholder="Usuario de acceso" mono/>
+            <Input value={username} onChange={v=>setUsername(normalizeUsernameInput(v))} placeholder="Usuario de acceso" mono/>
           </Field>
           <Field label="Nombre completo">
             <Input value={fullName} onChange={setFullName} placeholder="Nombre completo"/>
