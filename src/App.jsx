@@ -1,5 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/AuthContext'
 import { AuthGuard, AdminGuard } from './guards/Guards'
 import Login from './pages/Login'
@@ -14,32 +13,33 @@ function AppLoader() {
   return <AlasTransitionLoader active={active} label={label} />
 }
 
-function AnimatedRoutes() {
-  const location = useLocation()
+// Sin AnimatePresence en Routes: evita que el Routes saliente reciba la nueva
+// location y renderice la página destino durante la animación de salida,
+// causando doble render (dos AdminPanel simultáneos → pantalla vacía/corrupta).
+// Cada página maneja su propia animación de entrada via Framer Motion initial/animate.
+function AppRoutes() {
   return (
-    <AnimatePresence initial={false}>
-      <Routes location={location} key={location.pathname}>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <AuthGuard>
-              <Launcher />
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <AuthGuard>
-              <AdminGuard>
-                <AdminPanel />
-              </AdminGuard>
-            </AuthGuard>
-          }
-        />
-      </Routes>
-    </AnimatePresence>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <AuthGuard>
+            <Launcher />
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AuthGuard>
+            <AdminGuard>
+              <AdminPanel />
+            </AdminGuard>
+          </AuthGuard>
+        }
+      />
+    </Routes>
   )
 }
 
@@ -48,7 +48,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <AppLoader />
-        <AnimatedRoutes />
+        <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
   )
