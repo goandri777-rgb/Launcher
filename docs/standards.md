@@ -634,10 +634,10 @@ Antes de aprobar un módulo nuevo como parte del ecosistema ALAS:
 
 | Módulo | alas-transition.js | ui-protection.js | favicon | brand color | fuentes |
 |---|---|---|---|---|---|
-| logistic-launcher | ✅ canónico | ❌ falta | ✅ | ✅ #0B5F8D | ✅ Inter+Sora |
-| cajaventa | ✅ sincronizado | ✅ | ❌ sin `<link>` | ⚠️ #3B82F6 | ⚠️ +FontAwesome |
-| Calendario tareas Alas | ✅ sincronizado | ❌ falta | ✅ /assets/ | — | ✅ Inter |
-| itemsborrados | ✅ sincronizado | ❌ falta | ✅ /assets/ | — | ⚠️ sistema |
+| logistic-launcher | ✅ canónico | ✅ v1.0 canónico | ✅ | ✅ #0B5F8D | ✅ Inter+Sora |
+| cajaventa | ✅ sincronizado | ✅ v1.0 | ❌ sin `<link>` | ⚠️ #3B82F6 | ⚠️ +FontAwesome |
+| Calendario tareas Alas | ✅ sincronizado | ✅ v1.0 | ✅ /assets/ | — | ✅ Inter |
+| itemsborrados | ✅ sincronizado | ✅ v1.0 | ✅ /assets/ | — | ⚠️ sistema |
 
 ---
 
