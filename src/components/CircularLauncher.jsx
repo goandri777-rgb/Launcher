@@ -166,13 +166,27 @@ export default function CircularLauncher({ modules, onOpen }) {
 
     // ── Cuando los loaders se apagan, lanzar la animación de entrada ──
     const ctx = gsap.context(() => {
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       const nodes     = nodeRefs.current.filter(Boolean)
       const dashLines = lineDashRefs.current.filter(Boolean)
 
       floatTween.current?.kill()
       floatTween.current = null
 
+      // Siempre partir del estado oculto — ctx.revert() del bloque anterior
+      // restaura los elementos a su estado CSS visible, así que hay que
+      // volver a ocultarlos antes de animar.
+      gsap.set(systemRef.current, { autoAlpha: 0, transformPerspective: 1100, rotationX: 58, scale: 0.88, transformOrigin: '50% 50%', force3D: true })
+      gsap.set(hubRef.current,    { scale: 0, autoAlpha: 0, force3D: true })
+      nodes.forEach(node => gsap.set(node, { autoAlpha: 0, scale: 0, transformOrigin: '50% 50%', force3D: true }))
+      lineBaseRefs.current.forEach(path => {
+        if (!path) return
+        const len = path.getTotalLength ? path.getTotalLength() : 200
+        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 0.92 })
+      })
+      gsap.set(dashLines, { opacity: 0 })
+      gsap.set(orbitRef.current, { autoAlpha: 0 })
+
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       if (reduceMotion) {
         gsap.set(systemRef.current, { autoAlpha: 1, scale: 1, rotationX: 0 })
         gsap.set(hubRef.current,    { scale: 1, autoAlpha: 1 })

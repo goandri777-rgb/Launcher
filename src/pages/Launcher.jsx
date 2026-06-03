@@ -76,7 +76,7 @@ export default function Launcher() {
       animate={exitState}
       exit={{ opacity: 0, y: -7, scale: 0.992, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
       transition={{
-        duration: (isExiting || isLaunching) ? 0.28 : 0.42,
+        duration: 0.28,
         ease:     (isExiting || isLaunching) ? [0.4, 0, 1, 1] : [0.16, 1, 0.3, 1],
       }}
       onAnimationComplete={() => { if (isExiting) signOut() }}

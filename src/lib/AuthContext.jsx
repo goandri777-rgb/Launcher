@@ -103,7 +103,9 @@ export function AuthProvider({ children }) {
     })
 
     // Suscripción a cambios de auth (login, logout, refresh).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // INITIAL_SESSION se omite: getSession() ya cargó el perfil en este mismo efecto.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return
       setSession(session)
       loadProfile(session?.user?.id)
     })
@@ -111,9 +113,11 @@ export function AuthProvider({ children }) {
   }, [loadProfile])
 
   const signIn = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { error }
-    // Registra el último acceso vía RPC (reverificado en servidor).
+    // Setear sesión inmediatamente para que AuthGuard no flashee NoSession
+    // antes de que onAuthStateChange procese el SIGNED_IN event en React.
+    if (data?.session) setSession(data.session)
     try {
       await supabase.rpc('register_login')
     } catch (_) {}
