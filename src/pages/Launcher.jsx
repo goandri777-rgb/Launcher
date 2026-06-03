@@ -33,18 +33,18 @@ const T = {
 }
 
 export default function Launcher() {
-  const { profile, signOut, stopEntry } = useAuth()
-  const { modules, loading, openModule } = useModules()
+  const { profile, loading: authLoading, signOut, stopEntry } = useAuth()
+  const { modules, loading: modulesLoading, openModule } = useModules()
 
-  // Cuando los módulos cargan, da 400ms de margen para que System Online arranque
-  // debajo del AppLoader, luego señaliza que el loader puede salir.
+  // El AppLoader se oculta solo cuando AMBOS terminaron: módulos Y perfil.
+  // Evita que el usuario pueda clicar ADMIN antes de que profile esté listo.
   useEffect(() => {
-    if (loading) return
+    if (modulesLoading || authLoading) return
     const t = setTimeout(() => {
       stopEntry();
     }, 400)
     return () => clearTimeout(t)
-  }, [loading, stopEntry])
+  }, [modulesLoading, authLoading, stopEntry])
   const [isExiting,   setIsExiting]   = useState(false)
   const [isLaunching, setIsLaunching] = useState(false)
 

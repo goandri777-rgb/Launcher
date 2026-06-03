@@ -157,9 +157,8 @@ export function AuthGuard({ children }) {
 // admin → acceso total | resto → redirige al launcher
 export function AdminGuard({ children }) {
   const { profile, loading } = useAuth()
-  // Solo bloquear si cargando y aún no tenemos perfil (primera carga).
-  // Con perfil ya disponible, no blanquear durante recargas de onAuthStateChange.
-  if (loading && !profile) return null
+  // Si cargando y aún no hay perfil: mostrar spinner (nunca pantalla en blanco).
+  if (loading && !profile) return <Splash />
   if (profile?.role !== 'admin') return <Navigate to="/" replace />
   return children
 }
