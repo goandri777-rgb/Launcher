@@ -774,9 +774,9 @@ export default function CircularLauncher({ modules, onOpen }) {
                 }} />
               </div>
 
-              {/* Icon — casco cuando está en proceso, ícono normal en otro caso */}
+              {/* Icon — position:relative para quedar encima del hover overlay (que es absolute) */}
               {state === 'inactive' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, position: 'relative' }}>
                   <HardHat data-module-icon style={{
                     width: 24, height: 24,
                     color: '#2563EB',
@@ -800,6 +800,7 @@ export default function CircularLauncher({ modules, onOpen }) {
                   transition: 'color 220ms ease',
                   flexShrink: 0,
                   filter: state === 'blocked' ? 'grayscale(100%) opacity(0.35)' : 'none',
+                  position: 'relative',
                 }} />
               )}
 
