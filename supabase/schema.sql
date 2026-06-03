@@ -130,6 +130,17 @@ begin
 end;
 $$;
 
+-- Registra el logout del usuario actual.
+-- Debe llamarse ANTES de cerrar la sesión (auth.uid() aún disponible).
+create or replace function public.register_logout()
+returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+  insert into public.access_logs(user_id, action) values (auth.uid(), 'logout');
+end;
+$$;
+
 create or replace function public.normalize_username(p_username text)
 returns text
 language plpgsql immutable

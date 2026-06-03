@@ -130,7 +130,11 @@ export function AuthProvider({ children }) {
   }
 
   const signOut = async () => {
-    if (!DEMO_MODE) await supabase.auth.signOut()
+    // Registrar logout ANTES de cerrar sesión — auth.uid() sigue disponible
+    if (!DEMO_MODE) {
+      try { await supabase.rpc('register_logout') } catch (_) {}
+      await supabase.auth.signOut()
+    }
     // Limpiar estado — en DEMO_MODE también, para que el logout tenga efecto visible
     setSession(null)
     setProfile(null)
