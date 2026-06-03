@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
   const [transitioning, setTransitioning] = useState(false)
   const transitionTimer = useRef(null)
   const entryStartTime = useRef(0)
+  const bcRef = useRef(null)
 
   const startEntry = useCallback(() => {
     entryStartTime.current = Date.now()
@@ -117,6 +118,26 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [loadProfile])
 
+  // BroadcastChannel — sincroniza logout entre pestañas del mismo origen
+  useEffect(() => {
+    try {
+      const bc = new BroadcastChannel('alas-session')
+      bcRef.current = bc
+      bc.onmessage = (e) => {
+        if (e.data === 'logout') {
+          supabase.auth.signOut()
+          setSession(null)
+          setProfile(null)
+          try {
+            localStorage.removeItem('alas.sso.session')
+            localStorage.removeItem('alas.current_user')
+          } catch (_) {}
+        }
+      }
+      return () => bc.close()
+    } catch (_) {}
+  }, [])
+
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { error }
@@ -130,6 +151,8 @@ export function AuthProvider({ children }) {
   }
 
   const signOut = async () => {
+    // Notificar otras pestañas ANTES de cerrar
+    try { if (bcRef.current) bcRef.current.postMessage('logout') } catch (_) {}
     // Registrar logout ANTES de cerrar sesión — auth.uid() sigue disponible
     if (!DEMO_MODE) {
       try { await supabase.rpc('register_logout') } catch (_) {}
