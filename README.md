@@ -1,6 +1,6 @@
 # ALAS · Launcher logístico seguro
 
-Portal tipo *launcher* circular para entrar a tus programas de gestión logística (publicados en Vercel), con login, roles, permisos por módulo, panel admin y registro de accesos. **La seguridad real vive en Postgres (RLS), no en el frontend.**
+Portal tipo *launcher* circular para entrar a tus programas de gestión logística (publicados en Vercel), con login por `username`, roles, permisos por módulo, panel admin y registro de accesos. **La seguridad real vive en Postgres (RLS), no en el frontend.**
 
 Stack: React + Vite · Tailwind CSS · Framer Motion · Supabase (Auth + Postgres + RLS).
 
@@ -33,19 +33,19 @@ npm run dev               # http://localhost:5173
 
 1. Ve a **Authentication → Users → Add user**, crea tu correo y contraseña.
    El trigger crea automáticamente su perfil con rol `invitado`.
-2. En **SQL Editor**, conviértelo en admin:
+2. En **SQL Editor**, conviértelo en admin y asignale un `username`:
 
    ```sql
-   update public.profiles set role='admin'
+   update public.profiles set username='admin', role='admin'
    where id = (select id from auth.users where email='tu-correo@ejemplo.com');
    ```
-3. Inicia sesión. Verás el botón **Admin** en el launcher.
+3. Inicia sesión con ese `username` y tu contraseña. Verás el botón **Admin** en el launcher.
 
 ## 5. Crear más usuarios
 
 Hay dos vías:
 
-- **Rápida (recomendada para demo):** crea el usuario en **Authentication → Users**; luego, desde el **panel admin**, el RPC `admin_create_user` enlaza su perfil y le asigna rol. (Si el usuario ya existe por email, queda vinculado.)
+- **Rápida (recomendada para demo):** crea el usuario en **Authentication → Users**; luego, desde el **panel admin**, cargá `username`, email, nombre y rol. El RPC `admin_create_user` enlaza su perfil. (Si el usuario ya existe por email, queda vinculado.)
 - **Completa (producción):** crea una **Edge Function** con la `service_role` que llame a `auth.admin.createUser` y luego inserte el perfil. Así el panel crea credenciales de punta a punta sin exponer secretos al navegador. La función `admin_create_user` del SQL ya está lista para enlazar el perfil una vez exista el usuario auth.
 
 ## 6. Configurar tus URLs reales de Vercel
@@ -53,8 +53,8 @@ Hay dos vías:
 Los módulos demo usan `*.example.vercel.app`. Cámbialos:
 
 ```sql
-update public.modules set url='https://tu-app-real.vercel.app' where key='acuses';
--- repite para reposicion, kpi, reportes, facturacion, admin
+update public.modules set url='https://tu-app-real.vercel.app' where key='pedidos';
+-- repite para calendario, acuses, borrados, recepcion, inventario, facturacion
 ```
 
 ## 7. Asignar permisos
@@ -67,6 +67,7 @@ En el panel admin → un usuario → botón de permisos (escudo) → activa los 
 
 - **Ocultar botones es solo UX, no seguridad.** Cualquiera con devtools la salta.
 - La seguridad real son las **políticas RLS** y las **funciones RPC** del lado servidor:
+  - `get_module_catalog()` devuelve el catálogo sin URLs para pintar el launcher.
   - `get_allowed_modules()` devuelve solo los módulos del usuario; **no** entrega URLs.
   - `open_module(key)` reverifica permiso + estado de cuenta/módulo en el servidor, registra el acceso y **solo entonces** devuelve la URL. Sin permiso, el navegador nunca recibe el enlace.
   - Las RPC de admin exigen `is_admin()` internamente.

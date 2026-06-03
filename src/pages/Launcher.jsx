@@ -174,7 +174,7 @@ export default function Launcher() {
           variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.06 } } }}
         >
           {(() => {
-            const canAccess = profile?.role === 'admin' || profile?.role === 'supervisor'
+            const canAccess = profile?.role === 'admin'
             return (
               <motion.div variants={btnItem}>
                 {canAccess ? (

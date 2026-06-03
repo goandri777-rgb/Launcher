@@ -4,11 +4,11 @@ import { supabase } from '../lib/supabase'
 const DEMO_MODE = false
 
 const DEMO_USERS = [
-  { id: 'u1', full_name: 'Admin ALAS',    email: 'admin@alas.com',    role: 'admin',      is_active: true,  is_blocked: false, last_login: new Date().toISOString() },
-  { id: 'u2', full_name: 'Carlos Gómez',  email: 'cgomez@alas.com',   role: 'supervisor', is_active: true,  is_blocked: false, last_login: new Date(Date.now()-86400000).toISOString() },
-  { id: 'u3', full_name: 'María López',   email: 'mlopez@alas.com',   role: 'operador',   is_active: true,  is_blocked: false, last_login: new Date(Date.now()-172800000).toISOString() },
-  { id: 'u4', full_name: 'Jorge Pérez',   email: 'jperez@alas.com',   role: 'operador',   is_active: false, is_blocked: false, last_login: null },
-  { id: 'u5', full_name: 'Laura Ramírez', email: 'lramirez@alas.com', role: 'invitado',   is_active: true,  is_blocked: true,  last_login: null },
+  { id: 'u1', username: 'admin', full_name: 'Admin ALAS',    email: 'admin@alas.com',    role: 'admin',      is_active: true,  is_blocked: false, last_login: new Date().toISOString() },
+  { id: 'u2', username: 'cgomez', full_name: 'Carlos Gómez',  email: 'cgomez@alas.com',   role: 'supervisor', is_active: true,  is_blocked: false, last_login: new Date(Date.now()-86400000).toISOString() },
+  { id: 'u3', username: 'mlopez', full_name: 'María López',   email: 'mlopez@alas.com',   role: 'operador',   is_active: true,  is_blocked: false, last_login: new Date(Date.now()-172800000).toISOString() },
+  { id: 'u4', username: 'jperez', full_name: 'Jorge Pérez',   email: 'jperez@alas.com',   role: 'operador',   is_active: false, is_blocked: false, last_login: null },
+  { id: 'u5', username: 'lramirez', full_name: 'Laura Ramírez', email: 'lramirez@alas.com', role: 'invitado',   is_active: true,  is_blocked: true,  last_login: null },
 ]
 
 const DEMO_MODULES = [
@@ -40,29 +40,28 @@ const ok  = (data)  => ({ data, error: null })
 const err = (msg)   => ({ data: null, error: { message: msg } })
 
 export const adminApi = {
-  // Lista usuarios con su perfil y estado, enriquecido con username desde profiles.
+  // Lista usuarios con su perfil y estado.
   listUsers: async () => {
     if (DEMO_MODE) return Promise.resolve(ok(DEMO_USERS))
     const { data, error } = await supabase.rpc('admin_list_users')
-    if (error || !data?.length) return { data: data ?? [], error }
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, username')
-      .in('id', data.map(u => u.id))
-    if (profiles?.length) {
-      const byId = Object.fromEntries(profiles.map(p => [p.id, p.username]))
-      data.forEach(u => { u.username = byId[u.id] ?? null })
-    }
-    return ok(data)
+    return { data: data ?? [], error }
   },
 
-  // Crea un usuario (vía función SECURITY DEFINER que usa el admin API interno).
-  createUser: (email, password, fullName, role) => {
+  // Enlaza un usuario Auth existente con su perfil y username de login.
+  createUser: async (username, email, fullName, role) => {
     if (DEMO_MODE) {
-      DEMO_USERS.push({ id: `u${Date.now()}`, full_name: fullName, email, role, is_active: true, is_blocked: false, last_login: null })
+      DEMO_USERS.push({ id: `u${Date.now()}`, username, full_name: fullName, email, role, is_active: true, is_blocked: false, last_login: null })
       return Promise.resolve(ok(null))
     }
-    return supabase.rpc('admin_create_user', { p_email: email, p_password: password, p_full_name: fullName, p_role: role })
+    const { data, error } = await supabase.rpc('admin_create_user', {
+      p_username: username,
+      p_email: email,
+      p_full_name: fullName,
+      p_role: role,
+    })
+    if (error) return { data: null, error }
+    if (data?.ok === false) return err(data.reason || 'No se pudo crear el usuario')
+    return ok(data)
   },
 
   // Activa/desactiva o bloquea/desbloquea.
@@ -117,11 +116,12 @@ export const adminApi = {
     return supabase.rpc('admin_delete_user', { p_user_id: userId })
   },
 
-  // Edita datos de un usuario (nombre, rol, contraseña).
+  // Edita datos de un usuario.
   editUser: (userId, updates) => {
     if (DEMO_MODE) {
       const u = DEMO_USERS.find(u => u.id === userId)
       if (u) {
+        if (updates.username  !== undefined) u.username  = updates.username
         if (updates.full_name !== undefined) u.full_name = updates.full_name
         if (updates.role     !== undefined) u.role      = updates.role
       }
@@ -129,9 +129,9 @@ export const adminApi = {
     }
     return supabase.rpc('admin_edit_user', {
       p_user_id:  userId,
+      p_username: updates.username  ?? null,
       p_full_name: updates.full_name ?? null,
       p_role:     updates.role      ?? null,
-      p_password: updates.password  ?? null,
     })
   },
 

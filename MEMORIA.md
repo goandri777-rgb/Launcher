@@ -78,14 +78,15 @@ VITE_URL_INVENTARIO=
 
 ## 5. DEMO MODE
 
-Ambos archivos tienen un flag `DEMO_MODE = true` que bypasea Supabase:
+Los archivos mantienen un flag `DEMO_MODE`, pero el estado actual del proyecto es producción/Supabase:
 
 | Archivo | Flag | Efecto |
 |---|---|---|
-| `src/lib/AuthContext.jsx` | `DEMO_MODE = true` | Usuario demo sin login real (`demo@alas.com`, rol `admin`) |
-| `src/hooks/useModules.js` | `DEMO_MODE = true` | Módulos hardcodeados con URLs localhost |
+| `src/lib/AuthContext.jsx` | `DEMO_MODE = false` | Login real con Supabase Auth |
+| `src/hooks/useModules.js` | `DEMO_MODE = false` | Módulos desde RPCs Supabase |
+| `src/lib/adminApi.js` | `DEMO_MODE = false` | Panel admin desde RPCs Supabase |
 
-**Para producción: cambiar ambos a `false` y configurar `.env` con Supabase real.**
+**Para desarrollo demo se puede volver temporalmente a `true`, pero no es el estado actual.**
 
 ---
 
@@ -117,13 +118,13 @@ text3:      '#94a3b8'
 - Intro: timeline GSAP con hub, órbita, líneas y módulos en cascada; cleanup con `gsap.context()`
 - Hover actual: animación imperativa simple solo sobre el botón del módulo (`scale 1.07`, `y -2`, sombra/color)
 - Loader de salida: `AlasTransitionLoader.jsx`, overlay institucional sin texto visible, logo central + anillos GSAP
-- Al abrir módulo: delay breve `LAUNCH_TRANSITION_MS = 680` para cubrir la salida y evitar flashes blancos
+- Al abrir módulo: delay `LAUNCH_TRANSITION_MS = 1400` para cubrir la salida y evitar flashes blancos
 - Importante: no usar estado React para hover del launcher ni parallax del sistema; provocaba re-render/flicker del SVG
 - Animaciones CSS residuales: `hub-float 5s`, `hub-ring 4s`, `dash-march 1.8s`
 
 ### AdminPanel
 - Dashboard de una sola vista (sin tabs)
-- Grid: `1fr 320px` (tabla usuarios | columna derecha: módulos + actividad)
+- Grid: `1fr 420px` (tabla usuarios | columna derecha: módulos + actividad)
 - 4 stat cards arriba con gradientes de color
 - Filas animadas con CSS `@keyframes row-in` + `animationDelay` escalonado
 - Hover: CSS `.alas-tr:hover { background: #f8fafc }`
@@ -140,6 +141,7 @@ text3:      '#94a3b8'
 | `borrados` | Items Borrados | — | pendiente |
 | `recepcion` | Recepción Mercaderías | — | pendiente |
 | `inventario` | Inventario | — | pendiente |
+| `facturacion` | Facturacion | — | pendiente |
 
 ---
 
@@ -223,8 +225,9 @@ Accesible en `/admin`. Solo visible para usuarios con `role === 'admin'`.
 - **Actividad reciente**: últimos 8 registros con email, acción y módulo
 
 ### AdminAPI (`src/lib/adminApi.js`)
-Con `DEMO_MODE = true` usa datos locales en memoria.
 Con `DEMO_MODE = false` llama RPCs de Supabase protegidos por `is_admin()`.
+El login operativo es por `username`; el email queda interno para Supabase Auth.
+El panel enlaza usuarios Auth existentes con `username`, nombre y rol.
 
 ---
 
@@ -292,17 +295,20 @@ ALASTransition.exitToLauncher(url)                  // anima salida hacia derech
 - [x] Etapa 3: Calendario — `alas-auth-client.js` en bundle, bypass PIN, guard anti-eviction
 - [x] Etapa 4: Pruebas E2E (29/29 OK con Playwright)
 - [x] Etapa 5: Endurecimiento — secreto fuerte, config gitignoreada, TTL 60 min, logout
+- [x] Login por `username` alineado con Supabase: `admin_create_user`, `admin_edit_user`, `get_email_by_username`
+- [x] Catálogo de módulos sin URLs vía `get_module_catalog`; URLs solo por `open_module` o panel admin
+- [x] Dependencia directa Linux de Rollup removida; build verificado en Windows
 
 ---
 
 ## 12. PENDIENTES / PRÓXIMOS PASOS
 
 ### Antes de producción (obligatorios)
-- [ ] Cambiar `DEMO_MODE = false` en `AuthContext.jsx` y `useModules.js`
+- [x] `DEMO_MODE = false` en `AuthContext.jsx`, `useModules.js` y `adminApi.js`
 - [ ] Configurar `.env` con Supabase real (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
 - [ ] Configurar `VITE_LAUNCHER_URL` y URLs de cada módulo en `.env`
 - [ ] Actualizar `launcherUrl` en `sso-config.js` de CajaVenta y Calendario con URL de Vercel
-- [ ] Crear RPCs de Supabase: `get_allowed_modules`, `open_module`, `admin_list_users`, etc.
+- [x] Crear RPCs de Supabase: `get_module_catalog`, `get_allowed_modules`, `open_module`, `admin_list_users`, `admin_create_user`, `admin_edit_user`, etc.
 - [ ] Configurar RLS en Supabase (actualmente permisivo en CajaVenta)
 
 ### Mejoras de seguridad (recomendadas)
@@ -359,4 +365,4 @@ npx http-server -p 8080 --cors -c-1 .   # → http://localhost:8080
 
 ---
 
-*Última actualización: Junio 2026 — Loader institucional sin palabras agregado al flujo de apertura de módulos.*
+*Última actualización: Junio 2026 — login por username, RPCs admin y catálogo seguro de módulos alineados con el código actual.*

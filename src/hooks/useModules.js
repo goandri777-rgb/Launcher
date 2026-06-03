@@ -34,10 +34,10 @@ export function useModules() {
   const fetchModules = useCallback(async () => {
     setLoading(true)
 
-    // Busca en paralelo: módulos permitidos (con URL) + todos los activos (solo metadata)
+    // Busca en paralelo: módulos permitidos + catálogo sin URLs.
     const [{ data: allowed, error }, { data: allMods }] = await Promise.all([
       supabase.rpc('get_allowed_modules'),
-      supabase.from('modules').select('id,key,name,is_active,sort_order').order('sort_order'),
+      supabase.rpc('get_module_catalog'),
     ])
 
     if (error) {
@@ -51,6 +51,7 @@ export function useModules() {
       const combined = allMods?.length
         ? allMods.map(m => {
             if (!m.is_active) return { ...m, url: '', is_blocked: false }  // globalmente desactivado → Trabajando
+            if (m.is_blocked) return { ...m, url: '', is_blocked: true }   // globalmente bloqueado
             if (allowedMap[m.key]) return allowedMap[m.key]                // activo + tiene permiso → datos completos
             return { ...m, url: '', is_blocked: true }                     // activo + sin permiso → bloqueado
           })

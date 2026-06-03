@@ -14,7 +14,7 @@ exception when duplicate_object then null; end $$;
 -- Perfil 1:1 con auth.users. Guarda rol y estado de la cuenta.
 create table if not exists public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
-  username    text unique,               -- nombre de usuario para login (sin email)
+  username    text,                      -- nombre de usuario para login (sin email)
   full_name   text,
   role        user_role not null default 'invitado',
   is_active   boolean not null default true,
@@ -22,6 +22,10 @@ create table if not exists public.profiles (
   last_login  timestamptz,
   created_at  timestamptz not null default now()
 );
+
+create unique index if not exists profiles_username_lower_key
+  on public.profiles (lower(username))
+  where username is not null;
 
 -- Catálogo de módulos (programas publicados en Vercel).
 create table if not exists public.modules (
@@ -76,22 +80,19 @@ alter table public.access_logs enable row level security;
 
 -- ---------- POLÍTICAS RLS ----------
 
--- PROFILES: cada quien ve/edita lo mínimo; el admin ve/gestiona todo.
--- Permitimos lectura pública de perfiles activos para que el launcher muestre la cuadrícula de selección.
+-- PROFILES: cada quien ve su perfil; el admin ve/gestiona todo.
 drop policy if exists profiles_self_select on public.profiles;
 drop policy if exists profiles_public_select on public.profiles;
-create policy profiles_public_select on public.profiles
-  for select using (true);
+create policy profiles_self_select on public.profiles
+  for select using (id = auth.uid() or public.is_admin());
 
 drop policy if exists profiles_admin_all on public.profiles;
 create policy profiles_admin_all on public.profiles
   for all using (public.is_admin()) with check (public.is_admin());
 
--- MODULES: cualquier sesión puede leer el catálogo (nombres/estado),
--- pero NO se expone la URL por esta vía (ver columna en la RPC). Solo admin escribe.
+-- MODULES: solo admin lee/escribe la tabla completa porque contiene URLs.
+-- El launcher usa get_module_catalog(), que no devuelve URLs.
 drop policy if exists modules_read on public.modules;
-create policy modules_read on public.modules
-  for select using (auth.uid() is not null);
 
 drop policy if exists modules_admin_write on public.modules;
 create policy modules_admin_write on public.modules
@@ -126,6 +127,24 @@ begin
 end;
 $$;
 
+create or replace function public.normalize_username(p_username text)
+returns text
+language plpgsql immutable
+as $$
+declare
+  v_username text;
+begin
+  v_username := lower(trim(coalesce(p_username, '')));
+  if v_username = '' then
+    raise exception 'usuario requerido';
+  end if;
+  if v_username !~ '^[a-z0-9._-]{3,32}$' then
+    raise exception 'usuario invalido: usa 3 a 32 caracteres con letras, numeros, punto, guion o guion bajo';
+  end if;
+  return v_username;
+end;
+$$;
+
 -- Devuelve SOLO los módulos que el usuario puede ver.
 -- NOTA: no devuelve la URL aquí (la URL se entrega únicamente al abrir).
 create or replace function public.get_allowed_modules()
@@ -136,6 +155,17 @@ as $$
   from public.modules m
   join public.permissions p on p.module_id = m.id
   where p.user_id = auth.uid()
+  order by m.sort_order;
+$$;
+
+-- Catálogo visible para el launcher: metadata sin URL.
+create or replace function public.get_module_catalog()
+returns table (id uuid, key text, name text, is_active boolean, is_blocked boolean, sort_order int)
+language sql stable security definer set search_path = public
+as $$
+  select m.id, m.key, m.name, m.is_active, m.is_blocked, m.sort_order
+  from public.modules m
+  where auth.uid() is not null
   order by m.sort_order;
 $$;
 
@@ -182,15 +212,16 @@ $$;
 
 -- ---------- RPCs DE ADMINISTRACIÓN (todas exigen is_admin()) ----------
 
+drop function if exists public.admin_list_users();
 create or replace function public.admin_list_users()
-returns table (id uuid, email text, full_name text, role user_role,
+returns table (id uuid, username text, email text, full_name text, role user_role,
                is_active boolean, is_blocked boolean, last_login timestamptz)
 language plpgsql stable security definer set search_path = public
 as $$
 begin
   if not public.is_admin() then raise exception 'no autorizado'; end if;
   return query
-    select p.id, u.email::text, p.full_name, p.role, p.is_active, p.is_blocked, p.last_login
+    select p.id, p.username, u.email::text, p.full_name, p.role, p.is_active, p.is_blocked, p.last_login
     from public.profiles p
     join auth.users u on u.id = p.id
     order by p.created_at;
@@ -245,26 +276,53 @@ begin
     limit p_limit;
 end; $$;
 
--- Crear usuario desde el panel. Usa la extensión de admin de Supabase si está
--- disponible; si no, ver nota en el README (crear desde Authentication o Edge Function).
--- Esta versión inserta el perfil asumiendo que el usuario auth ya existe por email,
--- o lo deja pendiente. Para creación completa de credenciales se recomienda
--- una Edge Function con service_role (ver README, sección "Crear usuarios").
+-- Enlaza un usuario Auth existente con su perfil y username de login.
+-- Para creación completa de credenciales se recomienda una Edge Function con service_role.
+drop function if exists public.admin_create_user(text, text, text, public.user_role);
 create or replace function public.admin_create_user(
-  p_email text, p_password text, p_full_name text, p_role user_role)
+  p_username text, p_email text, p_full_name text, p_role user_role)
 returns json language plpgsql security definer set search_path = public as $$
-declare v_id uuid;
+declare
+  v_id uuid;
+  v_username text;
 begin
   if not public.is_admin() then raise exception 'no autorizado'; end if;
-  select id into v_id from auth.users where email = p_email;
+  v_username := public.normalize_username(p_username);
+  select id into v_id from auth.users where lower(email) = lower(trim(p_email));
   if v_id is null then
     return json_build_object('ok', false,
       'reason', 'Crea primero el usuario en Authentication o usa la Edge Function (ver README).');
   end if;
-  insert into public.profiles(id, full_name, role)
-  values (v_id, p_full_name, p_role)
-  on conflict (id) do update set full_name = excluded.full_name, role = excluded.role;
+  insert into public.profiles(id, username, full_name, role)
+  values (v_id, v_username, nullif(trim(p_full_name), ''), p_role)
+  on conflict (id) do update set
+    username = excluded.username,
+    full_name = coalesce(excluded.full_name, public.profiles.full_name),
+    role = excluded.role;
   return json_build_object('ok', true, 'id', v_id);
+end; $$;
+
+create or replace function public.admin_edit_user(
+  p_user_id uuid, p_username text default null, p_full_name text default null, p_role user_role default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_username text;
+begin
+  if not public.is_admin() then raise exception 'no autorizado'; end if;
+  if p_user_id = auth.uid() and p_role is not null and p_role <> 'admin' then
+    raise exception 'no puedes quitarte el rol admin a ti mismo';
+  end if;
+
+  if p_username is not null then
+    v_username := public.normalize_username(p_username);
+  end if;
+
+  update public.profiles
+  set
+    username = coalesce(v_username, username),
+    full_name = coalesce(nullif(trim(p_full_name), ''), full_name),
+    role = coalesce(p_role, role)
+  where id = p_user_id;
 end; $$;
 
 -- Elimina un usuario de auth.users (cascada elimina perfil, permisos; logs quedan con user_id=null).
@@ -328,5 +386,5 @@ on conflict (key) do nothing;
 -- PASO FINAL: convertir tu usuario en admin
 -- Ejecutar DESPUÉS de registrarte en el Launcher por primera vez.
 -- =====================================================================
--- update public.profiles set role='admin' where id =
+-- update public.profiles set username='admin', role='admin' where id =
 --   (select id from auth.users where email='TU-EMAIL@ejemplo.com');

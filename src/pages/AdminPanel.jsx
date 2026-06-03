@@ -368,13 +368,13 @@ function EditModuleModal({ module: mod, onClose, onSaved, notify }) {
 
 // ─── create user modal ────────────────────────────────────────────────────────
 function CreateUserModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({email:'',password:'',fullName:'',role:'operador'})
+  const [form, setForm] = useState({username:'',email:'',fullName:'',role:'operador'})
   const [busy, setBusy] = useState(false)
   const [err,  setErr]  = useState('')
 
   const submit = async () => {
     setErr(''); setBusy(true)
-    const {error} = await adminApi.createUser(form.email.trim(),form.password,form.fullName.trim(),form.role)
+    const {error} = await adminApi.createUser(form.username.trim(),form.email.trim(),form.fullName.trim(),form.role)
     setBusy(false)
     if (error) { setErr(error.message); return }
     onCreated()
@@ -383,11 +383,11 @@ function CreateUserModal({ onClose, onCreated }) {
   return (
     <Overlay onClose={onClose}>
       <ModalCard width={440}>
-        <ModalHead title="Nuevo usuario" sub="Completá los datos para crear la cuenta" onClose={onClose}/>
+        <ModalHead title="Nuevo usuario" sub="Completá los datos para enlazar la cuenta" onClose={onClose}/>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Field label="Usuario"><Input value={form.username} onChange={v=>setForm({...form,username:v})} placeholder="Ej. jperez" mono/></Field>
           <Field label="Nombre completo"><Input value={form.fullName} onChange={v=>setForm({...form,fullName:v})} placeholder="Ej. Juan Pérez"/></Field>
           <Field label="Correo electrónico"><Input type="email" value={form.email} onChange={v=>setForm({...form,email:v})} placeholder="usuario@empresa.com"/></Field>
-          <Field label="Contraseña"><Input type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="Mínimo 8 caracteres"/></Field>
           <Field label="Rol">
             <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}
               style={{width:'100%',borderRadius:10,background:'#ffffff',border:`1px solid ${C.border}`,padding:'9px 12px',fontSize:13,color:C.text1,outline:'none',fontFamily:'"Inter",system-ui,sans-serif',textTransform:'capitalize',boxSizing:'border-box'}}
@@ -399,7 +399,7 @@ function CreateUserModal({ onClose, onCreated }) {
           </Field>
           {err && <p style={{color:C.red,fontSize:12,margin:0,padding:'8px 12px',background:'#fff1f2',borderRadius:8,border:'1px solid rgba(239,68,68,0.2)'}}>{err}</p>}
           <div style={{paddingTop:4}}>
-            <PrimaryBtn onClick={submit} disabled={busy} icon={UserPlus}>{busy?'Creando cuenta…':'Crear usuario'}</PrimaryBtn>
+            <PrimaryBtn onClick={submit} disabled={busy} icon={UserPlus}>{busy?'Guardando…':'Guardar usuario'}</PrimaryBtn>
           </div>
         </div>
       </ModalCard>
@@ -466,18 +466,18 @@ function DeleteUserModal({ user, onClose, onDeleted, notify }) {
 
 // ─── edit user modal ──────────────────────────────────────────────────────────
 function EditUserModal({ user, onClose, onSaved, notify }) {
+  const [username, setUsername] = useState(user.username || '')
   const [fullName, setFullName] = useState(user.full_name || '')
   const [role,     setRole]     = useState(user.role     || 'operador')
-  const [password, setPassword] = useState('')
   const [busy,     setBusy]     = useState(false)
   const [err,      setErr]      = useState('')
 
   const save = async () => {
     setErr(''); setBusy(true)
     const updates = {}
+    if (username.trim() && username.trim() !== user.username) updates.username = username.trim()
     if (fullName.trim() && fullName.trim() !== user.full_name) updates.full_name = fullName.trim()
     if (role !== user.role) updates.role = role
-    if (password)           updates.password = password
     if (!Object.keys(updates).length) { setBusy(false); onClose(); return }
     const { error } = await adminApi.editUser(user.id, updates)
     setBusy(false)
@@ -490,6 +490,9 @@ function EditUserModal({ user, onClose, onSaved, notify }) {
       <ModalCard width={440}>
         <ModalHead title="Editar usuario" sub={user.full_name || user.email} onClose={onClose}/>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Field label="Usuario">
+            <Input value={username} onChange={setUsername} placeholder="Usuario de acceso" mono/>
+          </Field>
           <Field label="Nombre completo">
             <Input value={fullName} onChange={setFullName} placeholder="Nombre completo"/>
           </Field>
@@ -501,9 +504,6 @@ function EditUserModal({ user, onClose, onSaved, notify }) {
             >
               {ROLES.map(r=><option key={r} value={r} style={{textTransform:'capitalize'}}>{r}</option>)}
             </select>
-          </Field>
-          <Field label="Nueva contraseña (opcional)">
-            <Input type="password" value={password} onChange={setPassword} placeholder="Dejar vacío para no cambiar"/>
           </Field>
           {err && <p style={{color:C.red,fontSize:12,margin:0,padding:'8px 12px',background:'#fff1f2',borderRadius:8,border:'1px solid rgba(239,68,68,0.2)'}}>{err}</p>}
           <div style={{display:'flex',gap:8,justifyContent:'flex-end',paddingTop:4}}>
@@ -694,7 +694,7 @@ export default function AdminPanel() {
                         <td style={{padding:'11px 16px'}}>
                           <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
                             <div style={{width:30,height:30,borderRadius:9,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:12,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
-                              {(u.full_name||u.email||'U').charAt(0).toUpperCase()}
+                              {(u.full_name||u.username||u.email||'U').charAt(0).toUpperCase()}
                             </div>
                             <div style={{minWidth:0}}>
                               <div style={{fontWeight:600,color:C.text1,fontSize:13,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
