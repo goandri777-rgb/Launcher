@@ -112,15 +112,16 @@ function NoSession() {
 
 // ── AuthGuard ─────────────────────────────────────────────────────────────
 export function AuthGuard({ children }) {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, loading, transitioning } = useAuth()
   const location = useLocation()
 
   // Solo bloquear en la carga inicial (sesión desconocida).
   // Si ya hay sesión activa, no blanquear aunque loadProfile esté recargando.
   if (loading && !session) return null
 
-  // Sin sesión → pantalla inline (no redirect, para UX sin parpadeo)
-  if (!session) return <NoSession />
+  // Sin sesión: si estamos en transición post-login (startEntry activo),
+  // esperar en null en vez de mostrar NoSession — el AppLoader cubre el hueco.
+  if (!session) return transitioning ? null : <NoSession />
 
   // Cuenta bloqueada o inactiva
   if (profile && (profile.is_blocked || profile.is_active === false)) {
