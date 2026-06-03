@@ -29,12 +29,10 @@ body {
   color: #334155;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   background:
     radial-gradient(ellipse 70% 55% at 50% 42%, rgba(11,95,141,0.04), transparent 65%),
     linear-gradient(145deg, #edf1f7 0%, #e6ecf5 55%, #edf2f8 100%);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
 }
 
 /* Textura de puntos casi imperceptible */
@@ -140,21 +138,10 @@ body::before {
 
 /* hub-float reemplazado por GSAP (CircularLauncher.jsx) */
 
-/* Glow sutil del hub — estilo Linear/Arc */
-@keyframes hub-glow {
-  0%, 100% {
-    box-shadow:
-      0 4px 20px rgba(11,95,141,0.07),
-      0 1px 4px rgba(15,23,42,0.05),
-      inset 0 1px 0 rgba(255,255,255,1);
-  }
-  50% {
-    box-shadow:
-      0 6px 28px rgba(11,95,141,0.13),
-      0 2px 8px rgba(15,23,42,0.06),
-      0 0 0 5px rgba(11,95,141,0.035),
-      inset 0 1px 0 rgba(255,255,255,1);
-  }
+/* Glow sutil del hub — solo opacity pulsa (composited, sin paint) */
+@keyframes hub-glow-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 1; }
 }
 
 /* ── Admin Panel — tabla de usuarios ─────────────────────────────────────── */

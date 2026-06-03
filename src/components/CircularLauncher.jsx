@@ -58,7 +58,7 @@ function nodeStyles(state, hov) {
     transition: 'none',
     transformOrigin: '50% 50%',
     backfaceVisibility: 'hidden',
-    willChange: 'transform, background-color, border-color, box-shadow',
+    willChange: 'transform, opacity',
   }
   if (state === 'inactive') return {
     ...base,
@@ -418,7 +418,6 @@ export default function CircularLauncher({ modules, onOpen }) {
         ease: 'power2.out',
         overwrite: 'auto',
       })
-      gsap.set(lineBaseEl, { filter: on ? 'url(#line-glow)' : 'none' })
     }
 
     if (lineDashEl) {
@@ -480,12 +479,7 @@ export default function CircularLauncher({ modules, onOpen }) {
         className="absolute inset-0 pointer-events-none overflow-visible"
         width={SIZE} height={SIZE}
       >
-        <defs>
-          <filter id="line-glow" x="-60%" y="-60%" width="220%" height="220%">
-            <feGaussianBlur stdDeviation="1.5" result="b" />
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
+        <defs />
 
         {/* Orbit guide */}
         <circle
@@ -578,11 +572,18 @@ export default function CircularLauncher({ modules, onOpen }) {
           }}
         />
 
-        {/* Hub surface */}
+        {/* Hub surface — sombra estática, sin animación de paint */}
         <div className="absolute inset-0 rounded-full" style={{
           background: 'linear-gradient(145deg, #ffffff 0%, #f4f8ff 100%)',
           border: '1px solid rgba(203,213,225,0.75)',
-          animation: 'hub-glow 4s ease-in-out infinite',
+          boxShadow: '0 4px 20px rgba(11,95,141,0.07), 0 1px 4px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,1)',
+        }} />
+        {/* Glow overlay — solo opacity pulsa → compositor path, cero paint */}
+        <div className="absolute rounded-full pointer-events-none" style={{
+          inset: -2,
+          boxShadow: '0 6px 28px rgba(11,95,141,0.13), 0 2px 8px rgba(15,23,42,0.06), 0 0 0 5px rgba(11,95,141,0.035)',
+          willChange: 'opacity',
+          animation: 'hub-glow-pulse 4s ease-in-out infinite',
         }} />
 
         {/* Specular */}
@@ -799,8 +800,7 @@ export default function CircularLauncher({ modules, onOpen }) {
               {isBusy && (
                 <div className="absolute inset-0 grid place-items-center" style={{
                   borderRadius: 22,
-                  background: 'rgba(255,255,255,0.85)',
-                  backdropFilter: 'blur(4px)',
+                  background: 'rgba(255,255,255,0.94)',
                 }}>
                   <div className="animate-spin rounded-full border-2" style={{
                     width: 16, height: 16,
