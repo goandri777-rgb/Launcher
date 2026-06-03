@@ -73,6 +73,11 @@ export function AuthProvider({ children }) {
               list.push(newUser)
             }
             localStorage.setItem('alas.rememberedUsers', JSON.stringify(list))
+            // Expone usuario activo para ui-protection.js (banner de consola)
+            localStorage.setItem('alas.current_user', JSON.stringify({
+              name: data.full_name || data.username,
+              role: data.role || 'operador',
+            }))
           }
         } catch (e) {
           console.error('[ALAS] Error al guardar perfil en localStorage:', e)
@@ -130,7 +135,10 @@ export function AuthProvider({ children }) {
     setSession(null)
     setProfile(null)
     // Limpiar sesión SSO local (no puede limpiar otros dominios — TTL 60 min lo cubre)
-    try { localStorage.removeItem('alas.sso.session') } catch (_) {}
+    try {
+      localStorage.removeItem('alas.sso.session')
+      localStorage.removeItem('alas.current_user')
+    } catch (_) {}
   }
 
   // En DEMO_MODE: restaura la sesión demo sin necesitar Supabase
