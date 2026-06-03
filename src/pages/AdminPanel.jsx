@@ -3,47 +3,48 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, UserPlus, ShieldCheck, ShieldX, Ban, CheckCircle2,
-  X, Clock, Link2, Eye, EyeOff, Pencil, Check,
+  X, Clock, Link2, Eye, EyeOff, Pencil, Check, UserCog,
   Users, Boxes, TrendingUp, AlertTriangle,
 } from 'lucide-react'
 import { adminApi } from '../lib/adminApi'
 import { getModuleIcon } from '../data/icons'
+import { useAuth } from '../lib/AuthContext'
 
 const ROLES  = ['admin', 'supervisor', 'operador', 'invitado']
 const EASE   = [0.16, 1, 0.3, 1]
 const SPRING = { type: 'spring', stiffness: 400, damping: 30, mass: 0.5 }
 
 const C = {
-  brand:       '#0B5F8D',
-  brandDark:   '#08486A',
-  brandLight:  '#e8f4fd',
-  border:      'rgba(226,232,240,0.9)',
-  borderHov:   'rgba(11,95,141,0.28)',
-  borderFocus: 'rgba(11,95,141,0.45)',
-  bg:          '#eef2f7',
-  surface:     '#ffffff',
-  surfaceHov:  '#f8fafc',
-  text1:       '#0f172a',
-  text2:       '#334155',
-  text3:       '#64748b',
-  text4:       '#94a3b8',
-  green:       '#10b981',
-  amber:       '#f59e0b',
-  red:         '#ef4444',
-  glass:       'rgba(255,255,255,0.92)',
+  brand:       '#0B5F8D',              // Azul corporativo ALAS
+  brandDark:   '#08486a',              // Azul corporativo oscuro
+  brandLight:  'rgba(11, 95, 141, 0.08)', // Glass acento
+  border:      'rgba(11, 95, 141, 0.12)',  // Bordes sutiles
+  borderHov:   'rgba(11, 95, 141, 0.32)',  // Borde de enfoque
+  borderFocus: 'rgba(11, 95, 141, 0.50)',
+  bg:          'linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%)', // Fondo light cyberpunk limpio
+  surface:     'rgba(255, 255, 255, 0.75)', // Glassmorphism translúcido claro
+  surfaceHov:  'rgba(11, 95, 141, 0.04)',
+  text1:       '#0f172a',              // Slate 900
+  text2:       '#334155',              // Slate 700
+  text3:       '#64748b',              // Slate 500
+  text4:       '#94a3b8',              // Slate 400
+  green:       '#10b981',              // Verde
+  amber:       '#f59e0b',              // Ámbar
+  red:         '#ef4444',              // Rojo
+  glass:       'rgba(255, 255, 255, 0.85)', // Cabecera glass clara
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const statusMap = {
-  active:   { bg:'#f0fdf4', fg:'#15803d', border:'rgba(21,128,61,0.18)',  dot:'#22c55e', label:'Activo'    },
-  blocked:  { bg:'#fff1f2', fg:'#dc2626', border:'rgba(220,38,38,0.18)',  dot:'#ef4444', label:'Bloqueado' },
-  inactive: { bg:'#fafafa', fg:'#64748b', border:'rgba(100,116,139,0.18)',dot:'#94a3b8', label:'Inactivo'  },
+  active:   { bg:'rgba(16, 185, 129, 0.06)', fg:'#0f766e', border:'rgba(16, 185, 129, 0.2)',  dot:'#10b981', label: 'ACTIVE'    },
+  blocked:  { bg:'rgba(239, 68, 68, 0.06)',  fg:'#dc2626', border:'rgba(239, 68, 68, 0.2)',   dot:'#ef4444', label: 'BLOCKED'   },
+  inactive: { bg:'rgba(148, 163, 184, 0.06)', fg:'#475569', border:'rgba(148, 163, 184, 0.2)',  dot:'#94a3b8', label: 'INACTIVE'  },
 }
 const roleMap = {
-  admin:      { bg:'#eff6ff', fg:C.brand,   border:'rgba(11,95,141,0.18)'  },
-  supervisor: { bg:'#faf5ff', fg:'#7c3aed', border:'rgba(124,58,237,0.18)' },
-  operador:   { bg:'#f8fafc', fg:C.text3,   border:C.border                },
-  invitado:   { bg:'#f8fafc', fg:C.text3,   border:C.border                },
+  admin:      { bg:'rgba(11, 95, 141, 0.08)', fg:'#0b5f8d',   border:'rgba(11, 95, 141, 0.25)' },
+  supervisor: { bg:'rgba(168, 85, 247, 0.08)', fg:'#7c3aed',   border:'rgba(168, 85, 247, 0.22)' },
+  operador:   { bg:'rgba(71, 85, 105, 0.06)', fg:'#475569',   border:'rgba(71, 85, 105, 0.18)'  },
+  invitado:   { bg:'rgba(100, 116, 139, 0.06)', fg:'#64748b',   border:'rgba(100, 116, 139, 0.18)'  },
 }
 
 function StatusPill({ status }) {
@@ -74,7 +75,9 @@ function Card({ children, style }) {
       background: C.surface,
       border: `1px solid ${C.border}`,
       borderRadius: 16,
-      boxShadow: '0 1px 3px rgba(15,23,42,0.05), 0 0 0 1px rgba(226,232,240,0.4)',
+      boxShadow: '0 12px 32px 0 rgba(11, 95, 141, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255,255,255,0.9)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
       overflow: 'hidden',
       ...style,
     }}>
@@ -83,12 +86,14 @@ function Card({ children, style }) {
   )
 }
 
+// ─── cards ───────────────────────────────────────────────────────────────────
 function CardHeader({ title, right }) {
   return (
     <div style={{
       display:'flex', alignItems:'center', justifyContent:'space-between',
-      padding:'14px 20px 12px',
+      padding:'15px 20px 13px',
       borderBottom:`1px solid ${C.border}`,
+      background: 'rgba(11, 95, 141, 0.03)',
     }}>
       <span style={{fontFamily:'"Sora",system-ui,sans-serif',fontWeight:700,fontSize:13,color:C.text1,letterSpacing:'-0.02em'}}>{title}</span>
       {right && <div>{right}</div>}
@@ -98,7 +103,7 @@ function CardHeader({ title, right }) {
 
 function Th({ children, right }) {
   return (
-    <th style={{padding:'9px 20px',textAlign:right?'right':'left',fontWeight:600,color:C.text4,fontSize:11,letterSpacing:'0.04em',textTransform:'uppercase',whiteSpace:'nowrap'}}>
+    <th style={{padding:'10px 20px',textAlign:right?'right':'left',fontWeight:600,color:C.text4,fontSize:10.5,fontFamily:'"JetBrains Mono", monospace',letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap'}}>
       {children}
     </th>
   )
@@ -107,10 +112,10 @@ function Th({ children, right }) {
 function IconBtn({ title, onClick, icon: Icon, variant = 'default' }) {
   const [hov, setHov] = useState(false)
   const styles = {
-    default: { bg:'#f0f7ff', color:C.brand,  border:'rgba(11,95,141,0.22)'  },
-    danger:  { bg:'#fff1f2', color:C.red,    border:'rgba(239,68,68,0.22)'  },
-    success: { bg:'#f0fdf4', color:C.green,  border:'rgba(16,185,129,0.22)' },
-    ghost:   { bg:C.surfaceHov, color:C.text3, border:C.border              },
+    default: { bg:'rgba(59, 130, 246, 0.18)', color:C.brand,  border:'rgba(59, 130, 246, 0.3)',  borderRest:'rgba(59, 130, 246, 0.18)' },
+    danger:  { bg:'rgba(239, 68, 68, 0.18)',  color:C.red,    border:'rgba(239, 68, 68, 0.3)',   borderRest:'rgba(239, 68, 68, 0.18)'  },
+    success: { bg:'rgba(16, 185, 129, 0.18)', color:C.green,  border:'rgba(16, 185, 129, 0.3)',  borderRest:'rgba(16, 185, 129, 0.18)' },
+    ghost:   { bg:C.surfaceHov,               color:C.text3,  border:C.borderHov,                borderRest:C.border                   },
   }
   const s = styles[variant] || styles.default
   return (
@@ -118,16 +123,15 @@ function IconBtn({ title, onClick, icon: Icon, variant = 'default' }) {
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       whileHover={{scale:1.1}} whileTap={{scale:0.9}} transition={SPRING}
       style={{
-        display:'grid',placeItems:'center',width:40,height:40,borderRadius:10,
+        display:'grid',placeItems:'center',width:42,height:42,borderRadius:11,
         background: hov ? s.bg : 'transparent',
-        border: `1px solid ${hov ? s.border : 'transparent'}`,
+        border: `1px solid ${hov ? s.border : s.borderRest}`,
         color: hov ? s.color : C.text4,
         cursor:'pointer', transition:'all 150ms ease',
         flexShrink: 0,
-        boxShadow: hov ? `0 3px 10px ${s.border}` : 'none',
       }}
     >
-      <Icon style={{width:17,height:17}}/>
+      <Icon style={{width:18,height:18}}/>
     </motion.button>
   )
 }
@@ -137,7 +141,7 @@ function Overlay({ children, onClose }) {
   return (
     <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
       transition={{duration:0.2,ease:EASE}}
-      style={{position:'fixed',inset:0,zIndex:50,display:'grid',placeItems:'center',background:'rgba(15,23,42,0.35)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',padding:16}}
+      style={{position:'fixed',inset:0,zIndex:50,display:'grid',placeItems:'center',background:'rgba(15, 23, 42, 0.35)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',padding:16}}
       onClick={onClose}
       aria-hidden="true"
     >
@@ -155,7 +159,7 @@ function Overlay({ children, onClose }) {
 
 function ModalCard({ children, width=440 }) {
   return (
-    <div style={{background:`linear-gradient(145deg, ${C.surface}, #fafcff)`,border:`1px solid ${C.border}`,borderRadius:24,padding:32,width:'100%',maxWidth:width,boxShadow:'0 25px 80px rgba(15,23,42,0.18), 0 0 0 1px rgba(226,232,240,0.5)',fontFamily:'"Inter",system-ui,sans-serif'}}>
+    <div style={{background:'linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98))',border:`1px solid ${C.border}`,borderRadius:24,padding:32,width:'100%',maxWidth:width,boxShadow:'0 25px 80px rgba(11, 95, 141, 0.08), inset 0 1px 0 rgba(255,255,255,1)',backdropFilter:'blur(24px)',fontFamily:'"Inter",system-ui,sans-serif'}}>
       {children}
     </div>
   )
@@ -165,14 +169,12 @@ function ModalHead({ title, sub, onClose }) {
   return (
     <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:24}}>
       <div>
-        <h2 style={{fontFamily:'"Sora",system-ui,sans-serif',fontWeight:700,fontSize:17,color:C.text1,margin:0,letterSpacing:'-0.03em'}}>{title}</h2>
-        {sub && <p style={{fontSize:13,color:C.text3,margin:'5px 0 0',lineHeight:1.4}}>{sub}</p>}
+        <h2 style={{fontFamily:'"Sora",system-ui,sans-serif',fontWeight:700,fontSize:18,color:C.text1,margin:0}}>{title}</h2>
+        {sub && <p style={{fontSize:13,color:C.text3,margin:'4px 0 0'}}>{sub}</p>}
       </div>
       <motion.button onClick={onClose}
         whileHover={{scale:1.1,rotate:90}} whileTap={{scale:0.9}} transition={SPRING}
-        style={{background:C.surfaceHov,border:`1px solid ${C.border}`,cursor:'pointer',color:C.text4,padding:6,borderRadius:9,flexShrink:0,display:'grid',placeItems:'center',transition:'color 150ms ease'}}
-        onMouseEnter={e=>e.currentTarget.style.color=C.red}
-        onMouseLeave={e=>e.currentTarget.style.color=C.text4}
+        style={{background:C.surfaceHov,border:`1px solid ${C.border}`,cursor:'pointer',color:C.text4,padding:6,borderRadius:8,flexShrink:0,display:'grid',placeItems:'center'}}
       >
         <X style={{width:16,height:16}}/>
       </motion.button>
@@ -183,7 +185,7 @@ function ModalHead({ title, sub, onClose }) {
 function Field({ label, children }) {
   return (
     <div>
-      <label style={{fontSize:11,fontWeight:600,color:C.text3,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.06em'}}>{label}</label>
+      <label style={{fontSize:10,fontWeight:700,color:C.text3,display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.05em'}}>{label}</label>
       {children}
     </div>
   )
@@ -194,7 +196,7 @@ function Input({ type='text', value, onChange, placeholder, mono }) {
   return (
     <input type={type} value={value} placeholder={placeholder} onChange={e=>onChange(e.target.value)}
       onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)}
-      style={{width:'100%',borderRadius:12,background:C.surface,border:`1px solid ${focused?C.borderFocus:C.border}`,padding:'11px 14px',fontSize:13,color:C.text1,outline:'none',fontFamily:mono?'"JetBrains Mono","Fira Code",monospace':'"Inter",system-ui,sans-serif',boxSizing:'border-box',transition:'border-color 200ms ease, box-shadow 200ms ease',boxShadow:focused?'0 0 0 3px rgba(11,95,141,0.1)':'none'}}
+      style={{width:'100%',borderRadius:10,background:'#ffffff',border:`1px solid ${focused?C.borderFocus:C.border}`,padding:'10px 12px',fontSize:13,color:C.text1,outline:'none',fontFamily:mono?'"JetBrains Mono","Fira Code",monospace':'"Inter",system-ui,sans-serif',boxSizing:'border-box',transition:'border-color 200ms ease, box-shadow 200ms ease',boxShadow:focused?'0 0 0 3px rgba(11, 95, 141, 0.15)':'none'}}
     />
   )
 }
@@ -203,18 +205,19 @@ function PrimaryBtn({ onClick, disabled, children, icon: Icon }) {
   return (
     <motion.button onClick={onClick} disabled={disabled}
       whileHover={disabled?{}:{scale:1.03,y:-2}} whileTap={disabled?{}:{scale:0.96}} transition={SPRING}
-      style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 24px',borderRadius:12,background:disabled?'rgba(11,95,141,0.45)':`linear-gradient(135deg,${C.brand},${C.brandDark})`,border:'none',color:'#fff',fontSize:14,fontWeight:600,fontFamily:'"Inter",system-ui,sans-serif',cursor:disabled?'not-allowed':'pointer',boxShadow:disabled?'none':`0 4px 16px rgba(11,95,141,0.35)`,letterSpacing:'-0.01em'}}
+      style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 24px',borderRadius:12,background:disabled?'rgba(59,130,246,0.2)':`linear-gradient(135deg,${C.brand},${C.brandDark})`,border:'none',color:'#fff',fontSize:13.5,fontWeight:600,fontFamily:'"JetBrains Mono",monospace',cursor:disabled?'not-allowed':'pointer',boxShadow:disabled?'none':`0 4px 16px rgba(59,130,246,0.25)`,letterSpacing:'-0.01em'}}
     >
-      {Icon && <Icon style={{width:15,height:15}}/>}{children}
+      {Icon && <Icon style={{width:14,height:14}}/>}{children}
     </motion.button>
   )
 }
 
+// ─── buttons ──────────────────────────────────────────────────────────────────
 function GhostBtn({ onClick, children }) {
   return (
     <motion.button onClick={onClick}
       whileHover={{scale:1.02}} whileTap={{scale:0.97}} transition={SPRING}
-      style={{padding:'11px 22px',borderRadius:12,background:'transparent',border:`1px solid ${C.border}`,color:C.text2,fontSize:14,cursor:'pointer',fontFamily:'"Inter",system-ui,sans-serif',transition:'all 150ms ease'}}
+      style={{padding:'11px 22px',borderRadius:12,background:'transparent',border:`1px solid ${C.border}`,color:C.text2,fontSize:13.5,cursor:'pointer',fontFamily:'"Inter",system-ui,sans-serif',transition:'all 150ms ease'}}
       onMouseEnter={e=>{e.currentTarget.style.background=C.surfaceHov;e.currentTarget.style.borderColor=C.borderHov}}
       onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.borderColor=C.border}}
     >{children}</motion.button>
@@ -387,7 +390,7 @@ function CreateUserModal({ onClose, onCreated }) {
           <Field label="Contraseña"><Input type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="Mínimo 8 caracteres"/></Field>
           <Field label="Rol">
             <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}
-              style={{width:'100%',borderRadius:10,background:C.surface,border:`1px solid ${C.border}`,padding:'9px 12px',fontSize:13,color:C.text1,outline:'none',fontFamily:'"Inter",system-ui,sans-serif',textTransform:'capitalize',boxSizing:'border-box'}}
+              style={{width:'100%',borderRadius:10,background:'#ffffff',border:`1px solid ${C.border}`,padding:'9px 12px',fontSize:13,color:C.text1,outline:'none',fontFamily:'"Inter",system-ui,sans-serif',textTransform:'capitalize',boxSizing:'border-box'}}
               onFocus={e=>e.target.style.borderColor=C.borderFocus}
               onBlur={e=>e.target.style.borderColor=C.border}
             >
@@ -404,13 +407,65 @@ function CreateUserModal({ onClose, onCreated }) {
   )
 }
 
+// ─── edit user modal ──────────────────────────────────────────────────────────
+function EditUserModal({ user, onClose, onSaved, notify }) {
+  const [fullName, setFullName] = useState(user.full_name || '')
+  const [role,     setRole]     = useState(user.role     || 'operador')
+  const [password, setPassword] = useState('')
+  const [busy,     setBusy]     = useState(false)
+  const [err,      setErr]      = useState('')
+
+  const save = async () => {
+    setErr(''); setBusy(true)
+    const updates = {}
+    if (fullName.trim() && fullName.trim() !== user.full_name) updates.full_name = fullName.trim()
+    if (role !== user.role) updates.role = role
+    if (password)           updates.password = password
+    if (!Object.keys(updates).length) { setBusy(false); onClose(); return }
+    const { error } = await adminApi.editUser(user.id, updates)
+    setBusy(false)
+    if (error) { setErr(error.message || 'Error al guardar'); return }
+    notify('Usuario actualizado'); onSaved()
+  }
+
+  return (
+    <Overlay onClose={onClose}>
+      <ModalCard width={440}>
+        <ModalHead title="Editar usuario" sub={user.full_name || user.email} onClose={onClose}/>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <Field label="Nombre completo">
+            <Input value={fullName} onChange={setFullName} placeholder="Nombre completo"/>
+          </Field>
+          <Field label="Rol">
+            <select value={role} onChange={e=>setRole(e.target.value)}
+              style={{width:'100%',borderRadius:10,background:'#ffffff',border:`1px solid ${C.border}`,padding:'9px 12px',fontSize:13,color:C.text1,outline:'none',fontFamily:'"Inter",system-ui,sans-serif',textTransform:'capitalize',boxSizing:'border-box',transition:'border-color 200ms ease'}}
+              onFocus={e=>e.target.style.borderColor=C.borderFocus}
+              onBlur={e=>e.target.style.borderColor=C.border}
+            >
+              {ROLES.map(r=><option key={r} value={r} style={{textTransform:'capitalize'}}>{r}</option>)}
+            </select>
+          </Field>
+          <Field label="Nueva contraseña (opcional)">
+            <Input type="password" value={password} onChange={setPassword} placeholder="Dejar vacío para no cambiar"/>
+          </Field>
+          {err && <p style={{color:C.red,fontSize:12,margin:0,padding:'8px 12px',background:'#fff1f2',borderRadius:8,border:'1px solid rgba(239,68,68,0.2)'}}>{err}</p>}
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end',paddingTop:4}}>
+            <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
+            <PrimaryBtn onClick={save} disabled={busy} icon={Check}>{busy?'Guardando…':'Guardar cambios'}</PrimaryBtn>
+          </div>
+        </div>
+      </ModalCard>
+    </Overlay>
+  )
+}
+
 // ─── stat card ────────────────────────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, accent, delay=0 }) {
   const a = {
-    blue:   { bg:'linear-gradient(135deg,#eff6ff,#dbeafe)', icon:C.brand,   ring:'rgba(11,95,141,0.15)'   },
-    green:  { bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)', icon:'#16a34a', ring:'rgba(22,163,74,0.15)'   },
-    amber:  { bg:'linear-gradient(135deg,#fffbeb,#fef3c7)', icon:'#d97706', ring:'rgba(217,119,6,0.15)'   },
-    purple: { bg:'linear-gradient(135deg,#faf5ff,#ede9fe)', icon:'#7c3aed', ring:'rgba(124,58,237,0.15)'  },
+    blue:   { bg:'rgba(59, 130, 246, 0.12)', icon:C.brand,   ring:'rgba(59, 130, 246, 0.25)'   },
+    green:  { bg:'rgba(16, 185, 129, 0.12)', icon:'#10b981', ring:'rgba(16, 185, 129, 0.25)'   },
+    amber:  { bg:'rgba(245, 158, 11, 0.12)', icon:'#f59e0b', ring:'rgba(245, 158, 11, 0.25)'   },
+    purple: { bg:'rgba(168, 85, 247, 0.12)', icon:'#a855f7', ring:'rgba(168, 85, 247, 0.25)'  },
   }[accent] || {}
 
   return (
@@ -448,13 +503,17 @@ function UrlCell({ url }) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function AdminPanel() {
-  const [users,      setUsers]      = useState([])
-  const [modules,    setModules]    = useState([])
-  const [logs,       setLogs]       = useState([])
-  const [selected,   setSelected]   = useState(null)
-  const [editing,    setEditing]    = useState(null)
-  const [showCreate, setShowCreate] = useState(false)
-  const [toast,      setToast]      = useState('')
+  const { profile } = useAuth()
+  const isReadOnly  = profile?.role !== 'admin'
+
+  const [users,       setUsers]       = useState([])
+  const [modules,     setModules]     = useState([])
+  const [logs,        setLogs]        = useState([])
+  const [selected,    setSelected]    = useState(null)
+  const [editing,     setEditing]     = useState(null)
+  const [editingUser, setEditingUser] = useState(null)
+  const [showCreate,  setShowCreate]  = useState(false)
+  const [toast,       setToast]       = useState('')
   const toastTimer = useRef(null)
 
   const notify = msg => {
@@ -487,7 +546,7 @@ export default function AdminPanel() {
       animate={{ opacity: 1, y: 0,  scale: 1 }}
       exit={{    opacity: 0, y: -7, scale: 0.992, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
       transition={{ duration: 0.42, ease: EASE }}
-      style={{minHeight:'100%',display:'flex',flexDirection:'column',fontFamily:'"Inter",system-ui,sans-serif',color:C.text1}}
+      style={{minHeight:'100%',display:'flex',flexDirection:'column',fontFamily:'"Inter",system-ui,sans-serif',color:C.text1,background:C.bg}}
     >
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <motion.header
@@ -496,16 +555,16 @@ export default function AdminPanel() {
         style={{
           background:C.glass, backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
           borderBottom:`1px solid ${C.border}`,
-          boxShadow:'0 1px 0 rgba(226,232,240,0.8)',
+          boxShadow:'0 4px 20px rgba(0, 0, 0, 0.15)',
           display:'grid', gridTemplateColumns:'auto 1fr auto',
           alignItems:'center', gap:16,
           padding:'10px 28px',
           position:'sticky', top:0, zIndex:20,
         }}
       >
-        <Link to="/" style={{display:'grid',placeItems:'center',width:34,height:34,borderRadius:10,background:C.surface,border:`1px solid ${C.border}`,color:C.text3,textDecoration:'none',flexShrink:0,boxShadow:'0 1px 3px rgba(15,23,42,0.05)',transition:'all 150ms ease'}}
+        <Link to="/" style={{display:'grid',placeItems:'center',width:34,height:34,borderRadius:10,background:'rgba(11, 95, 141, 0.05)',border:`1px solid ${C.border}`,color:C.text3,textDecoration:'none',flexShrink:0,boxShadow:'0 1px 3px rgba(0,0,0,0.03)',transition:'all 150ms ease'}}
           onMouseEnter={e=>{e.currentTarget.style.borderColor=C.borderHov;e.currentTarget.style.color=C.brand;e.currentTarget.style.background=C.brandLight}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background=C.surface}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background='rgba(11, 95, 141, 0.05)'}}
         >
           <ArrowLeft style={{width:15,height:15}}/>
         </Link>
@@ -514,12 +573,18 @@ export default function AdminPanel() {
           <h1 style={{fontFamily:'"Sora",system-ui,sans-serif',fontWeight:800,fontSize:15,color:C.text1,letterSpacing:'-0.03em',margin:0}}>
             Panel de administración
           </h1>
-          <p style={{fontSize:11,color:C.text4,margin:'1px 0 0',fontFamily:'"Inter",system-ui'}}>
-            {users.length} usuarios · {modules.length} módulos
+          <p style={{fontSize:10.5,color:C.text4,margin:'1px 0 0',fontFamily:'"JetBrains Mono",monospace'}}>
+            {users.length} USUARIOS // {modules.length} MODULOS
           </p>
         </div>
 
-        <PrimaryBtn onClick={()=>setShowCreate(true)} icon={UserPlus}>Nuevo usuario</PrimaryBtn>
+        {isReadOnly ? (
+          <span style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:99,background:'rgba(245,158,11,0.10)',border:'1px solid rgba(245,158,11,0.28)',color:'#b45309',fontSize:11,fontWeight:600,fontFamily:'"JetBrains Mono",monospace',letterSpacing:'0.04em'}}>
+            👁 SOLO LECTURA
+          </span>
+        ) : (
+          <PrimaryBtn onClick={()=>setShowCreate(true)} icon={UserPlus}>Nuevo usuario</PrimaryBtn>
+        )}
       </motion.header>
 
       {/* ── Content ────────────────────────────────────────────────────────── */}
@@ -544,7 +609,7 @@ export default function AdminPanel() {
                   {users.length} total
                 </span>
               }/>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,tableLayout:'fixed'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,tableLayout:'fixed', '--border': C.border}}>
                 <colgroup>
                   <col style={{width:'30%'}}/>  {/* Usuario */}
                   <col style={{width:'10%'}}/>  {/* Rol */}
@@ -585,18 +650,23 @@ export default function AdminPanel() {
                           {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'}
                         </td>
                         <td style={{padding:'11px 16px'}}>
-                          <button onClick={()=>setSelected(u)}
-                            style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:8,background:'transparent',border:`1px solid ${C.border}`,color:C.text3,fontSize:11,fontWeight:500,cursor:'pointer',transition:'all 150ms ease',whiteSpace:'nowrap'}}
-                            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.borderHov;e.currentTarget.style.color=C.brand;e.currentTarget.style.background=C.brandLight}}
-                            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background='transparent'}}
-                          >
-                            <ShieldCheck style={{width:11,height:11}}/> Módulos
-                          </button>
+                          {!isReadOnly && (
+                            <button onClick={()=>setSelected(u)}
+                              style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:8,background:'transparent',border:`1px solid ${C.border}`,color:C.text3,fontSize:11,fontWeight:500,cursor:'pointer',transition:'all 150ms ease',whiteSpace:'nowrap'}}
+                              onMouseEnter={e=>{e.currentTarget.style.borderColor=C.borderHov;e.currentTarget.style.color=C.brand;e.currentTarget.style.background=C.brandLight}}
+                              onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background='transparent'}}
+                            >
+                              <ShieldCheck style={{width:11,height:11}}/> Módulos
+                            </button>
+                          )}
                         </td>
                         <td style={{padding:'11px 16px'}}>
                           <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:2}}>
-                            <IconBtn title={u.is_active?'Desactivar':'Activar'} onClick={()=>toggleActive(u)} icon={u.is_active?ShieldX:CheckCircle2} variant={u.is_active?'ghost':'success'}/>
-                            <IconBtn title={u.is_blocked?'Desbloquear':'Bloquear'} onClick={()=>toggleBlocked(u)} icon={u.is_blocked?CheckCircle2:Ban} variant={u.is_blocked?'success':'danger'}/>
+                            {!isReadOnly && <>
+                              <IconBtn title="Editar usuario" onClick={()=>setEditingUser(u)} icon={UserCog} variant="default"/>
+                              <IconBtn title={u.is_active?'Desactivar':'Activar'} onClick={()=>toggleActive(u)} icon={u.is_active?ShieldX:CheckCircle2} variant={u.is_active?'ghost':'success'}/>
+                              <IconBtn title={u.is_blocked?'Desbloquear':'Bloquear'} onClick={()=>toggleBlocked(u)} icon={u.is_blocked?CheckCircle2:Ban} variant={u.is_blocked?'success':'danger'}/>
+                            </>}
                           </div>
                         </td>
                       </tr>
@@ -640,10 +710,12 @@ export default function AdminPanel() {
                           <div style={{fontSize:13,fontWeight:600,color:m.is_active?C.text1:C.text4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',letterSpacing:'-0.01em'}}>{m.name}</div>
                           <UrlCell url={m.url}/>
                         </div>
-                        <div style={{display:'flex',alignItems:'center',gap:2,flexShrink:0}}>
-                          <IconBtn title="Editar URL" onClick={()=>setEditing(m)} icon={Pencil} variant="default"/>
-                          <IconBtn title={m.is_active?'Desactivar':'Activar'} onClick={()=>toggleModule(m)} icon={m.is_active?EyeOff:Eye} variant={m.is_active?'danger':'success'}/>
-                        </div>
+                        {!isReadOnly && (
+                          <div style={{display:'flex',alignItems:'center',gap:2,flexShrink:0}}>
+                            <IconBtn title="Editar URL" onClick={()=>setEditing(m)} icon={Pencil} variant="default"/>
+                            <IconBtn title={m.is_active?'Desactivar':'Activar'} onClick={()=>toggleModule(m)} icon={m.is_active?EyeOff:Eye} variant={m.is_active?'danger':'success'}/>
+                          </div>
+                        )}
                       </motion.div>
                     )
                   })}
@@ -695,10 +767,13 @@ export default function AdminPanel() {
         {selected   && <PermissionsModal user={selected} modules={modules} onClose={()=>setSelected(null)} notify={notify}/>}
       </AnimatePresence>
       <AnimatePresence>
-        {editing    && <EditModuleModal module={editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);loadModules();notify('Módulo actualizado')}} notify={notify}/>}
+        {editing     && <EditModuleModal module={editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);loadModules();notify('Módulo actualizado')}} notify={notify}/>}
       </AnimatePresence>
       <AnimatePresence>
-        {showCreate && <CreateUserModal onClose={()=>setShowCreate(false)} onCreated={()=>{setShowCreate(false);loadUsers();notify('Usuario creado')}}/>}
+        {editingUser && <EditUserModal user={editingUser} onClose={()=>setEditingUser(null)} onSaved={()=>{setEditingUser(null);loadUsers()}} notify={notify}/>}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCreate  && <CreateUserModal onClose={()=>setShowCreate(false)} onCreated={()=>{setShowCreate(false);loadUsers();notify('Usuario creado')}}/>}
       </AnimatePresence>
 
       {/* Toast */}

@@ -3,10 +3,10 @@ import { AnimatePresence, motion } from 'framer-motion'
 import gsap from 'gsap'
 
 // ── Geometría ─────────────────────────────────────────────────────────────
-const HUB_D  = 148                           // diámetro del hub (igual al launcher)
-const ARC_R  = HUB_D / 2 + 18               // radio del arco: 92px (fuera del hub ring)
-const C      = 2 * Math.PI * ARC_R          // circunferencia ≈ 578px
-const SIZE   = ARC_R * 2 + 44               // canvas SVG: 228px (arco + margen)
+const HUB_D  = 192                           // diámetro del hub (igual al launcher)
+const ARC_R  = HUB_D / 2 + 18               // radio del arco: 114px (fuera del hub ring)
+const C      = 2 * Math.PI * ARC_R          // circunferencia ≈ 716px
+const SIZE   = ARC_R * 2 + 44               // canvas SVG: 272px (arco + margen)
 
 export default function AlasTransitionLoader({ active, label = 'Abriendo módulo' }) {
   return (
@@ -195,7 +195,7 @@ function LoaderStage({ label }) {
             }} />
           </div>
 
-          {/* Logo: gris minimalista, igual que el watermark del hub */}
+          {/* Logo: negro de alta fidelidad y contraste */}
           <img
             ref={logoRef}
             src="/logo-icon.png"
@@ -207,7 +207,7 @@ function LoaderStage({ label }) {
               height: 'auto',
               userSelect: 'none',
               pointerEvents: 'none',
-              opacity: 0.14,
+              opacity: 0.95,
               filter: 'grayscale(1) brightness(0)',
               willChange: 'transform, opacity',
             }}

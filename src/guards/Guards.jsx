@@ -115,7 +115,7 @@ export function AuthGuard({ children }) {
   const { session, profile, loading } = useAuth()
   const location = useLocation()
 
-  if (loading) return <Splash />
+  if (loading) return null
 
   // Sin sesión → pantalla inline (no redirect, para UX sin parpadeo)
   if (!session) return <NoSession />
@@ -151,9 +151,10 @@ export function AuthGuard({ children }) {
 }
 
 // ── AdminGuard ────────────────────────────────────────────────────────────
+// admin → acceso total | supervisor → solo lectura | resto → redirige al launcher
 export function AdminGuard({ children }) {
   const { profile, loading } = useAuth()
-  if (loading) return <Splash />
-  if (profile?.role !== 'admin') return <Navigate to="/" replace />
+  if (loading) return null
+  if (profile?.role !== 'admin' && profile?.role !== 'supervisor') return <Navigate to="/" replace />
   return children
 }

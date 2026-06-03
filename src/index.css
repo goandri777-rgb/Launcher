@@ -114,6 +114,24 @@ body::before {
   to   { stroke-dashoffset:  0; }
 }
 
+/* Casco — bob suave para módulos en proceso */
+@keyframes hardhat-bob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%       { transform: translateY(-3px) rotate(4deg); }
+}
+
+/* Pulsación suave de los puntos de estado */
+@keyframes status-dot-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
 /* Anillo pulsante exterior del hub */
 @keyframes hub-ring {
   0%, 100% { transform: scale(1);    opacity: 0.55; }
@@ -146,8 +164,8 @@ body::before {
   animation: row-in 0.32s ease forwards;
   opacity: 0;
 }
-.alas-tr:hover { background: #f8fafc !important; }
-.alas-tr td { border-bottom: 1px solid rgba(226,232,240,0.9); }
+.alas-tr:hover { background: rgba(59, 130, 246, 0.07) !important; }
+.alas-tr td { border-bottom: 1px solid var(--border, rgba(226,232,240,0.9)); }
 
 @keyframes row-in {
   from { opacity: 0; transform: translateY(7px); }

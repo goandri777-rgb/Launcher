@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LogOut, Settings2 } from 'lucide-react'
+import { LogOut, Settings2, Lock } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 import { useModules } from '../hooks/useModules'
 import CircularLauncher from '../components/CircularLauncher'
@@ -40,7 +40,9 @@ export default function Launcher() {
   // debajo del AppLoader, luego señaliza que el loader puede salir.
   useEffect(() => {
     if (loading) return
-    const t = setTimeout(() => stopEntry(), 400)
+    const t = setTimeout(() => {
+      stopEntry();
+    }, 400)
     return () => clearTimeout(t)
   }, [loading, stopEntry])
   const [isExiting,   setIsExiting]   = useState(false)
@@ -83,36 +85,42 @@ export default function Launcher() {
       {/* ════ Header ════════════════════════════════════════════════════ */}
       <motion.header
         style={{
-          background: T.bg,
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: `1px solid ${T.border}`,
-          boxShadow: '0 1px 3px rgba(15,23,42,0.05)',
+          background: 'rgba(255, 255, 255, 0.45)',
+          backdropFilter: 'blur(20px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+          borderBottom: '1px solid rgba(11, 95, 141, 0.15)',
+          boxShadow: '0 8px 32px 0 rgba(11, 95, 141, 0.04), 0 1px 0 0 rgba(255, 255, 255, 0.35) inset',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 24px',
+          zIndex: 10,
         }}
-        className="relative z-10 grid grid-cols-[auto_1fr_auto] items-center px-6 py-3 gap-6"
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: EASE }}
       >
-        {/* Izquierda — tarjeta usuario compacta */}
+        {/* Izquierda — tarjeta usuario */}
         <div
-          className="flex items-center gap-3"
           style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: 12,
-            padding: '8px 12px',
-            boxShadow: '0 1px 3px rgba(15,23,42,0.05)',
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: 'rgba(255, 255, 255, 0.65)',
+            border: '1px solid rgba(11, 95, 141, 0.12)',
+            borderRadius: 14,
+            padding: '10px 16px',
+            boxShadow: '0 4px 12px rgba(11, 95, 141, 0.04)',
           }}
         >
           {/* Avatar */}
           <div style={{
-            width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-            background: T.brand,
+            width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+            background: 'linear-gradient(135deg, #0B5F8D, #08486A)',
             display: 'grid', placeItems: 'center',
             fontFamily: '"Sora", system-ui, sans-serif',
-            fontWeight: 700, fontSize: 14,
+            fontWeight: 700, fontSize: 16,
             color: '#ffffff',
+            boxShadow: '0 3px 10px rgba(11, 95, 141, 0.25)',
           }}>
             {(profile?.full_name || 'U').charAt(0).toUpperCase()}
           </div>
@@ -120,29 +128,36 @@ export default function Launcher() {
           <div>
             <p style={{
               fontFamily: '"Inter", system-ui, sans-serif',
-              fontWeight: 600, fontSize: 13.5,
+              fontWeight: 600, fontSize: 14,
               color: T.text1,
               letterSpacing: '-0.01em',
               lineHeight: 1.2,
+              margin: 0,
             }}>
               {profile?.full_name || 'usuario'}
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 4px rgba(16,185,129,0.5)', flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: T.text3, fontFamily: '"Inter", system-ui' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px rgba(16,185,129,0.55)', flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: T.text3, fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}>
                 {ROLE_LABEL[profile?.role] || '—'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Centro — logo */}
-        <div className="flex justify-center">
+        {/* Centro — logo absolutamente centrado */}
+        <div style={{
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+        }}>
           <motion.img
             src="/logo.png"
             alt="ALAS"
             style={{
-              height: 32, width: 'auto',
+              height: 34, width: 'auto', display: 'block',
               filter: 'brightness(0) saturate(100%) invert(24%) sepia(61%) saturate(1200%) hue-rotate(183deg) brightness(85%)',
             }}
             initial={{ opacity: 0, scale: 0.92 }}
@@ -153,23 +168,68 @@ export default function Launcher() {
 
         {/* Derecha — botones */}
         <motion.div
-          className="flex items-center gap-2"
+          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
           initial="hidden"
           animate="visible"
           variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.06 } } }}
         >
-          {profile?.role === 'admin' && (
-            <motion.div variants={btnItem}>
-              <Link to="/admin" className="surface-btn">
-                <Settings2 style={{ width: 14, height: 14 }} />
-                <span>Admin</span>
-              </Link>
-            </motion.div>
-          )}
+          {(() => {
+            const canAccess = profile?.role === 'admin' || profile?.role === 'supervisor'
+            return (
+              <motion.div variants={btnItem}>
+                {canAccess ? (
+                  <Link to="/admin" style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '10px 20px', borderRadius: 12,
+                    background: 'rgba(255, 255, 255, 0.75)',
+                    border: '1px solid rgba(11, 95, 141, 0.18)',
+                    boxShadow: '0 2px 10px rgba(11, 95, 141, 0.07)',
+                    fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                    fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em',
+                    color: '#0B5F8D', textDecoration: 'none',
+                    transition: 'all 150ms ease',
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f0f7ff'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.35)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.18)' }}
+                  >
+                    <Settings2 style={{ width: 15, height: 15, color: '#0B5F8D' }} />
+                    <span>ADMIN // CONTROL</span>
+                  </Link>
+                ) : (
+                  <div title="Sin permisos de acceso" style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '10px 20px', borderRadius: 12,
+                    background: 'rgba(255, 255, 255, 0.40)',
+                    border: '1px solid rgba(148, 163, 184, 0.25)',
+                    fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                    fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em',
+                    color: '#94a3b8', cursor: 'not-allowed',
+                    opacity: 0.6,
+                  }}>
+                    <Lock style={{ width: 13, height: 13 }} />
+                    <span>ADMIN // CONTROL</span>
+                  </div>
+                )}
+              </motion.div>
+            )
+          })()}
           <motion.div variants={btnItem}>
-            <button onClick={handleSignOut} className="surface-btn danger">
-              <LogOut style={{ width: 14, height: 14 }} />
-              <span>Salir</span>
+            <button onClick={handleSignOut} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '10px 20px', borderRadius: 12,
+              background: 'rgba(255, 255, 255, 0.75)',
+              border: '1px solid rgba(239, 68, 68, 0.18)',
+              boxShadow: '0 2px 10px rgba(239, 68, 68, 0.06)',
+              fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+              fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em',
+              color: '#ef4444', cursor: 'pointer',
+              transition: 'all 150ms ease',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#fff1f1'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.18)' }}
+            >
+              <LogOut style={{ width: 15, height: 15 }} />
+              <span>CERRAR SESIÓN</span>
             </button>
           </motion.div>
         </motion.div>
@@ -178,23 +238,7 @@ export default function Launcher() {
       {/* ════ Main ══════════════════════════════════════════════════════ */}
       <main className="relative z-10 flex-1 grid place-items-center">
         {loading ? (
-          <motion.div
-            role="status"
-            aria-label="Cargando sistema"
-            className="flex items-center gap-1.5"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.42, ease: EASE }}
-          >
-            {[0, 1, 2].map(i => (
-              <motion.div
-                key={i}
-                style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(11,95,141,0.45)' }}
-                animate={{ opacity: [0.25, 1, 0.25], scale: [0.75, 1, 0.75] }}
-                transition={{ duration: 1.4, delay: i * 0.20, repeat: Infinity, ease: 'easeInOut' }}
-              />
-            ))}
-          </motion.div>
+          null
         ) : modules.length === 0 ? (
           <motion.div
             className="text-center space-y-1"
@@ -214,7 +258,7 @@ export default function Launcher() {
       </main>
 
     </motion.div>
-    <AlasTransitionLoader active={isLaunching} />
+    <AlasTransitionLoader active={isLaunching} label="Abriendo módulo" />
     </>
   )
 }

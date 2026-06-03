@@ -7,17 +7,17 @@ import Launcher from './pages/Launcher'
 import AdminPanel from './pages/AdminPanel'
 import AlasTransitionLoader from './components/AlasTransitionLoader'
 
-// Solo activo durante la transición post-login.
-// No cubre el boot para no bloquear el retorno desde módulos SSO.
 function AppLoader() {
-  const { transitioning } = useAuth()
-  return <AlasTransitionLoader active={transitioning} label="Iniciando sistema" />
+  const { appBooting, transitioning } = useAuth()
+  const active = appBooting || transitioning
+  const label = appBooting ? "Iniciando sistema" : "Iniciando panel"
+  return <AlasTransitionLoader active={active} label={label} />
 }
 
 function AnimatedRoutes() {
   const location = useLocation()
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <AnimatePresence initial={false}>
       <Routes location={location} key={location.pathname}>
         <Route path="/login" element={<Login />} />
         <Route

@@ -107,6 +107,24 @@ export const adminApi = {
     return supabase.rpc('admin_toggle_permission', { p_user_id: userId, p_module_id: moduleId, p_grant: grant })
   },
 
+  // Edita datos de un usuario (nombre, rol, contraseña).
+  editUser: (userId, updates) => {
+    if (DEMO_MODE) {
+      const u = DEMO_USERS.find(u => u.id === userId)
+      if (u) {
+        if (updates.full_name !== undefined) u.full_name = updates.full_name
+        if (updates.role     !== undefined) u.role      = updates.role
+      }
+      return Promise.resolve(ok(null))
+    }
+    return supabase.rpc('admin_edit_user', {
+      p_user_id:  userId,
+      p_full_name: updates.full_name ?? null,
+      p_role:     updates.role      ?? null,
+      p_password: updates.password  ?? null,
+    })
+  },
+
   // Actualiza campos de un módulo (url, name, is_active, sort_order).
   updateModule: async (id, updates) => {
     if (DEMO_MODE) {

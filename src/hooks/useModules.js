@@ -11,11 +11,11 @@ const DEMO_MODE = false
 // Desarrollo: localhost. Producción: reemplazar con URLs de Vercel/dominio real.
 // En producción con DEMO_MODE=false, la URL viene del RPC `open_module` de Supabase.
 const IS_DEV = import.meta.env.DEV
-const LAUNCH_TRANSITION_MS = 680
+const LAUNCH_TRANSITION_MS = 1400
 const DEMO_MODULES = [
   { key: 'calendario', name: 'Calendario Tareas',     url: IS_DEV ? 'http://localhost:8080'  : import.meta.env.VITE_URL_CALENDARIO  || '', is_active: true, is_blocked: false },
   { key: 'acuses',     name: 'Acuses de Recibo',      url: IS_DEV ? ''                       : import.meta.env.VITE_URL_ACUSES       || '', is_active: true, is_blocked: false },
-  { key: 'borrados',   name: 'Items Borrados',        url: IS_DEV ? ''                       : import.meta.env.VITE_URL_BORRADOS     || '', is_active: true, is_blocked: false },
+  { key: 'borrados',   name: 'Items Borrados',        url: IS_DEV ? 'http://localhost:4000'  : import.meta.env.VITE_URL_BORRADOS     || '', is_active: true, is_blocked: false },
   { key: 'pedidos',    name: 'Pedidos Caja Venta',    url: IS_DEV ? 'http://localhost:3000'  : import.meta.env.VITE_URL_PEDIDOS      || '', is_active: true, is_blocked: false },
   { key: 'recepcion',  name: 'Recepción Mercaderías', url: IS_DEV ? ''                       : import.meta.env.VITE_URL_RECEPCION    || '', is_active: true, is_blocked: false },
   { key: 'inventario', name: 'Inventario',            url: IS_DEV ? ''                       : import.meta.env.VITE_URL_INVENTARIO   || '', is_active: true, is_blocked: false },
@@ -33,17 +33,37 @@ export function useModules() {
 
   const fetchModules = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase.rpc('get_allowed_modules')
+
+    // Busca en paralelo: módulos permitidos (con URL) + todos los activos (solo metadata)
+    const [{ data: allowed, error }, { data: allMods }] = await Promise.all([
+      supabase.rpc('get_allowed_modules'),
+      supabase.from('modules').select('id,key,name,is_active,sort_order').order('sort_order'),
+    ])
+
     if (error) {
       if (import.meta.env.DEV) console.error('[ALAS] Error cargando módulos:', error.message)
       setModules([])
     } else {
-      setModules(data || [])
+      const allowedMap = Object.fromEntries((allowed || []).map(m => [m.key, m]))
+
+      // Si pudimos leer la tabla de módulos: mostrar todos, marcar sin permiso como bloqueados
+      // Si no (RLS): caer al comportamiento anterior (solo permitidos)
+      const combined = allMods?.length
+        ? allMods.map(m => {
+            if (!m.is_active) return { ...m, url: '', is_blocked: false }  // globalmente desactivado → Trabajando
+            if (allowedMap[m.key]) return allowedMap[m.key]                // activo + tiene permiso → datos completos
+            return { ...m, url: '', is_blocked: true }                     // activo + sin permiso → bloqueado
+          })
+        : (allowed || [])
+
+      setModules(combined)
     }
     setLoading(false)
   }, [])
 
-  useEffect(() => { if (!DEMO_MODE) fetchModules() }, [fetchModules])
+  useEffect(() => {
+    if (!DEMO_MODE) fetchModules()
+  }, [fetchModules])
 
   // Abre un módulo con token SSO firmado adjunto en la URL.
   // En modo producción: reverifica el permiso en servidor antes de abrir.

@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import gsap from 'gsap'
 import { getModuleIcon } from '../data/icons'
+import { Lock, HardHat } from 'lucide-react'
+import { useAuth } from '../lib/AuthContext'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function getState(m) {
@@ -45,37 +47,40 @@ const C = {
 }
 
 function lineBaseColor(state) {
-  if (state === 'blocked')  return 'rgba(239,68,68,0.22)'
-  if (state === 'inactive') return 'rgba(203,213,225,0.45)'
-  return 'rgba(203,213,225,0.65)'
+  if (state === 'blocked')  return 'rgba(239, 68, 68, 0.35)'
+  if (state === 'inactive') return 'rgba(37, 99, 235, 0.22)'
+  return 'rgba(11, 95, 141, 0.28)'
 }
 
 function nodeStyles(state, hov) {
   const base = {
-    borderRadius: 20, width: BTN_SIZE, height: BTN_SIZE,
+    borderRadius: 22, width: BTN_SIZE, height: BTN_SIZE,
     transition: 'none',
     transformOrigin: '50% 50%',
     backfaceVisibility: 'hidden',
     willChange: 'transform, background-color, border-color, box-shadow',
   }
   if (state === 'inactive') return {
-    ...base, background: C.surface,
-    border: `1px solid ${C.border}`, boxShadow: 'none',
-    opacity: 0.4, cursor: 'not-allowed',
+    ...base,
+    background: 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%)',
+    border: '1px solid rgba(37, 99, 235, 0.22)',
+    boxShadow: '0 4px 16px rgba(37, 99, 235, 0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
+    opacity: 1,
+    cursor: 'not-allowed',
   }
   if (state === 'blocked') return {
-    ...base, background: '#fff1f2',
-    border: `1px solid rgba(239,68,68,${hov ? 0.32 : 0.20})`,
-    boxShadow: hov ? '0 6px 18px rgba(239,68,68,0.10)' : '0 1px 3px rgba(0,0,0,0.04)',
-    cursor: 'not-allowed',
+    ...base,
+    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(254, 242, 242, 0.8))',
+    border: '1px solid rgba(239, 68, 68, 0.15)',
+    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.02)',
+    cursor: 'pointer',
+    opacity: 0.65,
   }
   return {
     ...base,
-    background: hov ? C.surfaceHov : C.surface,
-    border: `1px solid ${hov ? C.borderHov : C.border}`,
-    boxShadow: hov
-      ? '0 16px 40px rgba(11,95,141,0.14), 0 6px 16px rgba(11,95,141,0.07), 0 1px 4px rgba(15,23,42,0.05)'
-      : '0 1px 4px rgba(15,23,42,0.06), 0 0 0 1px rgba(226,232,240,0.4)',
+    background: 'linear-gradient(135deg, #ffffff 0%, #fbfcfe 100%)',
+    border: '1px solid rgba(11, 95, 141, 0.14)',
+    boxShadow: '0 6px 20px rgba(11, 95, 141, 0.04), 0 2px 4px rgba(11, 95, 141, 0.02), inset 0 1px 0 #ffffff',
     cursor: 'pointer',
   }
 }
@@ -89,15 +94,23 @@ function labelColor(state, hov) {
   if (state === 'blocked')  return 'rgba(239,68,68,0.65)'
   return hov ? C.brand : C.text2
 }
-function dotStyle(state) {
-  const b = { width: 6, height: 6, borderRadius: '50%', position: 'absolute', top: 8, right: 8 }
-  if (state === 'active')  return { ...b, background: '#10b981', boxShadow: '0 0 5px rgba(16,185,129,0.5)' }
-  if (state === 'blocked') return { ...b, background: C.danger, boxShadow: '0 0 5px rgba(239,68,68,0.4)' }
-  return { ...b, background: '#cbd5e1' }
-}
+// dotStyle removed - replaced by inline pulsing component
 
 export default function CircularLauncher({ modules, onOpen }) {
+  const { appBooting, transitioning } = useAuth()
   const [busyKey, setBusyKey] = useState(null)
+  const [hubAlert, setHubAlert] = useState(null)
+  const alertTimer = useRef(null)
+
+  const triggerHubAlert = useCallback((msg) => {
+    clearTimeout(alertTimer.current)
+    setHubAlert(msg)
+    alertTimer.current = setTimeout(() => setHubAlert(null), 2000)
+  }, [])
+
+  // Limpieza del timer al desmontar
+  useEffect(() => () => clearTimeout(alertTimer.current), [])
+
   // ── Refs for GSAP ────────────────────────────────────────────────────────
   const containerRef = useRef(null)
   const hubRef      = useRef(null)
@@ -115,118 +128,129 @@ export default function CircularLauncher({ modules, onOpen }) {
   useEffect(() => {
     if (!modules.length || !hubRef.current) return
 
+    // ── Si el loader de inicio o de transición siguen activos, mantener oculto ──
+    if (appBooting || transitioning) {
+      const ctx = gsap.context(() => {
+        // transformPerspective propio en el sistema: crea un punto de fuga real
+        // z: -1400 lo pone "detrás de la pantalla" — combinado con scale:0.05 es casi invisible
+        gsap.set(systemRef.current, {
+          autoAlpha: 0,
+          transformPerspective: 1100,
+          rotationX: 58,
+          scale: 0.88,
+          transformOrigin: '50% 50%',
+          force3D: true,
+        })
+        gsap.set(hubRef.current, {
+          scale: 0,
+          autoAlpha: 0,
+          force3D: true,
+        })
+        nodeRefs.current.filter(Boolean).forEach(node => {
+          gsap.set(node, {
+            autoAlpha: 0,
+            scale: 0,
+            transformOrigin: '50% 50%',
+            force3D: true,
+          })
+        })
+        lineBaseRefs.current.forEach(path => {
+          if (!path) return
+          const len = path.getTotalLength ? path.getTotalLength() : 200
+          gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 0.92 })
+        })
+        gsap.set(lineDashRefs.current.filter(Boolean), { opacity: 0 })
+      })
+      return () => ctx.revert()
+    }
+
+    // ── Cuando los loaders se apagan, lanzar la animación de entrada ──
     const ctx = gsap.context(() => {
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const nodes = nodeRefs.current.filter(Boolean)
+      const nodes     = nodeRefs.current.filter(Boolean)
       const dashLines = lineDashRefs.current.filter(Boolean)
 
       floatTween.current?.kill()
       floatTween.current = null
 
-      // ── Estados iniciales ──────────────────────────────────────────────────
-      gsap.set(hubRef.current, {
-        autoAlpha: 0,
-        scale: 0.75,
-        y: 12,
-        transformOrigin: 'center center',
-        force3D: true,
-      })
-      gsap.set(orbitRef.current, {
-        autoAlpha: 0,
-        scale: 0.95,
-        transformOrigin: 'center center',
-        force3D: true,
-      })
-
-      lineBaseRefs.current.forEach(path => {
-        if (!path) return
-        const len = path.getTotalLength ? path.getTotalLength() : 200
-        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 0.92 })
-      })
-
-      gsap.set(dashLines, { opacity: 0 })
-      gsap.set(nodes, {
-        autoAlpha: 0,
-        scale: 0.75,
-        y: 16,
-        transformOrigin: '50% 50%',
-        force3D: true,
-      })
-
       if (reduceMotion) {
-        gsap.set(hubRef.current, { autoAlpha: 1, scale: 1, y: 0 })
-        gsap.set(orbitRef.current, { autoAlpha: 1, scale: 1 })
-        lineBaseRefs.current.forEach(path => path && gsap.set(path, { strokeDashoffset: 0 }))
+        gsap.set(systemRef.current, { autoAlpha: 1, scale: 1, rotationX: 0 })
+        gsap.set(hubRef.current,    { scale: 1, autoAlpha: 1 })
+        lineBaseRefs.current.forEach(p => p && gsap.set(p, { strokeDashoffset: 0 }))
         gsap.set(dashLines, { opacity: 1 })
-        gsap.set(nodes, { autoAlpha: 1, scale: 1, y: 0 })
+        gsap.set(nodes, { scale: 1, autoAlpha: 1 })
         return
       }
 
       const goLive = () => {
-        floatTween.current = gsap.to(hubRef.current, {
-          y: -5,
-          duration: 3.2,
-          repeat: -1,
-          yoyo: true,
-          ease: FLOAT_EASE,
-          overwrite: false,
-        })
         gsap.to(dashLines, {
           opacity: 1,
-          duration: 0.72,
-          stagger: {
-            each: 0.055,
-            from: "center",
-          },
+          duration: 0.50,
+          stagger: { each: 0.035, from: 'center' },
           ease: 'power2.out',
         })
       }
 
-      const tl = gsap.timeline({
-        delay: 0.12,
-        defaults: { ease: 'expo.out' },
-        onComplete: goLive,
-      })
+      const tl = gsap.timeline({ delay: 0.02, onComplete: goLive })
 
-      // 1. Hub central emerge con elasticidad amortiguada premium
+      // ── FASE 1: Tilt forward — el disco empieza inclinado (rotationX 58°)
+      // como mirando un plato desde arriba, se "levanta" hacia la cámara.
+      // El círculo se ve como elipse al principio y se abre al quedar de frente.
+      tl.to(systemRef.current, {
+        autoAlpha: 1,
+        rotationX: -3,
+        scale: 1.01,
+        duration: 0.88,
+        ease: 'expo.out',
+        force3D: true,
+      }, 0)
+      // Pequeño rebote y queda perfecto de frente
+      tl.to(systemRef.current, {
+        rotationX: 0,
+        scale: 1,
+        duration: 0.28,
+        ease: 'power3.inOut',
+        force3D: true,
+      }, 0.88)
+
+      // ── FASE 2: Hub emerge del centro a mitad del vuelo ──────────────────
       tl.to(hubRef.current, {
         autoAlpha: 1,
+        scale: 1.18,
+        duration: 0.44,
+        ease: 'back.out(2.5)',
+        force3D: true,
+      }, 0.44)
+      tl.to(hubRef.current, {
         scale: 1,
-        y: 0,
-        duration: 0.85,
-        ease: 'back.out(1.28)',
-      })
+        duration: 0.26,
+        ease: 'power3.out',
+        force3D: true,
+      }, 0.88)
 
-      // 2. Órbita circular se dibuja en espiral y entra en solapamiento
-      tl.to(orbitRef.current, {
-        autoAlpha: 1,
-        scale: 1,
-        duration: 0.75,
-      }, '-=0.68')
+      // ── FASE 3: Órbita snap ───────────────────────────────────────────────
+      tl.set(orbitRef.current, { autoAlpha: 1 }, 0.58)
 
-      // 3. Módulos y líneas con stagger coordinado
-      const filterLines = lineBaseRefs.current.filter(Boolean)
-      tl.to(filterLines, {
+      // ── FASE 4: Líneas explotan desde el centro — simultáneas ────────────
+      tl.to(lineBaseRefs.current.filter(Boolean), {
         strokeDashoffset: 0,
-        duration: 0.58,
-        stagger: {
-          each: 0.065,
-          from: "start"
-        }
-      }, '-=0.55')
+        duration: 0.50,
+        stagger: 0,
+        ease: 'power4.out',
+      }, 0.62)
 
-      // Disparo de energía consecutiva y entrada elástica de nodos
-      modules.forEach((_, i) => {
-        if (!nodeRefs.current[i]) return
-        const triggerTime = 0.35 + i * 0.065
-        tl.call(() => firePulse(i), [], triggerTime)
-        tl.to(nodeRefs.current[i], {
+      // ── FASE 5: Módulos en cascada al extremo de cada línea ───────────────
+      nodes.forEach((node, i) => {
+        if (!node) return
+        const t = 0.82 + i * 0.055
+        tl.call(() => firePulse(i), [], t)
+        tl.to(node, {
           autoAlpha: 1,
           scale: 1,
-          y: 0,
-          duration: 0.65,
-          ease: 'back.out(1.35)',
-        }, triggerTime + 0.12)
+          duration: 0.50,
+          ease: 'back.out(1.6)',
+          force3D: true,
+        }, t)
       })
     })
 
@@ -235,53 +259,9 @@ export default function CircularLauncher({ modules, onOpen }) {
       floatTween.current?.kill()
       floatTween.current = null
     }
-  }, [modules.length]) // eslint-disable-line
+  }, [modules.length, appBooting, transitioning]) // eslint-disable-line
 
-  // ── 1b. Parallax 3D interactivo con cursor ─────────────────────────────
-  useEffect(() => {
-    const container = containerRef.current
-    const system = systemRef.current
-    if (!container || !system || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-    // quickTo setters para 60 FPS sin sobrecarga en el DOM
-    const xTo = gsap.quickTo(system, "rotationY", { duration: 0.6, ease: "power3.out" })
-    const yTo = gsap.quickTo(system, "rotationX", { duration: 0.6, ease: "power3.out" })
-    
-    // El Hub reacciona en dirección contraria para acentuar la profundidad 3D
-    const hubX = gsap.quickTo(hubRef.current, "x", { duration: 0.7, ease: "power3.out" })
-    const hubY = gsap.quickTo(hubRef.current, "y", { duration: 0.7, ease: "power3.out" })
-
-    const handleMouseMove = (e) => {
-      if (busyKey) return // Desactivar parallax si hay navegación en curso
-      const rect = container.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const centerY = rect.top + rect.height / 2
-      
-      const normX = (e.clientX - centerX) / (rect.width / 2)
-      const normY = (e.clientY - centerY) / (rect.height / 2)
-      
-      xTo(normX * 8) // Rotación máxima en eje Y
-      yTo(-normY * 8) // Rotación máxima en eje X
-      
-      hubX(normX * 11) // Desplazamiento leve de parallax en hub
-      hubY(normY * 11)
-    }
-
-    const handleMouseLeave = () => {
-      xTo(0)
-      yTo(0)
-      hubX(0)
-      hubY(0)
-    }
-
-    container.addEventListener('mousemove', handleMouseMove)
-    container.addEventListener('mouseleave', handleMouseLeave)
-
-    return () => {
-      container.removeEventListener('mousemove', handleMouseMove)
-      container.removeEventListener('mouseleave', handleMouseLeave)
-    }
-  }, [modules, busyKey])
 
   // ── 2. Hub reacts to module hover ────────────────────────────────────────
   // Hover is handled imperatively in animateModuleHover to avoid SVG re-renders.
@@ -290,10 +270,6 @@ export default function CircularLauncher({ modules, onOpen }) {
   useEffect(() => {
     const ease = 'expo.out'
     if (busyKey) {
-      // Retornar la perspectiva 3D al punto neutro de inmediato al navegar
-      gsap.to(systemRef.current, { rotationX: 0, rotationY: 0, duration: 0.5, ease })
-      gsap.to(hubRef.current, { x: 0, y: 0, duration: 0.5, ease })
-
       nodeRefs.current.forEach((el, i) => {
         if (!el) return
         const isBusyNode = modules[i]?.key === busyKey
@@ -304,6 +280,13 @@ export default function CircularLauncher({ modules, onOpen }) {
         })
       })
       lineBaseRefs.current.forEach((el, i) => {
+        if (!el) return
+        gsap.to(el, {
+          opacity: modules[i]?.key === busyKey ? 0.9 : 0.04,
+          duration: 0.4, ease, overwrite: 'auto',
+        })
+      })
+      lineDashRefs.current.forEach((el, i) => {
         if (!el) return
         gsap.to(el, {
           opacity: modules[i]?.key === busyKey ? 0.9 : 0.04,
@@ -323,6 +306,12 @@ export default function CircularLauncher({ modules, onOpen }) {
         duration: 0.5, ease, overwrite: 'auto',
       })
       lineBaseRefs.current.forEach((el, i) => {
+        if (!el) return
+        gsap.to(el, {
+          opacity: 1, duration: 0.45, ease, overwrite: 'auto',
+        })
+      })
+      lineDashRefs.current.forEach((el, i) => {
         if (!el) return
         gsap.to(el, {
           opacity: 1, duration: 0.45, ease, overwrite: 'auto',
@@ -386,16 +375,18 @@ export default function CircularLauncher({ modules, onOpen }) {
 
     const iconEl = nodeEl?.querySelector('[data-module-icon]')
     const labelEl = nodeEl?.querySelector('[data-module-label]')
+    const lineBaseEl = lineBaseRefs.current[moduleIndex]
+    const lineDashEl = lineDashRefs.current[moduleIndex]
 
     gsap.killTweensOf([buttonEl, iconEl, labelEl].filter(Boolean))
     gsap.to(buttonEl, {
       scale: on ? 1.08 : 1,
       y: on ? -3 : 0,
-      backgroundColor: on ? C.surfaceHov : C.surface,
-      borderColor: on ? C.borderHov : C.border,
+      backgroundColor: on ? '#f0f7ff' : '#ffffff',
+      borderColor: on ? '#0B5F8D' : 'rgba(11, 95, 141, 0.14)',
       boxShadow: on
-        ? '0 16px 36px rgba(11,95,141,0.15), 0 4px 12px rgba(15,23,42,0.06)'
-        : '0 1px 4px rgba(15,23,42,0.06), 0 0 0 1px rgba(226,232,240,0.4)',
+        ? '0 16px 36px rgba(11, 95, 141, 0.15), 0 0 0 4px rgba(11, 95, 141, 0.08)'
+        : '0 6px 20px rgba(11, 95, 141, 0.04), 0 2px 4px rgba(11, 95, 141, 0.02), inset 0 1px 0 #ffffff',
       duration: on ? 0.32 : 0.24,
       ease: on ? 'expo.out' : 'power3.out',
       overwrite: 'auto',
@@ -417,10 +408,47 @@ export default function CircularLauncher({ modules, onOpen }) {
         overwrite: 'auto',
       })
     }
+
+    if (lineBaseEl) {
+      gsap.killTweensOf(lineBaseEl)
+      gsap.to(lineBaseEl, {
+        stroke: on ? '#0B5F8D' : lineBaseColor('active'),
+        strokeWidth: on ? 2.2 : 1.4,
+        duration: on ? 0.32 : 0.24,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      })
+      gsap.set(lineBaseEl, { filter: on ? 'url(#line-glow)' : 'none' })
+    }
+
+    if (lineDashEl) {
+      gsap.killTweensOf(lineDashEl)
+      gsap.to(lineDashEl, {
+        stroke: on ? '#0B5F8D' : 'rgba(11,95,141,0.38)',
+        strokeWidth: on ? 2.5 : 1.5,
+        duration: on ? 0.32 : 0.24,
+        ease: 'power2.out',
+        overwrite: 'auto',
+      })
+    }
   }, [])
 
   const handleClick = async (m) => {
-    if (getState(m) !== 'active') return
+    const state = getState(m)
+    if (state === 'blocked') {
+      const idx = modules.findIndex(mod => mod.key === m.key)
+      const buttonEl = buttonRefs.current[idx]
+      if (buttonEl) {
+        gsap.killTweensOf(buttonEl)
+        gsap.fromTo(buttonEl,
+          { x: -6 },
+          { x: 0, duration: 0.42, ease: 'elastic.out(1, 0.25)', clearProps: 'x' }
+        )
+      }
+      triggerHubAlert("SIN PERMISO")
+      return
+    }
+    if (state !== 'active') return
     const idx = modules.findIndex(mod => mod.key === m.key)
     firePulse(idx)
     setBusyKey(m.key)
@@ -438,7 +466,7 @@ export default function CircularLauncher({ modules, onOpen }) {
     <div
       ref={containerRef}
       className="relative grid place-items-center select-none"
-      style={{ width: SIZE, height: SIZE, maxWidth: '92vw', perspective: '900px' }}
+      style={{ width: SIZE, height: SIZE, maxWidth: '92vw' }}
     >
       {/* System wrapper */}
       <div
@@ -483,7 +511,6 @@ export default function CircularLauncher({ modules, onOpen }) {
           const x2 = CX + Math.cos(angle) * L_END
           const y2 = CY + Math.sin(angle) * L_END
           const state = getState(m)
-          const isHov = false
           const isBusy = busyKey === m.key
 
           return (
@@ -493,27 +520,22 @@ export default function CircularLauncher({ modules, onOpen }) {
                 ref={el => { lineBaseRefs.current[i] = el }}
                 d={`M ${x1} ${y1} L ${x2} ${y2}`}
                 stroke={lineBaseColor(state)}
-                strokeWidth={isHov ? 1.2 : 0.8}
+                strokeWidth={isBusy ? 2.0 : 1.4}
                 strokeLinecap="round"
                 fill="none"
-                filter={isHov && state === 'active' ? 'url(#line-glow)' : undefined}
               />
               {/* Marching dashes — CSS infinite, GSAP fades in after entrance */}
               {state === 'active' && (
                 <path
                   ref={el => { lineDashRefs.current[i] = el }}
                   d={`M ${x1} ${y1} L ${x2} ${y2}`}
-                  stroke={
-                    isBusy ? 'rgba(11,95,141,0.7)'
-                    : isHov ? 'rgba(11,95,141,0.55)'
-                    : 'rgba(11,95,141,0.22)'
-                  }
-                  strokeWidth={isBusy ? 1.8 : isHov ? 1.5 : 1.2}
+                  stroke={isBusy ? '#0B5F8D' : 'rgba(11,95,141,0.38)'}
+                  strokeWidth={isBusy ? 2.5 : 1.5}
                   strokeLinecap="round"
                   fill="none"
-                  strokeDasharray="2 11"
+                  strokeDasharray="3 9"
                   style={{
-                    animation: `dash-march ${isBusy ? 0.45 : isHov ? 0.9 : 1.8}s linear infinite`,
+                    animation: `dash-march ${isBusy ? 0.45 : 1.8}s linear infinite`,
                     animationDelay: `${i * 0.22}s`,
                     transition: 'stroke 200ms ease, stroke-width 200ms ease',
                     opacity: 0, // GSAP fades in after entrance
@@ -613,6 +635,28 @@ export default function CircularLauncher({ modules, onOpen }) {
                   }}
                 />
               </motion.div>
+            ) : hubAlert ? (
+              <motion.div
+                key="alert"
+                initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+              >
+                <p style={{
+                  fontFamily: '"Sora", system-ui, sans-serif',
+                  fontWeight: 700, fontSize: '10px',
+                  letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: '#ef4444',
+                  textShadow: '0 0 8px rgba(239, 68, 68, 0.25)',
+                  margin: 0,
+                }}>{hubAlert}</p>
+                <p style={{
+                  fontSize: '14px',
+                  margin: '2px 0 0',
+                  lineHeight: 1,
+                }}>😢</p>
+              </motion.div>
             ) : (
               <motion.div
                 key="idle"
@@ -671,7 +715,7 @@ export default function CircularLauncher({ modules, onOpen }) {
             <button
               ref={el => { buttonRefs.current[i] = el }}
               onClick={() => handleClick(m)}
-              disabled={!isActive || isBusy}
+              disabled={state === 'inactive' || isBusy}
               className="relative grid place-items-center flex-shrink-0"
               style={nodeStyles(state, isHov)}
             >
@@ -683,21 +727,78 @@ export default function CircularLauncher({ modules, onOpen }) {
                 background: 'rgba(255,255,255,0.9)',
               }} />
 
-              {/* Status dot */}
-              <span style={dotStyle(state)} />
+              {/* Status dot with subtle pulse */}
+              <div style={{
+                position: 'absolute', top: 8, right: 8,
+                width: 6, height: 6,
+                pointerEvents: 'none',
+              }}>
+                <span style={{
+                  position: 'absolute', inset: -1,
+                  borderRadius: '50%',
+                  background: state === 'active' ? '#10b981' : state === 'inactive' ? '#2563EB' : '#ef4444',
+                  animation: 'status-dot-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite',
+                  pointerEvents: 'none',
+                }} />
+                <span style={{
+                  position: 'absolute', inset: 0,
+                  borderRadius: '50%',
+                  background: state === 'active' ? '#10b981' : state === 'inactive' ? '#2563EB' : '#ef4444',
+                  boxShadow: state === 'active'
+                    ? '0 0 5px rgba(16, 185, 129, 0.45)'
+                    : state === 'inactive'
+                    ? '0 0 5px rgba(37, 99, 235, 0.45)'
+                    : '0 0 5px rgba(239, 68, 68, 0.4)',
+                  pointerEvents: 'none',
+                }} />
+              </div>
 
-              {/* Icon */}
-              <Icon data-module-icon style={{
-                width: 26, height: 26,
-                color: iconColor(state, isHov),
-                transition: 'none',
-                flexShrink: 0,
-              }} />
+              {/* Icon — casco cuando está en proceso, ícono normal en otro caso */}
+              {state === 'inactive' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <HardHat data-module-icon style={{
+                    width: 24, height: 24,
+                    color: '#2563EB',
+                    flexShrink: 0,
+                    animation: 'hardhat-bob 2.4s ease-in-out infinite',
+                  }} />
+                  <span style={{
+                    fontSize: '8.5px',
+                    fontWeight: 600,
+                    letterSpacing: '0.06em',
+                    color: '#2563EB',
+                    fontFamily: '"Inter", system-ui, sans-serif',
+                    textTransform: 'uppercase',
+                    opacity: 0.85,
+                  }}>Trabajando...</span>
+                </div>
+              ) : (
+                <Icon data-module-icon style={{
+                  width: 26, height: 26,
+                  color: iconColor(state, isHov),
+                  transition: 'none',
+                  flexShrink: 0,
+                  filter: state === 'blocked' ? 'grayscale(100%) opacity(0.35)' : 'none',
+                }} />
+              )}
+
+              {/* Locked overlay lock icon */}
+              {state === 'blocked' && (
+                <div style={{
+                  position: 'absolute', bottom: 5, right: 5,
+                  width: 17, height: 17, borderRadius: '50%',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  display: 'grid', placeItems: 'center',
+                }}>
+                  <Lock style={{ width: 8, height: 8, color: '#ef4444' }} />
+                </div>
+              )}
 
               {/* Busy spinner */}
               {isBusy && (
                 <div className="absolute inset-0 grid place-items-center" style={{
-                  borderRadius: 20,
+                  borderRadius: 22,
                   background: 'rgba(255,255,255,0.85)',
                   backdropFilter: 'blur(4px)',
                 }}>
@@ -710,9 +811,11 @@ export default function CircularLauncher({ modules, onOpen }) {
               )}
             </button>
 
+
+
             {/* Label */}
             <span data-module-label style={{
-              fontSize: '12px', fontWeight: 500, letterSpacing: '-0.01em',
+              fontSize: '11.5px', fontWeight: 500, letterSpacing: '-0.01em',
               fontFamily: '"Inter", system-ui, sans-serif',
               color: labelColor(state, isHov),
               transition: 'none',

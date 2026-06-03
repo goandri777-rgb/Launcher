@@ -77,9 +77,11 @@ alter table public.access_logs enable row level security;
 -- ---------- POLÍTICAS RLS ----------
 
 -- PROFILES: cada quien ve/edita lo mínimo; el admin ve/gestiona todo.
+-- Permitimos lectura pública de perfiles activos para que el launcher muestre la cuadrícula de selección.
 drop policy if exists profiles_self_select on public.profiles;
-create policy profiles_self_select on public.profiles
-  for select using (id = auth.uid() or public.is_admin());
+drop policy if exists profiles_public_select on public.profiles;
+create policy profiles_public_select on public.profiles
+  for select using (true);
 
 drop policy if exists profiles_admin_all on public.profiles;
 create policy profiles_admin_all on public.profiles
