@@ -227,7 +227,8 @@ Accesible en `/admin`. Solo visible para usuarios con `role === 'admin'`.
 ### AdminAPI (`src/lib/adminApi.js`)
 Con `DEMO_MODE = false` llama RPCs de Supabase protegidos por `is_admin()`.
 El login operativo es por `username`; el email queda interno para Supabase Auth.
-El panel enlaza usuarios Auth existentes con `username`, nombre y rol.
+El panel crea usuarios Auth completos con `username`, email, contraseña, nombre y rol mediante la Edge Function `admin-create-user`.
+El RPC `admin_create_user` queda como respaldo para enlazar usuarios Auth existentes.
 
 ---
 
@@ -298,6 +299,7 @@ ALASTransition.exitToLauncher(url)                  // anima salida hacia derech
 - [x] Login por `username` alineado con Supabase: `admin_create_user`, `admin_edit_user`, `get_email_by_username`
 - [x] Catálogo de módulos sin URLs vía `get_module_catalog`; URLs solo por `open_module` o panel admin
 - [x] Dependencia directa Linux de Rollup removida; build verificado en Windows
+- [x] Creación de usuarios con contraseña desde el panel mediante Supabase Edge Function `admin-create-user`
 
 ---
 
@@ -306,6 +308,7 @@ ALASTransition.exitToLauncher(url)                  // anima salida hacia derech
 ### Antes de producción (obligatorios)
 - [x] `DEMO_MODE = false` en `AuthContext.jsx`, `useModules.js` y `adminApi.js`
 - [ ] Configurar `.env` con Supabase real (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
+- [ ] Desplegar `supabase/functions/admin-create-user` y configurar `SUPABASE_SERVICE_ROLE_KEY`
 - [ ] Configurar `VITE_LAUNCHER_URL` y URLs de cada módulo en `.env`
 - [ ] Actualizar `launcherUrl` en `sso-config.js` de CajaVenta y Calendario con URL de Vercel
 - [x] Crear RPCs de Supabase: `get_module_catalog`, `get_allowed_modules`, `open_module`, `admin_list_users`, `admin_create_user`, `admin_edit_user`, etc.
@@ -365,4 +368,4 @@ npx http-server -p 8080 --cors -c-1 .   # → http://localhost:8080
 
 ---
 
-*Última actualización: Junio 2026 — login por username, RPCs admin y catálogo seguro de módulos alineados con el código actual.*
+*Última actualización: Junio 2026 — login por username, creación de usuarios con contraseña vía Edge Function, RPCs admin y catálogo seguro de módulos alineados con el código actual.*

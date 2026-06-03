@@ -379,19 +379,30 @@ function EditModuleModal({ module: mod, onClose, onSaved, notify }) {
 
 // ─── create user modal ────────────────────────────────────────────────────────
 function CreateUserModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({username:'',email:'',fullName:'',role:'operador'})
+  const [form, setForm] = useState({username:'',email:'',password:'',fullName:'',role:'operador'})
   const [busy, setBusy] = useState(false)
   const [err,  setErr]  = useState('')
 
   const submit = async () => {
     setErr(''); setBusy(true)
     const username = normalizeUsernameInput(form.username)
+    const email = form.email.trim()
     if (username.length < 3) {
       setBusy(false)
       setErr('Usuario inválido: usá al menos 3 caracteres.')
       return
     }
-    const {error} = await adminApi.createUser(username,form.email.trim(),form.fullName.trim(),form.role)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setBusy(false)
+      setErr('Correo electrónico inválido.')
+      return
+    }
+    if (form.password.length < 8) {
+      setBusy(false)
+      setErr('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+    const {error} = await adminApi.createUser(username,email,form.password,form.fullName.trim(),form.role)
     setBusy(false)
     if (error) { setErr(error.message); return }
     onCreated()
@@ -400,11 +411,12 @@ function CreateUserModal({ onClose, onCreated }) {
   return (
     <Overlay onClose={onClose}>
       <ModalCard width={440}>
-        <ModalHead title="Nuevo usuario" sub="Vinculá una cuenta ya creada en Supabase Auth" onClose={onClose}/>
+        <ModalHead title="Nuevo usuario" sub="Crea la cuenta con acceso al Launcher" onClose={onClose}/>
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
           <Field label="Usuario"><Input value={form.username} onChange={v=>setForm({...form,username:normalizeUsernameInput(v)})} placeholder="miguel_casco" mono/></Field>
           <Field label="Nombre completo"><Input value={form.fullName} onChange={v=>setForm({...form,fullName:v})} placeholder="Ej. Juan Pérez"/></Field>
           <Field label="Correo electrónico"><Input type="email" value={form.email} onChange={v=>setForm({...form,email:v})} placeholder="usuario@empresa.com"/></Field>
+          <Field label="Contraseña"><Input type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="Mínimo 8 caracteres"/></Field>
           <Field label="Rol">
             <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}
               style={{width:'100%',borderRadius:10,background:'#ffffff',border:`1px solid ${C.border}`,padding:'9px 12px',fontSize:13,color:C.text1,outline:'none',fontFamily:'"Inter",system-ui,sans-serif',textTransform:'capitalize',boxSizing:'border-box'}}
@@ -416,7 +428,7 @@ function CreateUserModal({ onClose, onCreated }) {
           </Field>
           {err && <p style={{color:C.red,fontSize:12,margin:0,padding:'8px 12px',background:'#fff1f2',borderRadius:8,border:'1px solid rgba(239,68,68,0.2)'}}>{err}</p>}
           <div style={{paddingTop:4}}>
-            <PrimaryBtn onClick={submit} disabled={busy} icon={UserPlus}>{busy?'Guardando…':'Guardar usuario'}</PrimaryBtn>
+            <PrimaryBtn onClick={submit} disabled={busy} icon={UserPlus}>{busy?'Creando…':'Crear usuario'}</PrimaryBtn>
           </div>
         </div>
       </ModalCard>

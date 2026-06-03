@@ -43,10 +43,17 @@ npm run dev               # http://localhost:5173
 
 ## 5. Crear más usuarios
 
-Hay dos vías:
+El panel admin ahora crea la cuenta completa: `username`, email, contraseña, nombre y rol.
+Para que funcione, desplegá la Edge Function que usa `auth.admin.createUser` del lado servidor:
 
-- **Rápida (recomendada para demo):** crea el usuario en **Authentication → Users**; luego, desde el **panel admin**, cargá `username`, email, nombre y rol. El RPC `admin_create_user` enlaza su perfil. (Si el usuario ya existe por email, queda vinculado.)
-- **Completa (producción):** crea una **Edge Function** con la `service_role` que llame a `auth.admin.createUser` y luego inserte el perfil. Así el panel crea credenciales de punta a punta sin exponer secretos al navegador. La función `admin_create_user` del SQL ya está lista para enlazar el perfil una vez exista el usuario auth.
+```bash
+supabase functions deploy admin-create-user
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
+```
+
+Después entrá al **panel admin → Nuevo usuario**, cargá los datos y asigná permisos de módulos.
+La `service_role` queda solo en Supabase; el frontend sigue usando únicamente la anon key pública.
+El RPC `admin_create_user` del SQL queda como respaldo para enlazar un usuario Auth existente si alguna vez lo necesitás.
 
 ## 6. Configurar tus URLs reales de Vercel
 
@@ -95,6 +102,7 @@ logistic-launcher/
 │   ├── lib/adminApi.js                    # llamadas RPC de admin
 │   └── data/icons.js                      # iconos por módulo
 ├── supabase/schema.sql                    # tablas + RLS + funciones + demo
+├── supabase/functions/admin-create-user   # crea usuarios Auth con password
 ├── .env.example
 └── README.md
 ```

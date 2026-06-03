@@ -277,7 +277,7 @@ begin
 end; $$;
 
 -- Enlaza un usuario Auth existente con su perfil y username de login.
--- Para creación completa de credenciales se recomienda una Edge Function con service_role.
+-- La creación completa con contraseña vive en supabase/functions/admin-create-user.
 drop function if exists public.admin_create_user(text, text, text, public.user_role);
 create or replace function public.admin_create_user(
   p_username text, p_email text, p_full_name text, p_role user_role)

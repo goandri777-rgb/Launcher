@@ -39,6 +39,16 @@ const DEMO_LOGS = [
 const ok  = (data)  => ({ data, error: null })
 const err = (msg)   => ({ data: null, error: { message: msg } })
 
+async function functionErrorMessage(error, fallback) {
+  if (!error) return fallback
+  try {
+    const payload = await error.context?.json()
+    return payload?.reason || payload?.error || payload?.message || error.message || fallback
+  } catch {
+    return error.message || fallback
+  }
+}
+
 export const adminApi = {
   // Lista usuarios con su perfil y estado.
   listUsers: async () => {
@@ -47,20 +57,17 @@ export const adminApi = {
     return { data: data ?? [], error }
   },
 
-  // Enlaza un usuario Auth existente con su perfil y username de login.
-  createUser: async (username, email, fullName, role) => {
+  // Crea el usuario Auth con password desde una Edge Function con service_role.
+  createUser: async (username, email, password, fullName, role) => {
     if (DEMO_MODE) {
       DEMO_USERS.push({ id: `u${Date.now()}`, username, full_name: fullName, email, role, is_active: true, is_blocked: false, last_login: null })
       return Promise.resolve(ok(null))
     }
-    const { data, error } = await supabase.rpc('admin_create_user', {
-      p_username: username,
-      p_email: email,
-      p_full_name: fullName,
-      p_role: role,
+    const { data, error } = await supabase.functions.invoke('admin-create-user', {
+      body: { username, email, password, fullName, role },
     })
-    if (error) return { data: null, error }
-    if (data?.ok === false) return err(data.reason || 'No se pudo crear el usuario')
+    if (error) return err(await functionErrorMessage(error, 'No se pudo crear el usuario'))
+    if (data?.ok === false) return err(data.reason || data.error || 'No se pudo crear el usuario')
     return ok(data)
   },
 
