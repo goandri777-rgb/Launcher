@@ -237,7 +237,7 @@ export default function Launcher() {
 
       {/* ════ Main ══════════════════════════════════════════════════════ */}
       <main className="relative z-10 flex-1 grid place-items-center">
-        {loading ? (
+        {modulesLoading ? (
           null
         ) : modules.length === 0 ? (
           <motion.div
