@@ -107,6 +107,16 @@ export const adminApi = {
     return supabase.rpc('admin_toggle_permission', { p_user_id: userId, p_module_id: moduleId, p_grant: grant })
   },
 
+  // Elimina un usuario y todo su historial de permisos (irreversible).
+  deleteUser: (userId) => {
+    if (DEMO_MODE) {
+      const idx = DEMO_USERS.findIndex(u => u.id === userId)
+      if (idx >= 0) DEMO_USERS.splice(idx, 1)
+      return Promise.resolve(ok(null))
+    }
+    return supabase.rpc('admin_delete_user', { p_user_id: userId })
+  },
+
   // Edita datos de un usuario (nombre, rol, contraseña).
   editUser: (userId, updates) => {
     if (DEMO_MODE) {

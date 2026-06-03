@@ -267,6 +267,19 @@ begin
   return json_build_object('ok', true, 'id', v_id);
 end; $$;
 
+-- Elimina un usuario de auth.users (cascada elimina perfil, permisos; logs quedan con user_id=null).
+-- No permite borrar tu propia cuenta ni la de otro admin.
+create or replace function public.admin_delete_user(p_user_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_role user_role;
+begin
+  if not public.is_admin() then raise exception 'no autorizado'; end if;
+  if p_user_id = auth.uid() then raise exception 'no puedes eliminar tu propia cuenta'; end if;
+  select role into v_role from public.profiles where id = p_user_id;
+  if v_role = 'admin' then raise exception 'no se puede eliminar a otro administrador'; end if;
+  delete from auth.users where id = p_user_id;
+end; $$;
+
 -- Devuelve el email interno a partir del username (para login sin email visible).
 -- SECURITY DEFINER: el cliente no puede listar todos los usernames.
 create or replace function public.get_email_by_username(p_username text)

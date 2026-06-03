@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, UserPlus, ShieldCheck, ShieldX, Ban, CheckCircle2,
   X, Clock, Link2, Eye, EyeOff, Pencil, Check, UserCog,
-  Users, Boxes, TrendingUp, AlertTriangle,
+  Users, Boxes, TrendingUp, AlertTriangle, Trash2,
 } from 'lucide-react'
 import { adminApi } from '../lib/adminApi'
 import { getModuleIcon } from '../data/icons'
@@ -407,6 +407,63 @@ function CreateUserModal({ onClose, onCreated }) {
   )
 }
 
+// ─── delete user modal ────────────────────────────────────────────────────────
+function DeleteUserModal({ user, onClose, onDeleted, notify }) {
+  const [busy, setBusy] = useState(false)
+  const [err,  setErr]  = useState('')
+  const userStatus = user.is_blocked ? 'blocked' : user.is_active ? 'active' : 'inactive'
+
+  const confirm = async () => {
+    setErr(''); setBusy(true)
+    const { error } = await adminApi.deleteUser(user.id)
+    setBusy(false)
+    if (error) { setErr(error.message || 'Error al eliminar'); return }
+    notify('Usuario eliminado')
+    onDeleted()
+  }
+
+  return (
+    <Overlay onClose={onClose}>
+      <ModalCard width={440}>
+        <ModalHead title="Eliminar usuario" sub="Esta acción es permanente e irreversible" onClose={onClose}/>
+
+        {/* usuario info strip */}
+        <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderRadius:12,marginBottom:20,background:'rgba(239,68,68,0.04)',border:'1px solid rgba(239,68,68,0.18)'}}>
+          <div style={{width:38,height:38,borderRadius:11,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:700,fontSize:15,color:'#fff'}}>
+            {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:600,color:C.text1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user.full_name || '—'}</div>
+            <div style={{fontSize:11,color:C.text3,marginTop:1}}>{user.username || user.email}</div>
+          </div>
+          <RolePill role={user.role}/>
+          <StatusPill status={userStatus}/>
+        </div>
+
+        {/* advertencia */}
+        <div style={{display:'flex',gap:10,padding:'12px 14px',borderRadius:10,marginBottom:20,background:'rgba(239,68,68,0.06)',border:'1px solid rgba(239,68,68,0.18)'}}>
+          <AlertTriangle style={{width:15,height:15,color:C.red,flexShrink:0,marginTop:1}}/>
+          <p style={{fontSize:12,color:'#b91c1c',margin:0,lineHeight:1.5}}>
+            Se eliminarán la cuenta, todos sus permisos y su acceso al sistema. Los registros de actividad se conservarán sin identificación de usuario.
+          </p>
+        </div>
+
+        {err && <p style={{color:C.red,fontSize:12,margin:'0 0 16px',padding:'8px 12px',background:'#fff1f2',borderRadius:8,border:'1px solid rgba(239,68,68,0.2)'}}>{err}</p>}
+
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+          <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
+          <motion.button onClick={confirm} disabled={busy}
+            whileHover={busy?{}:{scale:1.03,y:-2}} whileTap={busy?{}:{scale:0.96}} transition={SPRING}
+            style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 22px',borderRadius:12,background:busy?'rgba(239,68,68,0.35)':'linear-gradient(135deg,#ef4444,#dc2626)',border:'none',color:'#fff',fontSize:13.5,fontWeight:600,fontFamily:'"JetBrains Mono",monospace',cursor:busy?'not-allowed':'pointer',boxShadow:busy?'none':'0 4px 16px rgba(239,68,68,0.28)',letterSpacing:'-0.01em'}}
+          >
+            <Trash2 style={{width:14,height:14}}/>{busy ? 'Eliminando…' : 'Eliminar usuario'}
+          </motion.button>
+        </div>
+      </ModalCard>
+    </Overlay>
+  )
+}
+
 // ─── edit user modal ──────────────────────────────────────────────────────────
 function EditUserModal({ user, onClose, onSaved, notify }) {
   const [fullName, setFullName] = useState(user.full_name || '')
@@ -509,10 +566,11 @@ export default function AdminPanel() {
   const [users,       setUsers]       = useState([])
   const [modules,     setModules]     = useState([])
   const [logs,        setLogs]        = useState([])
-  const [selected,    setSelected]    = useState(null)
-  const [editing,     setEditing]     = useState(null)
-  const [editingUser, setEditingUser] = useState(null)
-  const [showCreate,  setShowCreate]  = useState(false)
+  const [selected,     setSelected]     = useState(null)
+  const [editing,      setEditing]      = useState(null)
+  const [editingUser,  setEditingUser]  = useState(null)
+  const [deletingUser, setDeletingUser] = useState(null)
+  const [showCreate,   setShowCreate]   = useState(false)
   const [toast,       setToast]       = useState('')
   const toastTimer = useRef(null)
 
@@ -666,6 +724,9 @@ export default function AdminPanel() {
                               <IconBtn title="Editar usuario" onClick={()=>setEditingUser(u)} icon={UserCog} variant="default"/>
                               <IconBtn title={u.is_active?'Desactivar':'Activar'} onClick={()=>toggleActive(u)} icon={u.is_active?ShieldX:CheckCircle2} variant={u.is_active?'ghost':'success'}/>
                               <IconBtn title={u.is_blocked?'Desbloquear':'Bloquear'} onClick={()=>toggleBlocked(u)} icon={u.is_blocked?CheckCircle2:Ban} variant={u.is_blocked?'success':'danger'}/>
+                              {u.role !== 'admin' && (
+                                <IconBtn title="Eliminar usuario" onClick={()=>setDeletingUser(u)} icon={Trash2} variant="danger"/>
+                              )}
                             </>}
                           </div>
                         </td>
@@ -771,6 +832,9 @@ export default function AdminPanel() {
       </AnimatePresence>
       <AnimatePresence>
         {editingUser && <EditUserModal user={editingUser} onClose={()=>setEditingUser(null)} onSaved={()=>{setEditingUser(null);loadUsers()}} notify={notify}/>}
+      </AnimatePresence>
+      <AnimatePresence>
+        {deletingUser && <DeleteUserModal user={deletingUser} onClose={()=>setDeletingUser(null)} onDeleted={()=>{setDeletingUser(null);loadUsers()}} notify={notify}/>}
       </AnimatePresence>
       <AnimatePresence>
         {showCreate  && <CreateUserModal onClose={()=>setShowCreate(false)} onCreated={()=>{setShowCreate(false);loadUsers();notify('Usuario creado')}}/>}
