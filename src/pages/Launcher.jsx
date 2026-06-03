@@ -178,7 +178,7 @@ export default function Launcher() {
             return (
               <motion.div variants={btnItem}>
                 {canAccess ? (
-                  <Link to="/admin" style={{
+                  <Link to="/admin" onClick={stopEntry} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
                     padding: '10px 20px', borderRadius: 12,
                     background: 'rgba(255, 255, 255, 0.75)',

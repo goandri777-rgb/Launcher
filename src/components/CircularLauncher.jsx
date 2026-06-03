@@ -369,63 +369,55 @@ export default function CircularLauncher({ modules, onOpen }) {
     if (getState(module) !== 'active') return
 
     const buttonEl = buttonRefs.current[moduleIndex]
-    const nodeEl = nodeRefs.current[moduleIndex]
+    const nodeEl   = nodeRefs.current[moduleIndex]
     if (nodeEl) gsap.set(nodeEl, { zIndex: on ? 32 : 20 })
     if (!buttonEl) return
 
-    const iconEl = nodeEl?.querySelector('[data-module-icon]')
-    const labelEl = nodeEl?.querySelector('[data-module-label]')
-    const lineBaseEl = lineBaseRefs.current[moduleIndex]
-    const lineDashEl = lineDashRefs.current[moduleIndex]
-
-    gsap.killTweensOf([buttonEl, iconEl, labelEl].filter(Boolean))
+    // ── Transform del botón: composited, sin paint ─────────────────────────
+    gsap.killTweensOf(buttonEl)
     gsap.to(buttonEl, {
       scale: on ? 1.08 : 1,
-      y: on ? -3 : 0,
-      backgroundColor: on ? '#f0f7ff' : '#ffffff',
-      borderColor: on ? '#0B5F8D' : 'rgba(11, 95, 141, 0.14)',
-      boxShadow: on
-        ? '0 16px 36px rgba(11, 95, 141, 0.15), 0 0 0 4px rgba(11, 95, 141, 0.08)'
-        : '0 6px 20px rgba(11, 95, 141, 0.04), 0 2px 4px rgba(11, 95, 141, 0.02), inset 0 1px 0 #ffffff',
+      y:     on ? -3   : 0,
       duration: on ? 0.32 : 0.24,
-      ease: on ? 'expo.out' : 'power3.out',
+      ease:     on ? 'expo.out' : 'power3.out',
       overwrite: 'auto',
       force3D: true,
     })
-    if (iconEl) {
-      gsap.to(iconEl, {
-        color: on ? C.brand : '#475569',
-        duration: 0.22,
-        ease: 'power2.out',
-        overwrite: 'auto',
-      })
-    }
-    if (labelEl) {
-      gsap.to(labelEl, {
-        color: on ? C.brand : C.text2,
-        duration: 0.22,
+
+    // ── Hover overlay: opacity composited, cero paint por frame ───────────
+    const overlayEl = buttonEl.querySelector('[data-hover-overlay]')
+    if (overlayEl) {
+      gsap.to(overlayEl, {
+        opacity:  on ? 1 : 0,
+        duration: on ? 0.28 : 0.20,
         ease: 'power2.out',
         overwrite: 'auto',
       })
     }
 
+    // ── Colores icon/label: CSS transition, 1 paint al cambiar, no por frame
+    const iconEl  = nodeEl?.querySelector('[data-module-icon]')
+    const labelEl = nodeEl?.querySelector('[data-module-label]')
+    if (iconEl)  iconEl.style.color  = on ? C.brand : '#475569'
+    if (labelEl) labelEl.style.color = on ? C.brand : C.text2
+
+    // ── Líneas: solo opacity (composited), sin stroke color ni strokeWidth ─
+    const lineBaseEl = lineBaseRefs.current[moduleIndex]
+    const lineDashEl = lineDashRefs.current[moduleIndex]
     if (lineBaseEl) {
       gsap.killTweensOf(lineBaseEl)
       gsap.to(lineBaseEl, {
-        stroke: on ? '#0B5F8D' : lineBaseColor('active'),
-        strokeWidth: on ? 2.2 : 1.4,
+        opacity:  on ? 1 : 0.55,
         duration: on ? 0.32 : 0.24,
         ease: 'power2.out',
         overwrite: 'auto',
       })
     }
-
     if (lineDashEl) {
       gsap.killTweensOf(lineDashEl)
       gsap.to(lineDashEl, {
-        stroke: on ? '#0B5F8D' : 'rgba(11,95,141,0.38)',
-        strokeWidth: on ? 2.5 : 1.5,
-        duration: on ? 0.32 : 0.24,
+        opacity:  on ? 1 : 0.6,
+        duration: on ? 0.28 : 0.20,
         ease: 'power2.out',
         overwrite: 'auto',
       })
@@ -720,6 +712,20 @@ export default function CircularLauncher({ modules, onOpen }) {
               className="relative grid place-items-center flex-shrink-0"
               style={nodeStyles(state, isHov)}
             >
+              {/* Hover overlay — visual hover baked in, solo opacity cambia (compositor) */}
+              {state === 'active' && (
+                <div
+                  data-hover-overlay
+                  style={{
+                    position: 'absolute', inset: 0, borderRadius: 20,
+                    background: '#f0f7ff',
+                    boxShadow: '0 16px 36px rgba(11,95,141,0.15), 0 0 0 2px #0B5F8D, 0 0 0 5px rgba(11,95,141,0.08)',
+                    opacity: 0,
+                    pointerEvents: 'none',
+                    willChange: 'opacity',
+                  }}
+                />
+              )}
               {/* Top specular */}
               <div style={{
                 position: 'absolute', top: 0, left: '50%',
@@ -777,7 +783,7 @@ export default function CircularLauncher({ modules, onOpen }) {
                 <Icon data-module-icon style={{
                   width: 26, height: 26,
                   color: iconColor(state, isHov),
-                  transition: 'none',
+                  transition: 'color 220ms ease',
                   flexShrink: 0,
                   filter: state === 'blocked' ? 'grayscale(100%) opacity(0.35)' : 'none',
                 }} />
@@ -818,7 +824,7 @@ export default function CircularLauncher({ modules, onOpen }) {
               fontSize: '11.5px', fontWeight: 500, letterSpacing: '-0.01em',
               fontFamily: '"Inter", system-ui, sans-serif',
               color: labelColor(state, isHov),
-              transition: 'none',
+              transition: 'color 220ms ease',
               textAlign: 'center', whiteSpace: 'normal', lineHeight: 1.35,
               width: NODE_W,
               display: '-webkit-box',
