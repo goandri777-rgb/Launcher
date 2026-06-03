@@ -308,7 +308,7 @@ ALASTransition.exitToLauncher(url)                  // anima salida hacia derech
 ### Antes de producción (obligatorios)
 - [x] `DEMO_MODE = false` en `AuthContext.jsx`, `useModules.js` y `adminApi.js`
 - [ ] Configurar `.env` con Supabase real (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
-- [ ] Desplegar `supabase/functions/admin-create-user` y configurar `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] Desplegar `supabase/functions/admin-create-user` y configurar `ALAS_SERVICE_ROLE_KEY`
 - [ ] Configurar `VITE_LAUNCHER_URL` y URLs de cada módulo en `.env`
 - [ ] Actualizar `launcherUrl` en `sso-config.js` de CajaVenta y Calendario con URL de Vercel
 - [x] Crear RPCs de Supabase: `get_module_catalog`, `get_allowed_modules`, `open_module`, `admin_list_users`, `admin_create_user`, `admin_edit_user`, etc.

@@ -48,7 +48,7 @@ Para que funcione, desplegá la Edge Function que usa `auth.admin.createUser` de
 
 ```bash
 supabase functions deploy admin-create-user
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
+supabase secrets set ALAS_SERVICE_ROLE_KEY=tu_service_role_key
 ```
 
 Después entrá al **panel admin → Nuevo usuario**, cargá los datos y asigná permisos de módulos.

@@ -33,10 +33,10 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const serviceRoleKey = Deno.env.get('ALAS_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    return json(500, { ok: false, reason: 'Faltan secretos de Supabase en la Edge Function' })
+    return json(500, { ok: false, reason: 'Falta configurar ALAS_SERVICE_ROLE_KEY en la Edge Function' })
   }
 
   const authHeader = req.headers.get('Authorization') ?? ''
