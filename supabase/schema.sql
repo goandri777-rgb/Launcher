@@ -9,6 +9,9 @@ do $$ begin
   create type user_role as enum ('admin','supervisor','operador','invitado');
 exception when duplicate_object then null; end $$;
 
+-- Garantiza que 'admin' existe aunque el enum haya sido creado con nombre antiguo ('administración').
+alter type user_role add value if not exists 'admin';
+
 -- ---------- TABLAS ----------
 
 -- Perfil 1:1 con auth.users. Guarda rol y estado de la cuenta.

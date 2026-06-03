@@ -115,7 +115,9 @@ export function AuthGuard({ children }) {
   const { session, profile, loading } = useAuth()
   const location = useLocation()
 
-  if (loading) return null
+  // Solo bloquear en la carga inicial (sesión desconocida).
+  // Si ya hay sesión activa, no blanquear aunque loadProfile esté recargando.
+  if (loading && !session) return null
 
   // Sin sesión → pantalla inline (no redirect, para UX sin parpadeo)
   if (!session) return <NoSession />
@@ -154,7 +156,9 @@ export function AuthGuard({ children }) {
 // admin → acceso total | resto → redirige al launcher
 export function AdminGuard({ children }) {
   const { profile, loading } = useAuth()
-  if (loading) return null
+  // Solo bloquear si cargando y aún no tenemos perfil (primera carga).
+  // Con perfil ya disponible, no blanquear durante recargas de onAuthStateChange.
+  if (loading && !profile) return null
   if (profile?.role !== 'admin') return <Navigate to="/" replace />
   return children
 }
