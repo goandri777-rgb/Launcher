@@ -247,6 +247,9 @@ returns void language plpgsql security definer set search_path = public as $$
 begin
   if not public.is_admin() then raise exception 'no autorizado'; end if;
   update public.profiles set is_active = p_value where id = p_user_id;
+  insert into public.access_logs(user_id, action)
+    values (auth.uid(), case when p_value then 'admin_activate_user' else 'admin_deactivate_user' end
+      || ':' || p_user_id::text);
 end; $$;
 
 create or replace function public.admin_set_blocked(p_user_id uuid, p_value boolean)
@@ -254,6 +257,9 @@ returns void language plpgsql security definer set search_path = public as $$
 begin
   if not public.is_admin() then raise exception 'no autorizado'; end if;
   update public.profiles set is_blocked = p_value where id = p_user_id;
+  insert into public.access_logs(user_id, action)
+    values (auth.uid(), case when p_value then 'admin_block_user' else 'admin_unblock_user' end
+      || ':' || p_user_id::text);
 end; $$;
 
 create or replace function public.admin_get_permissions(p_user_id uuid)
@@ -274,6 +280,10 @@ begin
   else
     delete from public.permissions where user_id = p_user_id and module_id = p_module_id;
   end if;
+  insert into public.access_logs(user_id, module_id, action)
+    values (auth.uid(), p_module_id,
+      case when p_grant then 'admin_grant_permission' else 'admin_revoke_permission' end
+      || ':' || p_user_id::text);
 end; $$;
 
 create or replace function public.admin_list_logs(p_limit int default 100)
@@ -313,6 +323,8 @@ begin
     username = excluded.username,
     full_name = coalesce(excluded.full_name, public.profiles.full_name),
     role = excluded.role;
+  insert into public.access_logs(user_id, action)
+    values (auth.uid(), 'admin_create_user:' || v_id::text);
   return json_build_object('ok', true, 'id', v_id);
 end; $$;
 
@@ -337,6 +349,8 @@ begin
     full_name = coalesce(nullif(trim(p_full_name), ''), full_name),
     role = coalesce(p_role, role)
   where id = p_user_id;
+  insert into public.access_logs(user_id, action)
+    values (auth.uid(), 'admin_edit_user:' || p_user_id::text);
 end; $$;
 
 -- Elimina un usuario de auth.users (cascada elimina perfil, permisos; logs quedan con user_id=null).
@@ -349,6 +363,8 @@ begin
   if p_user_id = auth.uid() then raise exception 'no puedes eliminar tu propia cuenta'; end if;
   select role into v_role from public.profiles where id = p_user_id;
   if v_role = 'admin' then raise exception 'no se puede eliminar a otro administrador'; end if;
+  insert into public.access_logs(user_id, action)
+    values (auth.uid(), 'admin_delete_user:' || p_user_id::text);
   delete from auth.users where id = p_user_id;
 end; $$;
 
