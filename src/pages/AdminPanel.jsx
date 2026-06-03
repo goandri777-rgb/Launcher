@@ -391,9 +391,9 @@ function CreateUserModal({ onClose, onCreated }) {
       setErr('Usuario inválido: usá al menos 3 caracteres.')
       return
     }
-    if (form.password.length < 8) {
+    if (!form.password) {
       setBusy(false)
-      setErr('La contraseña debe tener al menos 8 caracteres.')
+      setErr('Contraseña requerida.')
       return
     }
     const {error} = await adminApi.createUser(username,form.password,form.fullName.trim(),form.role)
@@ -409,7 +409,7 @@ function CreateUserModal({ onClose, onCreated }) {
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
           <Field label="Usuario"><Input value={form.username} onChange={v=>setForm({...form,username:normalizeUsernameInput(v)})} placeholder="miguel_casco" mono/></Field>
           <Field label="Nombre completo"><Input value={form.fullName} onChange={v=>setForm({...form,fullName:v})} placeholder="Ej. Juan Pérez"/></Field>
-          <Field label="Contraseña"><Input type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="Mínimo 8 caracteres"/></Field>
+          <Field label="Contraseña"><Input type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="Contraseña"/></Field>
           <Field label="Rol">
             <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}
               style={{width:'100%',borderRadius:10,background:'#ffffff',border:`1px solid ${C.border}`,padding:'9px 12px',fontSize:13,color:C.text1,outline:'none',fontFamily:'"Inter",system-ui,sans-serif',textTransform:'capitalize',boxSizing:'border-box'}}

@@ -83,8 +83,8 @@ Deno.serve(async (req) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json(200, { ok: false, reason: 'Correo electronico invalido' })
   }
-  if (password.length < 8) {
-    return json(200, { ok: false, reason: 'La contrasena debe tener al menos 8 caracteres' })
+  if (!password) {
+    return json(200, { ok: false, reason: 'Contrasena requerida' })
   }
   if (!ROLES.has(role)) {
     return json(200, { ok: false, reason: 'Rol invalido' })
