@@ -87,8 +87,8 @@ function Card({ children, style }) {
       border: `1px solid ${C.border}`,
       borderRadius: 16,
       boxShadow: '0 12px 32px 0 rgba(11, 95, 141, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255,255,255,0.9)',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
       overflow: 'hidden',
       ...style,
     }}>
@@ -634,7 +634,7 @@ export default function AdminPanel() {
         initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}}
         transition={{duration:0.26, delay:0, ease:EASE}}
         style={{
-          background:C.glass, backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
+          background:C.glass, backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
           borderBottom:`1px solid ${C.border}`,
           boxShadow:'0 4px 20px rgba(0, 0, 0, 0.15)',
           display:'grid', gridTemplateColumns:'auto 1fr auto',
