@@ -15,6 +15,16 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
+    <style>
+      /* CSS crítico inline: evita flash blanco antes de que Vite inyecte el CSS bundle */
+      html, body { margin: 0; height: 100%; }
+      body {
+        background:
+          radial-gradient(ellipse 70% 55% at 50% 42%, rgba(11,95,141,0.04), transparent 65%),
+          linear-gradient(145deg, #edf1f7 0%, #e6ecf5 55%, #edf2f8 100%);
+      }
+      #root { height: 100%; position: relative; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
