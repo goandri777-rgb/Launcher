@@ -68,12 +68,9 @@ function LoaderStage({ label }) {
         // Arco florece en la fase final
         .to(arcGroupRef.current, { autoAlpha: 1, duration: 0.50 }, '-=0.25')
 
-      // ── Idle: hub flota y respira sutilmente ─────────────────────────────
+      // ── Idle: hub flota y respira sutilmente (tween unificado — 1 RAF listener) ──
       gsap.to(coreRef.current, {
-        y: -6, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut',
-      })
-      gsap.to(coreRef.current, {
-        scale: 1.025, duration: 1.4, repeat: -1, yoyo: true, ease: 'sine.inOut'
+        y: -6, scale: 1.025, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut',
       })
 
       // ── Arco: giro continuo y dinámico de alta velocidad ─────────────────
@@ -183,7 +180,7 @@ function LoaderStage({ label }) {
             position: 'absolute', inset: 0, borderRadius: '50%',
             background: 'linear-gradient(145deg, #ffffff 0%, #f4f8ff 100%)',
             border: '1px solid rgba(203,213,225,0.75)',
-            animation: 'hub-glow 4s ease-in-out infinite',
+            animation: 'hub-glow-pulse 4s ease-in-out infinite',
           }} />
 
           {/* Línea especular */}
