@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import gsap from 'gsap'
 import { getModuleIcon } from '../data/icons'
@@ -125,7 +125,9 @@ export default function CircularLauncher({ modules, onOpen }) {
   const systemRef   = useRef(null)
 
   // ── 1. GSAP entrance — System Online (runs on every mount) ─────────────
-  useEffect(() => {
+  // useLayoutEffect: dispara antes del paint — evita flash de launcher
+  // mientras el loader todavía está activo (appBooting / transitioning).
+  useLayoutEffect(() => {
     if (!modules.length || !hubRef.current) return
 
     // ── Si el loader de inicio o de transición siguen activos, mantener oculto ──
