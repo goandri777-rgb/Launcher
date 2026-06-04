@@ -3,6 +3,19 @@
 
 ---
 
+## Tus cuentas de GitHub — mapa de repos
+
+| Proyecto | Email | Cuenta GitHub |
+|----------|-------|---------------|
+| **logistic-launcher** | goandri777@gmail.com | goandri777-rgb |
+| **cajaventa** | cajaventas8@gmail.com | cajaventas8-ux |
+| **itemsborrados** | lcc1alasdeposito@gmail.com | lcc1alasdeposito-a11y |
+| **Calendario tareas Alas** | therminator298@gmail.com | therminator298-source |
+
+> Tenés 4 cuentas distintas. Por eso el setup de SSH necesita una clave por cuenta.
+
+---
+
 ## PASO 1 — Actualizar el sistema
 
 Abrí una terminal (`Ctrl + Alt + T`) y ejecutá:
@@ -17,72 +30,22 @@ sudo apt update && sudo apt upgrade -y
 
 ```bash
 sudo apt install git -y
-
-# Verificar instalación
 git --version
 ```
 
-### Configurar tu identidad (OBLIGATORIO para commits)
+### Configurar identidad global (nombre base — el email se configura por repo)
 
 ```bash
-git config --global user.name "Tu Nombre Completo"
+git config --global user.name "AGOMEZ"
 git config --global user.email "therminator298@gmail.com"
-
-# Verificar que quedó bien
-git config --global --list
 ```
 
-> **¿Por qué el email?** Git necesita el email para firmar cada commit con tu identidad.
-> No es una contraseña ni acceso — es solo etiqueta de autoría. Usá el mismo
-> email que usás en tu cuenta de GitHub.
+> El email global es el de respaldo. Más adelante configuramos el email correcto
+> en cada repositorio individualmente.
 
 ---
 
-## PASO 3 — Autenticación con GitHub (para poder hacer push)
-
-Tenés dos opciones. La opción A es la más cómoda a largo plazo.
-
-### Opción A — SSH Key (recomendado, no pedirá contraseña nunca más)
-
-```bash
-# 1. Generar la clave SSH
-ssh-keygen -t ed25519 -C "therminator298@gmail.com"
-# Presionar Enter 3 veces (acepta defaults, sin passphrase)
-
-# 2. Copiar la clave pública
-cat ~/.ssh/id_ed25519.pub
-```
-
-Copiá todo el texto que aparece. Luego:
-1. Ir a **GitHub.com** → tu foto → **Settings**
-2. **SSH and GPG keys** → **New SSH key**
-3. Pegar la clave copiada → **Add SSH key**
-
-```bash
-# 3. Verificar que funciona
-ssh -T git@github.com
-# Debe responder: "Hi goandri777-rgb! You've successfully authenticated..."
-```
-
----
-
-### Opción B — HTTPS con Token (más simple pero pide token en cada push)
-
-1. Ir a **GitHub.com** → tu foto → **Settings**
-2. **Developer settings** → **Personal access tokens** → **Tokens (classic)**
-3. **Generate new token** → seleccionar scope `repo` → copiar el token generado
-
-```bash
-# Guardar credenciales para no escribirlas cada vez
-git config --global credential.helper store
-# La primera vez que hagas push te pedirá usuario y token — después lo guarda
-```
-
----
-
-## PASO 4 — Instalar Node.js (via NVM)
-
-NVM te permite manejar versiones de Node fácilmente:
+## PASO 3 — Instalar Node.js (via NVM)
 
 ```bash
 # Instalar NVM
@@ -97,86 +60,192 @@ nvm use --lts
 
 # Verificar
 node --version    # debe mostrar v20.x o superior
-npm --version     # debe mostrar 10.x o superior
+npm --version
 ```
 
 ---
 
-## PASO 5 — Instalar VS Code
+## PASO 4 — Instalar VS Code
 
 ```bash
 sudo snap install code --classic
 ```
 
-Si snap no está disponible en tu distro:
-
-```bash
-# Descargar .deb desde el sitio oficial
-wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
-sudo install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/
-sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
-sudo apt update
-sudo apt install code -y
-```
-
 ---
 
-## PASO 6 — Instalar Claude Code (la IA con la que trabajamos)
+## PASO 5 — Instalar Claude Code
 
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
 
-Obtené tu API Key en: **console.anthropic.com** → API Keys → Create key
+Obtené tu API Key en **console.anthropic.com** → API Keys → Create key
 
 ```bash
-# Configurar la API key
 claude
-# La primera vez te pedirá la API key — pegala y Enter
+# La primera vez te pide la API key — pegala y Enter
 ```
 
 ---
 
-## PASO 7 — Crear la carpeta de trabajo y clonar los repositorios
+## PASO 6 — Configurar SSH para 4 cuentas de GitHub
+
+Como tenés 4 cuentas distintas, necesitás una clave SSH por cuenta y un archivo
+de configuración que le diga a Git cuál usar para cada repo.
+
+### 6.1 — Generar las 4 claves SSH
 
 ```bash
-# Crear carpeta principal
+# Clave para el Launcher (goandri777)
+ssh-keygen -t ed25519 -C "goandri777@gmail.com" -f ~/.ssh/id_launcher
+# Presionar Enter 2 veces (sin passphrase)
+
+# Clave para CajaVenta (cajaventas8)
+ssh-keygen -t ed25519 -C "cajaventas8@gmail.com" -f ~/.ssh/id_cajaventa
+
+# Clave para ItemsBorrados (lcc1alasdeposito)
+ssh-keygen -t ed25519 -C "lcc1alasdeposito@gmail.com" -f ~/.ssh/id_itemsborrados
+
+# Clave para Calendario (therminator298)
+ssh-keygen -t ed25519 -C "therminator298@gmail.com" -f ~/.ssh/id_calendario
+```
+
+### 6.2 — Crear el archivo de configuración SSH
+
+```bash
+nano ~/.ssh/config
+```
+
+Pegá exactamente esto:
+
+```
+# Launcher — goandri777
+Host github-launcher
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_launcher
+
+# CajaVenta — cajaventas8
+Host github-cajaventa
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_cajaventa
+
+# ItemsBorrados — lcc1alasdeposito
+Host github-itemsborrados
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_itemsborrados
+
+# Calendario — therminator298
+Host github-calendario
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_calendario
+```
+
+Guardá: `Ctrl + O` → Enter → `Ctrl + X`
+
+```bash
+# Ajustar permisos (obligatorio)
+chmod 600 ~/.ssh/config
+```
+
+### 6.3 — Agregar cada clave pública a su cuenta de GitHub
+
+Hacé esto 4 veces, una por cuenta:
+
+```bash
+# Ver la clave pública del Launcher
+cat ~/.ssh/id_launcher.pub
+```
+Copiá todo el texto → abrí **github.com** → iniciar sesión con **goandri777@gmail.com**
+→ tu foto → **Settings** → **SSH and GPG keys** → **New SSH key** → pegá → **Add SSH key**
+
+```bash
+# Ver la clave pública de CajaVenta
+cat ~/.ssh/id_cajaventa.pub
+```
+Copiá → **github.com** → iniciá sesión con **cajaventas8@gmail.com** → mismos pasos
+
+```bash
+# Ver la clave pública de ItemsBorrados
+cat ~/.ssh/id_itemsborrados.pub
+```
+Copiá → **github.com** → iniciá sesión con **lcc1alasdeposito@gmail.com** → mismos pasos
+
+```bash
+# Ver la clave pública de Calendario
+cat ~/.ssh/id_calendario.pub
+```
+Copiá → **github.com** → iniciá sesión con **therminator298@gmail.com** → mismos pasos
+
+### 6.4 — Verificar que las 4 conexiones funcionan
+
+```bash
+ssh -T git@github-launcher
+# Debe responder: "Hi goandri777-rgb! You've successfully authenticated..."
+
+ssh -T git@github-cajaventa
+# Debe responder: "Hi cajaventas8-ux! You've successfully authenticated..."
+
+ssh -T git@github-itemsborrados
+# Debe responder: "Hi lcc1alasdeposito-a11y! You've successfully authenticated..."
+
+ssh -T git@github-calendario
+# Debe responder: "Hi therminator298-source! You've successfully authenticated..."
+```
+
+---
+
+## PASO 7 — Crear la carpeta y clonar los repositorios
+
+```bash
 mkdir -p ~/Escritorio/LAUNCHER-2.0
 cd ~/Escritorio/LAUNCHER-2.0
 ```
 
-### Clonar con SSH (si elegiste Opción A):
-
 ```bash
-git clone git@github.com:goandri777-rgb/Launcher.git logistic-launcher
-git clone git@github.com:cajaventas8-ux/Cajaventa.git cajaventa
-git clone git@github.com:lcc1alasdeposito-a11y/ITEMSBORRADOS.git itemsborrados
-git clone git@github.com:therminator298-source/ALAS.git "Calendario tareas Alas"
+# Launcher — usa el alias github-launcher
+git clone git@github-launcher:goandri777-rgb/Launcher.git logistic-launcher
+
+# CajaVenta — usa el alias github-cajaventa
+git clone git@github-cajaventa:cajaventas8-ux/Cajaventa.git cajaventa
+
+# ItemsBorrados — usa el alias github-itemsborrados
+git clone git@github-itemsborrados:lcc1alasdeposito-a11y/ITEMSBORRADOS.git itemsborrados
+
+# Calendario — usa el alias github-calendario
+git clone git@github-calendario:therminator298-source/ALAS.git "Calendario tareas Alas"
 ```
 
-### Clonar con HTTPS (si elegiste Opción B):
+### Configurar el email correcto en cada repo
 
 ```bash
-git clone https://github.com/goandri777-rgb/Launcher.git logistic-launcher
-git clone https://github.com/cajaventas8-ux/Cajaventa.git cajaventa
-git clone https://github.com/lcc1alasdeposito-a11y/ITEMSBORRADOS.git itemsborrados
-git clone https://github.com/therminator298-source/ALAS.git "Calendario tareas Alas"
+cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
+git config user.email "goandri777@gmail.com"
+
+cd ~/Escritorio/LAUNCHER-2.0/cajaventa
+git config user.email "cajaventas8@gmail.com"
+
+cd ~/Escritorio/LAUNCHER-2.0/itemsborrados
+git config user.email "lcc1alasdeposito@gmail.com"
+
+cd ~/Escritorio/LAUNCHER-2.0/Calendario\ tareas\ Alas
+git config user.email "therminator298@gmail.com"
 ```
 
 ---
 
-## PASO 8 — Instalar dependencias de cada proyecto
+## PASO 8 — Instalar dependencias
 
 ```bash
-# Launcher (React + Vite)
 cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
 npm install
 
-# CajaVenta (Node.js)
 cd ~/Escritorio/LAUNCHER-2.0/cajaventa
 npm install
 
-# ACUSE (si tiene dependencias)
 cd ~/Escritorio/LAUNCHER-2.0/ACUSE
 npm install
 ```
@@ -185,164 +254,136 @@ npm install
 
 ## PASO 9 — Copiar los archivos secretos (.env y configs SSO)
 
-Estos archivos NO están en Git porque contienen contraseñas y tokens.
-Tenés que copiarlos manualmente desde tu PC de trabajo.
+Estos NO están en Git. Tenés que copiarlos desde tu PC de trabajo (USB o email a vos mismo).
 
-### Archivos que necesitás copiar:
-
-| Archivo origen (Windows) | Destino en Linux |
-|--------------------------|-----------------|
+| Archivo | Destino |
+|---------|---------|
 | `logistic-launcher/.env` | `~/Escritorio/LAUNCHER-2.0/logistic-launcher/.env` |
 | `cajaventa/js/alas-sso-config.js` | `~/Escritorio/LAUNCHER-2.0/cajaventa/js/alas-sso-config.js` |
 | `itemsborrados/alas-sso-config.js` | `~/Escritorio/LAUNCHER-2.0/itemsborrados/alas-sso-config.js` |
 | `Calendario tareas Alas/sso-config.js` | `~/Escritorio/LAUNCHER-2.0/Calendario tareas Alas/sso-config.js` |
 
-### Contenido del archivo .env del Launcher:
+### Contenido del .env del Launcher (completar con tus valores):
 
 ```env
 VITE_SUPABASE_URL=https://xkgumqztscqcwamtimuh.supabase.co
-VITE_SUPABASE_ANON_KEY=(tu anon key de Supabase)
-VITE_SSO_SECRET=(tu secreto de 64 hex chars)
+VITE_SUPABASE_ANON_KEY=(copiá desde el .env de Windows)
+VITE_SSO_SECRET=(copiá desde el .env de Windows)
 VITE_LAUNCHER_URL=https://launcher-tawny.vercel.app
 ```
-
-> Abrí el archivo .env en Windows, copiá el contenido y creá el mismo archivo en Linux.
 
 ---
 
 ## PASO 10 — Levantar los proyectos
 
-### Launcher (React + Vite)
 ```bash
+# Launcher
 cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
 npm run dev
-# → abre http://localhost:5173
-```
+# → http://localhost:5173
 
-### CajaVenta
-```bash
+# CajaVenta
 cd ~/Escritorio/LAUNCHER-2.0/cajaventa
 node server.js
-# → abre http://localhost:3000
-```
+# → http://localhost:3000
 
-### Calendario Tareas
-```bash
+# Calendario (rebuild si cambiaste src/)
 cd ~/Escritorio/LAUNCHER-2.0/Calendario\ tareas\ Alas
-
-# Si hiciste cambios en src/, primero rebuild:
 node scripts/build.js
-
-# Levantar servidor
 npx http-server -p 8080 --cors -c-1 .
-# → abre http://localhost:8080
-```
+# → http://localhost:8080
 
-### Items Borrados
-```bash
+# ItemsBorrados
 cd ~/Escritorio/LAUNCHER-2.0/itemsborrados
 node server.js
-# → abre http://localhost:4000
+# → http://localhost:4000
 ```
 
 ---
 
-## Flujo de trabajo diario con Git
+## Flujo diario de trabajo
 
-### Ver qué archivos cambiaron
 ```bash
-git status
-```
+# 1. Antes de empezar — bajar los últimos cambios
+cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
+git pull origin main
 
-### Hacer commit de un archivo específico
-```bash
-git add nombre-del-archivo.jsx
+# 2. Trabajar con Claude Code
+claude
+
+# 3. Al terminar — subir cambios
+git add nombre-archivo.jsx
 git commit -m "descripcion del cambio"
-```
-
-### Subir al repositorio remoto
-```bash
 git push origin main
 ```
 
-### Bajar cambios que hiciste desde otro lado
-```bash
-git pull origin main
-```
-
-### Ver historial de commits
-```bash
-git log --oneline -10
-```
-
----
-
-## Abrir el proyecto con Claude Code (igual que acá)
-
-```bash
-cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
-claude
-```
-
-Claude Code detecta automáticamente el proyecto y la memoria guardada.
-Podés pedirle exactamente lo mismo que acá — tiene toda la memoria del proyecto.
+> Cada repo usa automáticamente la cuenta de GitHub correcta gracias al archivo
+> ~/.ssh/config que configuramos en el Paso 6.
 
 ---
 
 ## Extensiones de VS Code recomendadas
 
-Abrí VS Code y instalá estas extensiones desde el marketplace:
+Abrí VS Code y buscalas en el marketplace (icono de cuadraditos a la izquierda):
 
-- **Claude Code** (Anthropic) — integración con IA
-- **ES7+ React/Redux/React-Native snippets** — snippets para React
-- **Tailwind CSS IntelliSense** — autocompletado de clases Tailwind
-- **GitLens** — historial y diff de Git en el editor
-- **Prettier** — formateo automático de código
-- **Auto Rename Tag** — renombra tags HTML/JSX automáticamente
+- **Claude Code** (Anthropic)
+- **ES7+ React/Redux/React-Native snippets**
+- **Tailwind CSS IntelliSense**
+- **GitLens**
+- **Prettier**
+- **Auto Rename Tag**
 
 ---
 
 ## Solución de problemas comunes
 
-### "Permission denied" al hacer push con SSH
+### "Permission denied (publickey)" al hacer push
 ```bash
-# Verificar que el agente SSH está corriendo
+# Verificar que el agente SSH tiene las claves cargadas
 eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519
+ssh-add ~/.ssh/id_launcher
+ssh-add ~/.ssh/id_cajaventa
+ssh-add ~/.ssh/id_itemsborrados
+ssh-add ~/.ssh/id_calendario
+
+# Probar la conexión de nuevo
+ssh -T git@github-launcher
 ```
 
-### "command not found: node" después de instalar NVM
+### "command not found: node"
 ```bash
 source ~/.bashrc
 nvm use --lts
 ```
 
-### Puerto ya en uso
+### Puerto ocupado
 ```bash
-# Ver qué proceso usa el puerto (ej: 5173)
-lsof -i :5173
-# Matar ese proceso
-kill -9 <PID>
+lsof -i :5173    # ver qué proceso usa el puerto
+kill -9 <PID>    # cerrar ese proceso
 ```
 
-### Error al instalar dependencias con npm
+### Error de dependencias
 ```bash
-# Limpiar cache y reinstalar
 rm -rf node_modules package-lock.json
 npm install
 ```
 
 ---
 
-## Resumen rápido de lo que necesitás
+## Resumen final — checklist
 
-| ¿Qué? | ¿Para qué? | ¿El email es necesario? |
-|-------|------------|------------------------|
-| `git config user.email` | Firmar tus commits | **Sí — siempre** |
-| SSH key / Token GitHub | Hacer push al repo | **Sí — una sola vez** |
-| `.env` y `sso-config.js` | Conectar con Supabase y SSO | **Sí — copiar manualmente** |
-| `node` + `npm` | Correr los proyectos | No necesita email |
-| Claude Code API key | Usar la IA | No necesita email |
+- [ ] Git instalado y configurado
+- [ ] SSH keys generadas (4 claves — una por cuenta)
+- [ ] Archivo `~/.ssh/config` creado con los 4 alias
+- [ ] Claves públicas agregadas a cada cuenta de GitHub
+- [ ] Node.js instalado via NVM
+- [ ] VS Code instalado
+- [ ] Claude Code instalado con API key
+- [ ] 4 repositorios clonados
+- [ ] Email configurado en cada repo individualmente
+- [ ] Dependencias instaladas (`npm install`)
+- [ ] Archivos `.env` y `sso-config.js` copiados desde Windows
+- [ ] Proyectos corriendo correctamente
 
 ---
 
