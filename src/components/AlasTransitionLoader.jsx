@@ -104,7 +104,7 @@ function LoaderStage({ label }) {
       aria-label={label}
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, y: -6, transition: { duration: 0.26, ease: [0.4, 0, 1, 1] } }}
+      exit={{ opacity: 0, y: -10, transition: { duration: 0.60, ease: [0.4, 0, 0.8, 1] } }}
       transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
       style={{
         position: 'fixed',

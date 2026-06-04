@@ -136,8 +136,8 @@ export default function CircularLauncher({ modules, onOpen }) {
         gsap.set(systemRef.current, {
           autoAlpha: 0,
           transformPerspective: 1100,
-          rotationX: 58,
-          scale: 0.88,
+          rotationX: 32,
+          scale: 0.92,
           transformOrigin: '50% 50%',
           force3D: true,
         })
@@ -175,7 +175,7 @@ export default function CircularLauncher({ modules, onOpen }) {
       // Siempre partir del estado oculto — ctx.revert() del bloque anterior
       // restaura los elementos a su estado CSS visible, así que hay que
       // volver a ocultarlos antes de animar.
-      gsap.set(systemRef.current, { autoAlpha: 0, transformPerspective: 1100, rotationX: 58, scale: 0.88, transformOrigin: '50% 50%', force3D: true })
+      gsap.set(systemRef.current, { autoAlpha: 0, transformPerspective: 1100, rotationX: 32, scale: 0.92, transformOrigin: '50% 50%', force3D: true })
       gsap.set(hubRef.current,    { scale: 0, autoAlpha: 0, force3D: true })
       nodes.forEach(node => gsap.set(node, { autoAlpha: 0, scale: 0, transformOrigin: '50% 50%', force3D: true }))
       lineBaseRefs.current.forEach(path => {
@@ -207,62 +207,52 @@ export default function CircularLauncher({ modules, onOpen }) {
 
       const tl = gsap.timeline({ delay: 0.02, onComplete: goLive })
 
-      // ── FASE 1: Tilt forward — el disco empieza inclinado (rotationX 58°)
-      // como mirando un plato desde arriba, se "levanta" hacia la cámara.
-      // El círculo se ve como elipse al principio y se abre al quedar de frente.
+      // ── FASE 1: Tilt suave — el disco sube desde 32° inclinado a plano
       tl.to(systemRef.current, {
         autoAlpha: 1,
-        rotationX: -3,
-        scale: 1.01,
-        duration: 0.88,
+        rotationX: 0,
+        scale: 1,
+        duration: 0.65,
         ease: 'expo.out',
         force3D: true,
       }, 0)
-      // Pequeño rebote y queda perfecto de frente
-      tl.to(systemRef.current, {
-        rotationX: 0,
-        scale: 1,
-        duration: 0.28,
-        ease: 'power3.inOut',
-        force3D: true,
-      }, 0.88)
 
-      // ── FASE 2: Hub emerge del centro a mitad del vuelo ──────────────────
+      // ── FASE 2: Hub emerge del centro
       tl.to(hubRef.current, {
         autoAlpha: 1,
-        scale: 1.18,
-        duration: 0.44,
-        ease: 'back.out(2.5)',
+        scale: 1.10,
+        duration: 0.42,
+        ease: 'back.out(1.5)',
         force3D: true,
-      }, 0.44)
+      }, 0.38)
       tl.to(hubRef.current, {
         scale: 1,
-        duration: 0.26,
-        ease: 'power3.out',
+        duration: 0.24,
+        ease: 'power2.out',
         force3D: true,
-      }, 0.88)
+      }, 0.80)
 
       // ── FASE 3: Órbita snap ───────────────────────────────────────────────
-      tl.set(orbitRef.current, { autoAlpha: 1 }, 0.58)
+      tl.set(orbitRef.current, { autoAlpha: 1 }, 0.46)
 
       // ── FASE 4: Líneas explotan desde el centro — simultáneas ────────────
       tl.to(lineBaseRefs.current.filter(Boolean), {
         strokeDashoffset: 0,
-        duration: 0.50,
+        duration: 0.48,
         stagger: 0,
         ease: 'power4.out',
-      }, 0.62)
+      }, 0.52)
 
       // ── FASE 5: Módulos en cascada al extremo de cada línea ───────────────
       nodes.forEach((node, i) => {
         if (!node) return
-        const t = 0.82 + i * 0.055
+        const t = 0.70 + i * 0.048
         tl.call(() => firePulse(i), [], t)
         tl.to(node, {
           autoAlpha: 1,
           scale: 1,
-          duration: 0.50,
-          ease: 'back.out(1.6)',
+          duration: 0.46,
+          ease: 'back.out(1.4)',
           force3D: true,
         }, t)
       })
