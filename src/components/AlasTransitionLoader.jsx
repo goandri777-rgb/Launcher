@@ -102,7 +102,7 @@ function LoaderStage({ label }) {
       role="status"
       aria-live="polite"
       aria-label={label}
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, y: -6, transition: { duration: 0.26, ease: [0.4, 0, 1, 1] } }}
       transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
