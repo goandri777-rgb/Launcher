@@ -86,8 +86,8 @@ export default function Launcher() {
       <motion.header
         style={{
           background: 'rgba(255, 255, 255, 0.45)',
-          backdropFilter: 'blur(20px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+          backdropFilter: 'blur(12px) saturate(120%)',
+          WebkitBackdropFilter: 'blur(12px) saturate(120%)',
           borderBottom: '1px solid rgba(11, 95, 141, 0.15)',
           boxShadow: '0 8px 32px 0 rgba(11, 95, 141, 0.04), 0 1px 0 0 rgba(255, 255, 255, 0.35) inset',
           position: 'relative',
