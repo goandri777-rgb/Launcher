@@ -154,11 +154,11 @@ export function AuthGuard({ children }) {
 }
 
 // ── AdminGuard ────────────────────────────────────────────────────────────
-// admin → acceso total | resto → redirige al launcher
+// admin → acceso total | supervisor → solo lectura | resto → redirige al launcher
 export function AdminGuard({ children }) {
   const { profile, loading } = useAuth()
   // Si cargando y aún no hay perfil: mostrar spinner (nunca pantalla en blanco).
   if (loading && !profile) return <Splash />
-  if (profile?.role !== 'admin') return <Navigate to="/" replace />
+  if (profile?.role !== 'admin' && profile?.role !== 'supervisor') return <Navigate to="/" replace />
   return children
 }
