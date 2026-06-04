@@ -38,7 +38,7 @@ body {
 /* Textura de puntos casi imperceptible */
 body::before {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   background-image: radial-gradient(circle, rgba(11,95,141,0.055) 1px, transparent 1px);
   background-size: 44px 44px;
@@ -125,7 +125,7 @@ body::before {
     opacity: 0.7;
   }
   100% {
-    transform: scale(2.8);
+    transform: scale(2.2);
     opacity: 0;
   }
 }
