@@ -388,7 +388,6 @@ export default function CircularLauncher({ modules, onOpen }) {
     if (!buttonEl) return
 
     // ── Transform del botón: composited, sin paint ─────────────────────────
-    gsap.killTweensOf(buttonEl)
     gsap.to(buttonEl, {
       scale: on ? 1.08 : 1,
       y:     on ? -3   : 0,
@@ -419,7 +418,6 @@ export default function CircularLauncher({ modules, onOpen }) {
     const lineBaseEl = lineBaseRefs.current[moduleIndex]
     const lineDashEl = lineDashRefs.current[moduleIndex]
     if (lineBaseEl) {
-      gsap.killTweensOf(lineBaseEl)
       gsap.to(lineBaseEl, {
         opacity:  on ? 1 : 0.55,
         duration: on ? 0.32 : 0.24,
@@ -428,7 +426,6 @@ export default function CircularLauncher({ modules, onOpen }) {
       })
     }
     if (lineDashEl) {
-      gsap.killTweensOf(lineDashEl)
       gsap.to(lineDashEl, {
         opacity:  on ? 1 : 0.6,
         duration: on ? 0.28 : 0.20,
@@ -759,6 +756,8 @@ export default function CircularLauncher({ modules, onOpen }) {
                   borderRadius: '50%',
                   background: state === 'active' ? '#10b981' : state === 'inactive' ? '#2563EB' : '#ef4444',
                   animation: 'status-dot-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite',
+                  transformBox: 'fill-box',
+                  transformOrigin: 'center',
                   pointerEvents: 'none',
                 }} />
                 <span style={{
