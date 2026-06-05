@@ -695,7 +695,7 @@ export default function AdminPanel() {
         </div>
 
         {/* Main grid */}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 420px',gap:18,alignItems:'start'}}>
+        <div style={{display:'grid',gridTemplateColumns:'minmax(0,640px) 420px',gap:18,alignItems:'start'}}>
 
           {/* ── Usuarios ───────────────────────────────────────────────────── */}
           <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.26,ease:EASE}}>
@@ -707,11 +707,11 @@ export default function AdminPanel() {
               }/>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,tableLayout:'fixed', '--border': C.border}}>
                 <colgroup>
-                  <col style={{width:'30%'}}/>  {/* Usuario */}
+                  <col style={{width:'26%'}}/>  {/* Usuario */}
                   <col style={{width:'11%'}}/>  {/* Rol */}
                   <col style={{width:'12%'}}/>  {/* Estado */}
                   <col style={{width:'14%'}}/>  {/* Permisos */}
-                  <col style={{width:'33%'}}/>  {/* Acciones */}
+                  <col style={{width:'37%'}}/>  {/* Acciones */}
                 </colgroup>
                 <thead style={{borderBottom:`1px solid ${C.border}`}}>
                   <tr>
@@ -727,23 +727,22 @@ export default function AdminPanel() {
                     const st=u.is_blocked?'blocked':u.is_active?'active':'inactive'
                     return (
                       <tr key={u.id} className="alas-tr" style={{animationDelay:`${Math.min(i, 7) * 0.055}s`}}>
-                        <td style={{padding:'11px 8px'}}>
-                          <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
-                            <div style={{width:30,height:30,borderRadius:9,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:12,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
+                        <td style={{padding:'9px 6px'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
+                            <div style={{width:26,height:26,borderRadius:8,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:11,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
                               {(u.full_name||u.username||u.email||'U').charAt(0).toUpperCase()}
                             </div>
                             <div style={{minWidth:0}}>
-                              <div style={{fontWeight:600,color:C.text1,fontSize:13,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
-                              <div style={{fontSize:11,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.username || u.email}</div>
+                              <div style={{fontWeight:600,color:C.text1,fontSize:12.5,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
                               <div style={{fontSize:10,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                                 {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'Sin acceso'}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td style={{padding:'11px 8px'}}><RolePill role={u.role}/></td>
-                        <td style={{padding:'11px 8px'}}><StatusPill status={st}/></td>
-                        <td style={{padding:'11px 8px'}}>
+                        <td style={{padding:'9px 6px'}}><RolePill role={u.role}/></td>
+                        <td style={{padding:'9px 6px'}}><StatusPill status={st}/></td>
+                        <td style={{padding:'9px 6px'}}>
                           {!isReadOnly && (
                             <button onClick={()=>setSelected(u)}
                               style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:8,background:'transparent',border:`1px solid ${C.border}`,color:C.text3,fontSize:11,fontWeight:500,cursor:'pointer',transition:'all 150ms ease',whiteSpace:'nowrap'}}
@@ -754,7 +753,7 @@ export default function AdminPanel() {
                             </button>
                           )}
                         </td>
-                        <td style={{padding:'11px 8px'}}>
+                        <td style={{padding:'9px 6px'}}>
                           <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:2}}>
                             {!isReadOnly && <>
                               <IconBtn title="Editar usuario" onClick={()=>setEditingUser(u)} icon={UserCog} variant="default"/>
