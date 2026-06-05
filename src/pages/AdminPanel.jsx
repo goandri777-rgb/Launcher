@@ -73,9 +73,24 @@ function RolePill({ role }) {
     <span style={{display:'inline-block',padding:'2px 9px',borderRadius:99,fontSize:11,fontWeight:500,background:r.bg,color:r.fg,border:`1px solid ${r.border}`,textTransform:'capitalize'}}>{role}</span>
   )
 }
+function normalizeAction(raw) {
+  if (!raw) return '—'
+  const a = raw.toLowerCase()
+  if (a.startsWith('register_login')  || a === 'login')           return 'Inició sesión'
+  if (a.startsWith('register_logout') || a === 'logout')          return 'Cerró sesión'
+  if (a.startsWith('admin_create_user'))                          return 'Creó usuario'
+  if (a.startsWith('admin_delete_user'))                          return 'Eliminó usuario'
+  if (a.startsWith('admin_edit_user'))                            return 'Editó usuario'
+  if (a.startsWith('admin_block_user'))                           return 'Bloqueó usuario'
+  if (a.startsWith('admin_unblock_user'))                         return 'Desbloqueó usuario'
+  if (a.startsWith('admin_activate'))                             return 'Activó usuario'
+  if (a.startsWith('admin_deactivate'))                           return 'Desactivó usuario'
+  if (a.startsWith('open_module'))                                return 'Abrió módulo'
+  return raw.replace(/_/g,' ').replace(/:[^ ]+/,'').trim()
+}
 function ActionPill({ action }) {
   return (
-    <span style={{display:'inline-block',padding:'2px 9px',borderRadius:99,fontSize:11,fontWeight:500,background:C.brandLight,color:C.brand,border:`1px solid rgba(11,95,141,0.15)`,textTransform:'capitalize'}}>{action}</span>
+    <span style={{display:'inline-block',padding:'2px 9px',borderRadius:99,fontSize:11,fontWeight:500,background:C.brandLight,color:C.brand,border:`1px solid rgba(11,95,141,0.15)`}}>{action}</span>
   )
 }
 
@@ -134,7 +149,7 @@ function IconBtn({ title, onClick, icon: Icon, variant = 'default' }) {
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       whileHover={{scale:1.1}} whileTap={{scale:0.9}} transition={SPRING}
       style={{
-        display:'grid',placeItems:'center',width:30,height:30,borderRadius:8,
+        display:'grid',placeItems:'center',width:36,height:36,borderRadius:10,
         background: hov ? s.bg : 'transparent',
         border: `1px solid ${hov ? s.border : s.borderRest}`,
         color: hov ? s.color : C.text4,
@@ -142,7 +157,7 @@ function IconBtn({ title, onClick, icon: Icon, variant = 'default' }) {
         flexShrink: 0,
       }}
     >
-      <Icon style={{width:14,height:14}}/>
+      <Icon style={{width:16,height:16}}/>
     </motion.button>
   )
 }
@@ -692,19 +707,17 @@ export default function AdminPanel() {
               }/>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,tableLayout:'fixed', '--border': C.border}}>
                 <colgroup>
-                  <col style={{width:'26%'}}/>  {/* Usuario */}
-                  <col style={{width:'10%'}}/>  {/* Rol */}
-                  <col style={{width:'11%'}}/>  {/* Estado */}
-                  <col style={{width:'17%'}}/>  {/* Último acceso */}
-                  <col style={{width:'12%'}}/>  {/* Permisos */}
-                  <col style={{width:'24%'}}/>  {/* Acciones */}
+                  <col style={{width:'30%'}}/>  {/* Usuario */}
+                  <col style={{width:'11%'}}/>  {/* Rol */}
+                  <col style={{width:'12%'}}/>  {/* Estado */}
+                  <col style={{width:'14%'}}/>  {/* Permisos */}
+                  <col style={{width:'33%'}}/>  {/* Acciones */}
                 </colgroup>
                 <thead style={{borderBottom:`1px solid ${C.border}`}}>
                   <tr>
                     <Th>Usuario</Th>
                     <Th>Rol</Th>
                     <Th>Estado</Th>
-                    <Th>Último acceso</Th>
                     <Th>Permisos</Th>
                     <Th right>Acciones</Th>
                   </tr>
@@ -722,14 +735,14 @@ export default function AdminPanel() {
                             <div style={{minWidth:0}}>
                               <div style={{fontWeight:600,color:C.text1,fontSize:13,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
                               <div style={{fontSize:11,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.username || u.email}</div>
+                              <div style={{fontSize:10,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'Sin acceso'}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td style={{padding:'11px 8px'}}><RolePill role={u.role}/></td>
                         <td style={{padding:'11px 8px'}}><StatusPill status={st}/></td>
-                        <td style={{padding:'11px 8px',color:C.text4,fontSize:11,whiteSpace:'nowrap'}}>
-                          {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'}
-                        </td>
                         <td style={{padding:'11px 8px'}}>
                           {!isReadOnly && (
                             <button onClick={()=>setSelected(u)}
@@ -758,7 +771,7 @@ export default function AdminPanel() {
                   })}
                   {users.length===0 && (
                     <tr>
-                      <td colSpan={6} style={{padding:'36px 20px',textAlign:'center',color:C.text4,fontSize:13,borderBottom:'none'}}>Sin usuarios registrados</td>
+                      <td colSpan={5} style={{padding:'36px 20px',textAlign:'center',color:C.text4,fontSize:13,borderBottom:'none'}}>Sin usuarios registrados</td>
                     </tr>
                   )}
                 </tbody>
@@ -825,7 +838,7 @@ export default function AdminPanel() {
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
                           <span style={{fontSize:12,fontWeight:600,color:C.text1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{emailToName[l.email] || l.email || '—'}</span>
-                          <ActionPill action={l.action}/>
+                          <ActionPill action={normalizeAction(l.action)}/>
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:6}}>
                           {l.module_name && <span style={{fontSize:11,color:C.text3}}>{l.module_name}</span>}
