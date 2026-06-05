@@ -1,13 +1,12 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LogOut, Settings2, Lock, LayoutGrid } from 'lucide-react'
+import { LogOut, Settings2, Lock, LayoutGrid, Check, X } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 import { useModules } from '../hooks/useModules'
 import CircularLauncher from '../components/CircularLauncher'
 import AlasTransitionLoader from '../components/AlasTransitionLoader'
 import ProjectsSidebar from '../components/ProjectsSidebar'
-import HubOrderPanel from '../components/HubOrderPanel'
 
 // ── Helpers orden personalizado por usuario ───────────────────────────────
 const orderKey   = (uid) => `alas.hub.order.${uid}`
@@ -61,17 +60,28 @@ export default function Launcher() {
   }, [modulesLoading, authLoading, stopEntry])
   const [isExiting,    setIsExiting]    = useState(false)
   const [isLaunching,  setIsLaunching]  = useState(false)
-  const [hubOrderOpen, setHubOrderOpen] = useState(false)
+  const [hubEditMode,  setHubEditMode]  = useState(false)
+  const [pendingOrder, setPendingOrder] = useState(null)
+  const [hubOrderVer,  setHubOrderVer]  = useState(0)
 
-  // Módulos reordenados según preferencia del usuario actual
   const orderedModules = useMemo(() => {
     if (!profile?.id || !modules.length) return modules
     return applyOrder(modules, loadOrder(profile.id))
-  }, [modules, profile?.id])
+  // eslint-disable-next-line
+  }, [modules, profile?.id, hubOrderVer])
 
-  const handleSaveHubOrder = (newOrder) => {
-    saveOrder(profile.id, newOrder.map(m => m.key))
-    setHubOrderOpen(false)
+  const handleSaveHubOrder = () => {
+    if (pendingOrder?.length) {
+      saveOrder(profile.id, pendingOrder.map(m => m.key))
+      setHubOrderVer(v => v + 1)
+    }
+    setHubEditMode(false)
+    setPendingOrder(null)
+  }
+
+  const handleCancelHubOrder = () => {
+    setHubEditMode(false)
+    setPendingOrder(null)
   }
 
   const handleSignOut = () => setIsExiting(true)
@@ -207,26 +217,63 @@ export default function Launcher() {
           animate="visible"
           variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.06 } } }}
         >
-          {/* Ordenar Hub — visible para todos */}
-          <motion.div variants={btnItem}>
-            <button onClick={() => setHubOrderOpen(true)} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '10px 20px', borderRadius: 12,
-              background: 'rgba(255, 255, 255, 0.75)',
-              border: '1px solid rgba(11, 95, 141, 0.18)',
-              boxShadow: '0 2px 10px rgba(11, 95, 141, 0.07)',
-              fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-              fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em',
-              color: '#0B5F8D', cursor: 'pointer',
-              transition: 'all 150ms ease',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#f0f7ff'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.35)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.18)' }}
-            >
-              <LayoutGrid style={{ width: 14, height: 14 }} />
-              <span>ORDENAR HUB</span>
-            </button>
-          </motion.div>
+          {/* Ordenar Hub / Listo / Cancelar */}
+          <AnimatePresence mode="wait">
+            {hubEditMode ? (
+              <motion.div key="edit-btns" variants={btnItem}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ display: 'flex', gap: 6 }}
+              >
+                <button onClick={handleCancelHubOrder} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  padding: '10px 18px', borderRadius: 12,
+                  background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(148,163,184,0.30)',
+                  fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 600,
+                  color: '#64748b', cursor: 'pointer', transition: 'all 150ms ease',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.75)'}
+                >
+                  <X style={{ width: 13, height: 13 }} />
+                  CANCELAR
+                </button>
+                <button onClick={handleSaveHubOrder} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  padding: '10px 20px', borderRadius: 12,
+                  background: 'linear-gradient(135deg,#0B5F8D,#08486A)',
+                  border: 'none',
+                  fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700,
+                  color: '#fff', cursor: 'pointer', transition: 'opacity 150ms ease',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  <Check style={{ width: 13, height: 13 }} />
+                  LISTO
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div key="order-btn" variants={btnItem}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              >
+                <button onClick={() => setHubEditMode(true)} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '10px 20px', borderRadius: 12,
+                  background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(11,95,141,0.18)',
+                  boxShadow: '0 2px 10px rgba(11,95,141,0.07)',
+                  fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, fontWeight: 600,
+                  letterSpacing: '-0.01em', color: '#0B5F8D', cursor: 'pointer',
+                  transition: 'all 150ms ease',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#f0f7ff'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.35)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.18)' }}
+                >
+                  <LayoutGrid style={{ width: 14, height: 14 }} />
+                  ORDENAR HUB
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {(() => {
             const canAccess = profile?.role === 'admin'
@@ -320,7 +367,12 @@ export default function Launcher() {
               </p>
             </motion.div>
           ) : (
-            <CircularLauncher modules={orderedModules} onOpen={handleOpenModule} />
+            <CircularLauncher
+              modules={orderedModules}
+              onOpen={handleOpenModule}
+              editMode={hubEditMode}
+              onOrderChange={setPendingOrder}
+            />
           )}
         </main>
 
@@ -329,15 +381,6 @@ export default function Launcher() {
     </motion.div>
     <AlasTransitionLoader active={isLaunching} label="Abriendo módulo" />
 
-    <AnimatePresence>
-      {hubOrderOpen && (
-        <HubOrderPanel
-          modules={orderedModules}
-          onSave={handleSaveHubOrder}
-          onClose={() => setHubOrderOpen(false)}
-        />
-      )}
-    </AnimatePresence>
     </>
   )
 }

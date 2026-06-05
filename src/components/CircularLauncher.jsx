@@ -102,11 +102,15 @@ function labelColor(state, hov) {
 }
 // dotStyle removed - replaced by inline pulsing component
 
-export default function CircularLauncher({ modules, onOpen }) {
+export default function CircularLauncher({ modules, onOpen, editMode = false, onOrderChange }) {
   const { appBooting, transitioning } = useAuth()
-  const [busyKey, setBusyKey] = useState(null)
-  const [hubAlert, setHubAlert] = useState(null)
+  const [busyKey,    setBusyKey]    = useState(null)
+  const [hubAlert,   setHubAlert]   = useState(null)
+  const [editOrder,  setEditOrder]  = useState([])
+  const [dragVisual, setDragVisual] = useState(null) // { dragKey, targetSlot }
   const alertTimer = useRef(null)
+  const nodeByKey  = useRef({})
+  const dragRef    = useRef(null)
 
   const triggerHubAlert = useCallback((msg) => {
     clearTimeout(alertTimer.current)
@@ -357,6 +361,112 @@ export default function CircularLauncher({ modules, onOpen }) {
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
 
+  // ── Edit mode — wiggle, drag-to-swap ─────────────────────────────────────
+  useEffect(() => {
+    if (editMode) {
+      setEditOrder([...modules])
+      setDragVisual(null)
+      dragRef.current = null
+      nodeRefs.current.filter(Boolean).forEach((el, i) => {
+        gsap.killTweensOf(el)
+        gsap.set(el, { clearProps: 'x,y,scale,rotation' })
+        gsap.to(el, {
+          rotation: 2, duration: 0.7 + i * 0.08,
+          ease: 'sine.inOut', yoyo: true, repeat: -1, delay: i * 0.09,
+        })
+      })
+    } else {
+      nodeRefs.current.filter(Boolean).forEach(el => {
+        gsap.killTweensOf(el)
+        gsap.to(el, { rotation: 0, x: 0, y: 0, scale: 1, duration: 0.22, ease: 'power2.out' })
+      })
+      dragRef.current = null
+      setDragVisual(null)
+    }
+  }, [editMode]) // eslint-disable-line
+
+  useEffect(() => {
+    if (editMode && onOrderChange && editOrder.length) onOrderChange(editOrder)
+  }, [editOrder]) // eslint-disable-line
+
+  const handleEditDragStart = useCallback((e, key) => {
+    e.stopPropagation()
+    const slotIdx = editOrder.findIndex(m => m.key === key)
+    const el = nodeByKey.current[key]
+    if (!el || slotIdx < 0) return
+    dragRef.current = { key, startSlot: slotIdx, targetSlot: slotIdx, pStartX: e.clientX, pStartY: e.clientY, el }
+    gsap.killTweensOf(el, 'rotation')
+    gsap.to(el, { scale: 1.12, rotation: 0, duration: 0.16, ease: 'power2.out' })
+  }, [editOrder])
+
+  const handleEditDragMove = useCallback((e) => {
+    if (!dragRef.current) return
+    const dr = dragRef.current
+    const n = editOrder.length
+    const dx = e.clientX - dr.pStartX
+    const dy = e.clientY - dr.pStartY
+    gsap.set(dr.el, { x: dx, y: dy })
+
+    const sp = polar(dr.startSlot, n, ORBIT_R)
+    const cx = sp.x + dx, cy = sp.y + dy
+    let nearest = dr.startSlot, minDist = Infinity
+    for (let j = 0; j < n; j++) {
+      const p = polar(j, n, ORBIT_R)
+      const d = Math.hypot(cx - p.x, cy - p.y)
+      if (d < minDist) { minDist = d; nearest = j }
+    }
+    if (nearest !== dr.targetSlot) {
+      dr.targetSlot = nearest
+      setDragVisual({ dragKey: dr.key, targetSlot: nearest })
+    }
+  }, [editOrder])
+
+  const handleEditDragEnd = useCallback(() => {
+    if (!dragRef.current) return
+    const dr = dragRef.current
+    const n = editOrder.length
+
+    if (dr.targetSlot !== dr.startSlot) {
+      const newOrder = [...editOrder]
+      const dragged   = newOrder[dr.startSlot]
+      const displaced = newOrder[dr.targetSlot]
+      newOrder[dr.startSlot] = displaced
+      newOrder[dr.targetSlot] = dragged
+
+      const posS = polar(dr.startSlot, n, ORBIT_R)
+      const posT = polar(dr.targetSlot, n, ORBIT_R)
+      const dispEl = nodeByKey.current[displaced.key]
+      if (dispEl) gsap.killTweensOf(dispEl, 'rotation')
+
+      let done = 0
+      const onDone = () => {
+        if (++done < 2) return
+        gsap.set(dr.el, { clearProps: 'x,y,scale' })
+        if (dispEl) gsap.set(dispEl, { clearProps: 'x,y' })
+        setEditOrder(newOrder)
+        dragRef.current = null
+        setDragVisual(null)
+        // Restart wiggles after re-render
+        setTimeout(() => {
+          const e1 = nodeByKey.current[dragged.key]
+          const e2 = nodeByKey.current[displaced.key]
+          if (e1) gsap.to(e1, { rotation: 2, duration: 0.72, ease: 'sine.inOut', yoyo: true, repeat: -1 })
+          if (e2) gsap.to(e2, { rotation: 2, duration: 0.80, ease: 'sine.inOut', yoyo: true, repeat: -1 })
+        }, 60)
+      }
+
+      gsap.to(dr.el, { x: posT.x - posS.x, y: posT.y - posS.y, scale: 1, duration: 0.42, ease: 'back.out(1.3)', onComplete: onDone })
+      if (dispEl) {
+        gsap.to(dispEl, { x: posS.x - posT.x, y: posS.y - posT.y, duration: 0.42, ease: 'back.out(1.3)', onComplete: onDone })
+      } else { onDone() }
+    } else {
+      gsap.to(dr.el, { x: 0, y: 0, scale: 1, rotation: 2, duration: 0.28, ease: 'back.out(1.5)' })
+      gsap.to(dr.el, { rotation: 2, duration: 0.72, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: 0.28 })
+      dragRef.current = null
+      setDragVisual(null)
+    }
+  }, [editOrder])
+
   // ── 5. Click pulse — dot travels hub → node ───────────────────────────────
   const firePulse = useCallback((moduleIndex) => {
     const pulseEl = pulseRefs.current[moduleIndex]
@@ -487,11 +597,16 @@ export default function CircularLauncher({ modules, onOpen }) {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const displayModules = editMode ? (editOrder.length ? editOrder : modules) : modules
+
   return (
     <div
       ref={containerRef}
       className="relative grid place-items-center select-none"
       style={{ width: SIZE, height: SIZE, maxWidth: '92vw' }}
+      onPointerMove={editMode ? handleEditDragMove : undefined}
+      onPointerUp={editMode ? handleEditDragEnd : undefined}
+      onPointerLeave={editMode ? handleEditDragEnd : undefined}
     >
       {/* System wrapper */}
       <div
@@ -536,15 +651,32 @@ export default function CircularLauncher({ modules, onOpen }) {
           }}
         />
 
+        {/* Target slot ring — edit mode drag feedback */}
+        {editMode && dragVisual && dragVisual.targetSlot !== editOrder.findIndex(m => m.key === dragVisual.dragKey) && (() => {
+          const n = displayModules.length
+          const pos = polar(dragVisual.targetSlot, n, ORBIT_R)
+          return (
+            <circle
+              key="target-slot"
+              cx={CX + pos.x} cy={CY + pos.y} r={BTN_SIZE / 2 + 10}
+              fill="rgba(11,95,141,0.07)"
+              stroke="rgba(11,95,141,0.50)"
+              strokeWidth="1.5"
+              strokeDasharray="5 4"
+              style={{ animation: 'orbit-spin 3s linear infinite', transformBox: 'fill-box', transformOrigin: 'center' }}
+            />
+          )
+        })()}
+
         {/* Connector lines */}
-        {modules.map((m, i) => {
-          const { angle } = polar(i, modules.length, ORBIT_R)
+        {displayModules.map((m, i) => {
+          const { angle } = polar(i, displayModules.length, ORBIT_R)
           const x1 = CX + Math.cos(angle) * L_START
           const y1 = CY + Math.sin(angle) * L_START
           const x2 = CX + Math.cos(angle) * L_END
           const y2 = CY + Math.sin(angle) * L_END
           const state = getState(m)
-          const isBusy = busyKey === m.key
+          const isBusy = !editMode && busyKey === m.key
 
           return (
             <g key={m.key}>
@@ -659,7 +791,19 @@ export default function CircularLauncher({ modules, onOpen }) {
         {/* Hub text */}
         <div className="relative z-10 text-center px-5" style={{ lineHeight: 1.3, minHeight: 28 }}>
           <AnimatePresence mode="wait">
-            {busyKey ? (
+            {editMode ? (
+              <motion.div key="edit"
+                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}
+              >
+                <p style={{ fontFamily: '"Sora", system-ui, sans-serif', fontWeight: 700, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: C.brand, margin: 0 }}>
+                  EDITANDO
+                </p>
+                <p style={{ fontFamily: '"Inter", system-ui, sans-serif', fontSize: '9px', color: C.text3, margin: '3px 0 0', letterSpacing: '0.03em' }}>
+                  arrastrá módulos
+                </p>
+              </motion.div>
+            ) : busyKey ? (
               <motion.div
                 key="busy"
                 initial={{ opacity: 0, y: 5 }}
@@ -732,23 +876,22 @@ export default function CircularLauncher({ modules, onOpen }) {
       </div>
 
       {/* ── Módulos ──────────────────────────────────────────────────── */}
-      {modules.map((m, i) => {
-        const { x, y } = polar(i, modules.length, ORBIT_R)
-        const state    = getState(m)
-        const Icon     = getModuleIcon(m.key)
-        const isBusy   = busyKey    === m.key
-        const isHov    = false
-        const isActive = state === 'active'
+      {displayModules.map((m, i) => {
+        const { x, y } = polar(i, displayModules.length, ORBIT_R)
+        const state      = getState(m)
+        const Icon       = getModuleIcon(m.key)
+        const isBusy     = !editMode && busyKey === m.key
+        const isHov      = false
+        const isActive   = state === 'active'
+        const isDragging = editMode && dragVisual?.dragKey === m.key
+        const isTarget   = editMode && dragVisual && dragVisual.targetSlot === i && !isDragging
 
         return (
-          // Regular div — GSAP animates entrance (y + opacity)
-          // GSAP handles hover zoom without moving the hitbox.
           <div
             key={m.key}
-            ref={el => { nodeRefs.current[i] = el }}
+            ref={el => { nodeRefs.current[i] = el; nodeByKey.current[m.key] = el }}
             className="absolute z-20 flex flex-col items-center"
             style={{
-              // CSS absolute positioning (replaces Framer Motion x/y)
               left: `calc(50% + ${x - NODE_W / 2}px)`,
               top:  `calc(50% + ${y - BTN_SIZE / 2 - 8}px)`,
               width: NODE_W,
@@ -756,20 +899,26 @@ export default function CircularLauncher({ modules, onOpen }) {
               paddingTop: 8,
               boxSizing: 'border-box',
               gap: 8,
-              zIndex: isHov ? 32 : 20,
+              zIndex: isDragging ? 50 : 20,
               willChange: 'transform, opacity',
+              cursor: editMode ? (isDragging ? 'grabbing' : 'grab') : undefined,
             }}
-            onPointerEnter={() => isActive && !isBusy && animateModuleHover(i, m, true)}
-            onPointerLeave={() => animateModuleHover(i, m, false)}
-            onPointerMove={(e) => !isBusy && handlePointerMove(e, i, m)}
+            onPointerEnter={() => !editMode && isActive && !isBusy && animateModuleHover(i, m, true)}
+            onPointerLeave={() => !editMode && animateModuleHover(i, m, false)}
+            onPointerMove={(e) => !editMode && !isBusy && handlePointerMove(e, i, m)}
+            onPointerDown={editMode ? (e => handleEditDragStart(e, m.key)) : undefined}
           >
             {/* Button surface: GSAP animates hover zoom without moving the hitbox */}
             <button
               ref={el => { buttonRefs.current[i] = el }}
-              onClick={() => handleClick(m)}
-              disabled={state === 'inactive' || isBusy}
+              onClick={() => !editMode && handleClick(m)}
+              disabled={!editMode && (state === 'inactive' || isBusy)}
               className="relative grid place-items-center flex-shrink-0"
-              style={nodeStyles(state, isHov)}
+              style={{
+                ...nodeStyles(state, isHov),
+                ...(isTarget ? { boxShadow: '0 0 0 2.5px rgba(11,95,141,0.55), 0 8px 24px rgba(11,95,141,0.18)', background: 'rgba(240,247,255,0.90)' } : {}),
+                ...(isDragging ? { boxShadow: '0 20px 52px rgba(11,95,141,0.28), 0 4px 14px rgba(11,95,141,0.16)' } : {}),
+              }}
             >
               {/* Hover overlay — visual hover baked in, solo opacity cambia (compositor) */}
               {state === 'active' && (
