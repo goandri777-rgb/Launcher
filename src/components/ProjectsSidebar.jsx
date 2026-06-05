@@ -1,6 +1,8 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { Plus, X, ChevronLeft, ChevronRight, GripVertical, FolderKanban, Check } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/AuthContext'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const EASE = [0.16, 1, 0.3, 1]
@@ -11,66 +13,102 @@ const STATUS = [
   { value: 'pausado',     label: 'Pausado',      color: '#94a3b8' },
 ]
 
-const statusColor  = (v) => STATUS.find(s => s.value === v)?.color  ?? '#94a3b8'
-const statusLabel  = (v) => STATUS.find(s => s.value === v)?.label  ?? v
-
-// ── Persistencia ──────────────────────────────────────────────────────────────
-function load() {
-  try { return JSON.parse(localStorage.getItem('alas.sidebar.projects') ?? '[]') } catch { return [] }
-}
-function persist(list) {
-  try { localStorage.setItem('alas.sidebar.projects', JSON.stringify(list)) } catch {}
-}
+const statusColor = (v) => STATUS.find(s => s.value === v)?.color ?? '#94a3b8'
+const statusLabel = (v) => STATUS.find(s => s.value === v)?.label ?? v
 
 // ── Estilos reutilizables ─────────────────────────────────────────────────────
 const T = {
-  brand:    '#0B5F8D',
-  text1:    '#1e293b',
-  text2:    '#475569',
-  text3:    '#94a3b8',
-  border:   'rgba(11,95,141,0.10)',
-  surface:  'rgba(255,255,255,0.70)',
-  danger:   '#ef4444',
+  brand:   '#0B5F8D',
+  text1:   '#1e293b',
+  text2:   '#475569',
+  text3:   '#94a3b8',
+  border:  'rgba(11,95,141,0.10)',
+  surface: 'rgba(255,255,255,0.70)',
+  danger:  '#ef4444',
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function ProjectsSidebar() {
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
+
   const [open,      setOpen]      = useState(true)
-  const [projects,  setProjects]  = useState(load)
+  const [projects,  setProjects]  = useState([])
+  const [loading,   setLoading]   = useState(true)
   const [adding,    setAdding]    = useState(false)
   const [newName,   setNewName]   = useState('')
   const [newStatus, setNewStatus] = useState('trabajando')
   const [hovered,   setHovered]   = useState(null)
-  const nameInputRef = useRef(null)
+  const nameInputRef  = useRef(null)
+  const refetchTimer  = useRef(null)
 
-  const update = useCallback((list) => {
-    setProjects(list)
-    persist(list)
+  // ── Carga desde Supabase ──────────────────────────────────────────────────
+  const fetchProjects = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('sidebar_projects')
+      .select('*')
+      .order('position', { ascending: true })
+    if (!error && data) setProjects(data)
+    setLoading(false)
   }, [])
 
-  const handleAdd = () => {
-    if (!newName.trim()) return
-    update([...projects, {
-      id:        crypto.randomUUID(),
-      name:      newName.trim(),
-      status:    newStatus,
-      createdAt: new Date().toISOString(),
-    }])
+  useEffect(() => {
+    fetchProjects()
+
+    // Realtime: cualquier cambio recarga la lista (debounced para reorden masivo)
+    const channel = supabase
+      .channel('sidebar_projects_rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sidebar_projects' }, () => {
+        clearTimeout(refetchTimer.current)
+        refetchTimer.current = setTimeout(fetchProjects, 350)
+      })
+      .subscribe()
+
+    return () => {
+      clearTimeout(refetchTimer.current)
+      supabase.removeChannel(channel)
+    }
+  }, [fetchProjects])
+
+  // ── Acciones (solo admin) ─────────────────────────────────────────────────
+  const handleAdd = async () => {
+    if (!newName.trim() || !isAdmin) return
+    const maxPos = projects.length > 0 ? Math.max(...projects.map(p => p.position)) + 1 : 0
+    await supabase.from('sidebar_projects').insert({
+      name:     newName.trim(),
+      status:   newStatus,
+      position: maxPos,
+    })
     setNewName('')
     setNewStatus('trabajando')
     setAdding(false)
   }
 
-  const handleDelete = (id) => update(projects.filter(p => p.id !== id))
-
-  const handleCycleStatus = (id) => {
-    update(projects.map(p => {
-      if (p.id !== id) return p
-      const idx  = STATUS.findIndex(s => s.value === p.status)
-      const next = STATUS[(idx + 1) % STATUS.length]
-      return { ...p, status: next.value }
-    }))
+  const handleDelete = async (id) => {
+    if (!isAdmin) return
+    await supabase.from('sidebar_projects').delete().eq('id', id)
   }
+
+  const handleCycleStatus = async (id) => {
+    if (!isAdmin) return
+    const p = projects.find(p => p.id === id)
+    if (!p) return
+    const idx  = STATUS.findIndex(s => s.value === p.status)
+    const next = STATUS[(idx + 1) % STATUS.length]
+    // Optimistic
+    setProjects(prev => prev.map(x => x.id === id ? { ...x, status: next.value } : x))
+    await supabase.from('sidebar_projects').update({ status: next.value }).eq('id', id)
+  }
+
+  const handleReorder = useCallback(async (newOrder) => {
+    if (!isAdmin) return
+    setProjects(newOrder)
+    await Promise.all(
+      newOrder.map((p, i) =>
+        supabase.from('sidebar_projects').update({ position: i }).eq('id', p.id)
+      )
+    )
+  }, [isAdmin])
 
   const openAdding = () => {
     setAdding(true)
@@ -150,135 +188,174 @@ export default function ProjectsSidebar() {
                 color: T.brand, borderRadius: 99, padding: '2px 8px',
                 fontFamily: '"Inter", sans-serif',
               }}>
-                {projects.length}
+                {loading ? '…' : projects.length}
               </span>
             </div>
 
-            {/* Lista reordenable */}
+            {/* Lista */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 0', scrollbarWidth: 'none' }}>
-              {projects.length === 0 && !adding && (
+
+              {/* Estado vacío */}
+              {!loading && projects.length === 0 && !adding && (
                 <div style={{
                   textAlign: 'center', padding: '32px 16px',
                   color: T.text3, fontSize: 12, lineHeight: 1.6,
                   fontFamily: '"Inter", sans-serif',
                 }}>
-                  Sin proyectos aún.<br />
-                  <span style={{ color: T.brand, fontWeight: 600, cursor: 'pointer' }} onClick={openAdding}>
-                    Añadí el primero
-                  </span>
+                  Sin proyectos aún.
+                  {isAdmin && (
+                    <>
+                      <br />
+                      <span
+                        style={{ color: T.brand, fontWeight: 600, cursor: 'pointer' }}
+                        onClick={openAdding}
+                      >
+                        Añadí el primero
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
 
-              <Reorder.Group
-                axis="y"
-                values={projects}
-                onReorder={update}
-                style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}
-              >
-                {projects.map((p) => (
-                  <Reorder.Item
-                    key={p.id}
-                    value={p}
-                    style={{ borderRadius: 14, cursor: 'grab' }}
-                    whileDrag={{
-                      scale: 1.03,
-                      boxShadow: '0 16px 32px rgba(11,95,141,0.18)',
-                      zIndex: 99,
-                      cursor: 'grabbing',
-                    }}
-                  >
-                    <div
-                      onMouseEnter={() => setHovered(p.id)}
-                      onMouseLeave={() => setHovered(null)}
-                      style={{
-                        background: hovered === p.id ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.78)',
-                        border: hovered === p.id
-                          ? `1px solid ${statusColor(p.status)}40`
-                          : '1px solid rgba(226,232,240,0.85)',
-                        borderRadius: 14,
-                        padding: '11px 12px 10px',
-                        transition: 'background 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
-                        boxShadow: hovered === p.id
-                          ? `0 6px 20px rgba(11,95,141,0.09), 0 0 0 3px ${statusColor(p.status)}12`
-                          : '0 2px 8px rgba(11,95,141,0.04)',
-                        position: 'relative',
-                        backdropFilter: 'blur(8px)',
-                        WebkitBackdropFilter: 'blur(8px)',
-                      }}
+              {/* Skeleton carga */}
+              {loading && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} style={{
+                      height: 68, borderRadius: 14,
+                      background: 'rgba(11,95,141,0.05)',
+                      animation: `bob ${1.2 + i * 0.2}s ease-in-out infinite`,
+                    }} />
+                  ))}
+                </div>
+              )}
+
+              {/* Lista reordenable (solo admin arrastra) */}
+              {!loading && (
+                <Reorder.Group
+                  axis="y"
+                  values={projects}
+                  onReorder={handleReorder}
+                  style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}
+                >
+                  {projects.map((p) => (
+                    <Reorder.Item
+                      key={p.id}
+                      value={p}
+                      dragListener={isAdmin}
+                      style={{ borderRadius: 14, cursor: isAdmin ? 'grab' : 'default' }}
+                      whileDrag={isAdmin ? {
+                        scale: 1.03,
+                        boxShadow: '0 16px 32px rgba(11,95,141,0.18)',
+                        zIndex: 99,
+                        cursor: 'grabbing',
+                      } : {}}
                     >
-                      {/* Fila superior: grip + nombre + eliminar */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
-                        <GripVertical style={{
-                          width: 12, height: 12, color: T.text3, flexShrink: 0,
-                          opacity: hovered === p.id ? 0.6 : 0,
-                          transition: 'opacity 150ms ease',
-                        }} />
-
-                        <span style={{
-                          flex: 1, fontSize: 12.5, fontWeight: 700,
-                          color: T.text1, fontFamily: '"Inter", sans-serif',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                          letterSpacing: '-0.015em', lineHeight: 1.3,
-                        }}>
-                          {p.name}
-                        </span>
-
-                        <button
-                          onPointerDown={e => e.stopPropagation()}
-                          onClick={() => handleDelete(p.id)}
-                          title="Eliminar proyecto"
-                          style={{
-                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                            border: 'none', background: 'rgba(239,68,68,0.08)',
-                            color: T.danger, cursor: 'pointer',
-                            display: 'grid', placeItems: 'center',
-                            opacity: hovered === p.id ? 1 : 0,
-                            transition: 'opacity 120ms ease, background 120ms ease',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                        >
-                          <X style={{ width: 10, height: 10 }} />
-                        </button>
-                      </div>
-
-                      {/* Fila inferior: dot de estado + etiqueta legible */}
-                      <button
-                        onPointerDown={e => e.stopPropagation()}
-                        onClick={() => handleCycleStatus(p.id)}
-                        title="Clic para cambiar estado"
+                      <div
+                        onMouseEnter={() => setHovered(p.id)}
+                        onMouseLeave={() => setHovered(null)}
                         style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          border: 'none', background: `${statusColor(p.status)}14`,
-                          borderRadius: 99, padding: '3px 9px 3px 7px',
-                          cursor: 'pointer',
-                          transition: 'background 150ms ease, transform 150ms ease',
+                          background: hovered === p.id ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.78)',
+                          border: hovered === p.id
+                            ? `1px solid ${statusColor(p.status)}40`
+                            : '1px solid rgba(226,232,240,0.85)',
+                          borderRadius: 14,
+                          padding: '11px 12px 10px',
+                          transition: 'background 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
+                          boxShadow: hovered === p.id
+                            ? `0 6px 20px rgba(11,95,141,0.09), 0 0 0 3px ${statusColor(p.status)}12`
+                            : '0 2px 8px rgba(11,95,141,0.04)',
+                          position: 'relative',
+                          backdropFilter: 'blur(8px)',
+                          WebkitBackdropFilter: 'blur(8px)',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = `${statusColor(p.status)}26`; e.currentTarget.style.transform = 'scale(1.04)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = `${statusColor(p.status)}14`; e.currentTarget.style.transform = 'scale(1)' }}
                       >
-                        <span style={{
-                          width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                          background: statusColor(p.status),
-                          boxShadow: `0 0 5px ${statusColor(p.status)}90`,
-                        }} />
-                        <span style={{
-                          fontSize: 10.5, fontWeight: 600,
-                          color: statusColor(p.status),
-                          fontFamily: '"Inter", sans-serif',
-                          letterSpacing: '-0.01em',
-                        }}>
-                          {statusLabel(p.status)}
-                        </span>
-                      </button>
-                    </div>
-                  </Reorder.Item>
-                ))}
-              </Reorder.Group>
+                        {/* Fila superior: grip + nombre + eliminar */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+                          {isAdmin && (
+                            <GripVertical style={{
+                              width: 12, height: 12, color: T.text3, flexShrink: 0,
+                              opacity: hovered === p.id ? 0.6 : 0,
+                              transition: 'opacity 150ms ease',
+                            }} />
+                          )}
 
-              {/* Formulario inline añadir */}
+                          <span style={{
+                            flex: 1, fontSize: 12.5, fontWeight: 700,
+                            color: T.text1, fontFamily: '"Inter", sans-serif',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            letterSpacing: '-0.015em', lineHeight: 1.3,
+                          }}>
+                            {p.name}
+                          </span>
+
+                          {isAdmin && (
+                            <button
+                              onPointerDown={e => e.stopPropagation()}
+                              onClick={() => handleDelete(p.id)}
+                              title="Eliminar proyecto"
+                              style={{
+                                width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                                border: 'none', background: 'rgba(239,68,68,0.08)',
+                                color: T.danger, cursor: 'pointer',
+                                display: 'grid', placeItems: 'center',
+                                opacity: hovered === p.id ? 1 : 0,
+                                transition: 'opacity 120ms ease, background 120ms ease',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                            >
+                              <X style={{ width: 10, height: 10 }} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Fila inferior: pill de estado */}
+                        <div
+                          onPointerDown={e => e.stopPropagation()}
+                          onClick={() => isAdmin && handleCycleStatus(p.id)}
+                          title={isAdmin ? 'Clic para cambiar estado' : statusLabel(p.status)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: `${statusColor(p.status)}14`,
+                            borderRadius: 99, padding: '3px 9px 3px 7px',
+                            cursor: isAdmin ? 'pointer' : 'default',
+                            transition: 'background 150ms ease, transform 150ms ease',
+                            border: 'none',
+                          }}
+                          onMouseEnter={e => {
+                            if (!isAdmin) return
+                            e.currentTarget.style.background = `${statusColor(p.status)}26`
+                            e.currentTarget.style.transform = 'scale(1.04)'
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = `${statusColor(p.status)}14`
+                            e.currentTarget.style.transform = 'scale(1)'
+                          }}
+                        >
+                          <span style={{
+                            width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                            background: statusColor(p.status),
+                            boxShadow: `0 0 5px ${statusColor(p.status)}90`,
+                          }} />
+                          <span style={{
+                            fontSize: 10.5, fontWeight: 600,
+                            color: statusColor(p.status),
+                            fontFamily: '"Inter", sans-serif',
+                            letterSpacing: '-0.01em',
+                          }}>
+                            {statusLabel(p.status)}
+                          </span>
+                        </div>
+                      </div>
+                    </Reorder.Item>
+                  ))}
+                </Reorder.Group>
+              )}
+
+              {/* Formulario inline añadir (solo admin) */}
               <AnimatePresence>
-                {adding && (
+                {adding && isAdmin && (
                   <motion.div
                     key="add-form"
                     initial={{ opacity: 0, height: 0, marginTop: 0 }}
@@ -294,7 +371,6 @@ export default function ProjectsSidebar() {
                       display: 'flex', flexDirection: 'column', gap: 10,
                       boxShadow: '0 4px 16px rgba(11,95,141,0.08)',
                     }}>
-                      {/* Input nombre */}
                       <input
                         ref={nameInputRef}
                         type="text"
@@ -314,7 +390,6 @@ export default function ProjectsSidebar() {
                         onBlur={e => e.target.style.borderColor = 'rgba(226,232,240,0.9)'}
                       />
 
-                      {/* Selector estado */}
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {STATUS.map(s => (
                           <button
@@ -337,7 +412,6 @@ export default function ProjectsSidebar() {
                         ))}
                       </div>
 
-                      {/* Botones guardar / cancelar */}
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           onClick={handleAdd}
@@ -356,7 +430,7 @@ export default function ProjectsSidebar() {
                           Añadir
                         </button>
                         <button
-                          onClick={() => { setAdding(false); setNewName(''); }}
+                          onClick={() => { setAdding(false); setNewName('') }}
                           style={{
                             width: 34, borderRadius: 9, border: '1px solid rgba(226,232,240,0.9)',
                             background: '#fff', color: T.text3, cursor: 'pointer',
@@ -372,8 +446,8 @@ export default function ProjectsSidebar() {
               </AnimatePresence>
             </div>
 
-            {/* Footer — botón añadir */}
-            {!adding && (
+            {/* Footer — botón añadir (solo admin) */}
+            {!adding && isAdmin && (
               <div style={{ padding: '10px 10px 14px', borderTop: `1px solid ${T.border}`, marginTop: 8 }}>
                 <button
                   onClick={openAdding}
