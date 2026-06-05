@@ -19,6 +19,7 @@ const DEMO_MODULES = [
   { key: 'pedidos',    name: 'Pedidos Caja Venta',    url: IS_DEV ? 'http://localhost:3000'  : import.meta.env.VITE_URL_PEDIDOS      || '', is_active: true, is_blocked: false },
   { key: 'recepcion',  name: 'Recepción Mercaderías', url: IS_DEV ? ''                       : import.meta.env.VITE_URL_RECEPCION    || '', is_active: true, is_blocked: false },
   { key: 'inventario', name: 'Inventario',            url: IS_DEV ? ''                       : import.meta.env.VITE_URL_INVENTARIO   || '', is_active: true, is_blocked: false },
+  { key: 'flete',      name: 'Calculadora de Flete', url: IS_DEV ? ''                       : import.meta.env.VITE_URL_FLETE        || '', is_active: false, is_blocked: false },
 ]
 // ──────────────────────────────────────────────────────────────────────────
 

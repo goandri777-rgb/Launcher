@@ -7,6 +7,7 @@ import {
   Boxes,
   Box,
   Settings2,
+  Truck,
 } from 'lucide-react'
 
 const GuaraniIcon = (props) => (
@@ -27,6 +28,7 @@ export const MODULE_ICONS = {
   recepcion:    PackageCheck,
   inventario:   Boxes,
   facturacion:  GuaraniIcon,
+  flete:        Truck,
   admin:        Settings2,
 }
 
