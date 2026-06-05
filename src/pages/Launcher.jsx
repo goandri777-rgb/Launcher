@@ -6,6 +6,7 @@ import { useAuth } from '../lib/AuthContext'
 import { useModules } from '../hooks/useModules'
 import CircularLauncher from '../components/CircularLauncher'
 import AlasTransitionLoader from '../components/AlasTransitionLoader'
+import ProjectsSidebar from '../components/ProjectsSidebar'
 
 const ROLE_LABEL = {
   admin:      'Administrador',
@@ -243,27 +244,33 @@ export default function Launcher() {
         </motion.div>
       </motion.header>
 
-      {/* ════ Main ══════════════════════════════════════════════════════ */}
-      <main className="relative z-10 flex-1 grid place-items-center">
-        {modulesLoading ? (
-          null
-        ) : modules.length === 0 ? (
-          <motion.div
-            className="text-center space-y-1"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: EASE }}
-          >
-            <p style={{ fontSize: 14, color: T.text2, fontFamily: '"Inter", system-ui' }}>
-              Sin módulos asignados.
-            </p>
-            <p style={{ fontSize: 12, color: T.text3 }}>
-              Pedí acceso al administrador.
-            </p>
-          </motion.div>
-        ) : (
-          <CircularLauncher modules={modules} onOpen={handleOpenModule} />
-        )}
-      </main>
+      {/* ════ Body = Sidebar + Main ═════════════════════════════════════ */}
+      <div className="relative z-10 flex-1 flex overflow-hidden">
+
+        <ProjectsSidebar />
+
+        <main className="flex-1 grid place-items-center overflow-hidden">
+          {modulesLoading ? (
+            null
+          ) : modules.length === 0 ? (
+            <motion.div
+              className="text-center space-y-1"
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: EASE }}
+            >
+              <p style={{ fontSize: 14, color: T.text2, fontFamily: '"Inter", system-ui' }}>
+                Sin módulos asignados.
+              </p>
+              <p style={{ fontSize: 12, color: T.text3 }}>
+                Pedí acceso al administrador.
+              </p>
+            </motion.div>
+          ) : (
+            <CircularLauncher modules={modules} onOpen={handleOpenModule} />
+          )}
+        </main>
+
+      </div>
 
     </motion.div>
     <AlasTransitionLoader active={isLaunching} label="Abriendo módulo" />
