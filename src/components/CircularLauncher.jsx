@@ -62,25 +62,31 @@ function nodeStyles(state, hov) {
   }
   if (state === 'inactive') return {
     ...base,
-    background: 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%)',
-    border: '1px solid rgba(37, 99, 235, 0.22)',
+    background: 'rgba(240, 249, 255, 0.78)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.80)',
     boxShadow: '0 4px 16px rgba(37, 99, 235, 0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
     opacity: 1,
     cursor: 'not-allowed',
   }
   if (state === 'blocked') return {
     ...base,
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(254, 242, 242, 0.8))',
-    border: '1px solid rgba(239, 68, 68, 0.15)',
-    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.02)',
+    background: 'rgba(255,255,255,0.72)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.82)',
+    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.04)',
     cursor: 'pointer',
     opacity: 0.65,
   }
   return {
     ...base,
-    background: 'linear-gradient(135deg, #ffffff 0%, #fbfcfe 100%)',
-    border: '1px solid rgba(11, 95, 141, 0.14)',
-    boxShadow: '0 6px 20px rgba(11, 95, 141, 0.04), 0 2px 4px rgba(11, 95, 141, 0.02), inset 0 1px 0 #ffffff',
+    background: 'rgba(255,255,255,0.72)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.85)',
+    boxShadow: '0 6px 22px rgba(11, 95, 141, 0.08), 0 2px 6px rgba(11, 95, 141, 0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
     cursor: 'pointer',
   }
 }
@@ -269,7 +275,14 @@ export default function CircularLauncher({ modules, onOpen }) {
 
 
 
-  // ── 2. Hub reacts to module hover ────────────────────────────────────────
+  // ── 2. Perspective 3D — habilita tilt magnético en hover ─────────────────
+  useEffect(() => {
+    buttonRefs.current.filter(Boolean).forEach(btn => {
+      gsap.set(btn, { transformPerspective: 700 })
+    })
+  }, [modules.length])
+
+  // ── 3. Hub reacts to module hover ────────────────────────────────────────
   // Hover is handled imperatively in animateModuleHover to avoid SVG re-renders.
 
   // ── 4. Busy state — dim everything except the active module ──────────────
@@ -371,6 +384,22 @@ export default function CircularLauncher({ modules, onOpen }) {
     }, '-=0.35')
   }, [modules.length])
 
+  const handlePointerMove = useCallback((e, moduleIndex, module) => {
+    if (getState(module) !== 'active') return
+    const buttonEl = buttonRefs.current[moduleIndex]
+    if (!buttonEl) return
+    const rect = buttonEl.getBoundingClientRect()
+    const dx = (e.clientX - (rect.left + rect.width  / 2)) / (rect.width  / 2)
+    const dy = (e.clientY - (rect.top  + rect.height / 2)) / (rect.height / 2)
+    gsap.to(buttonEl, {
+      rotateX: -dy * 10,
+      rotateY:  dx * 10,
+      duration: 0.28,
+      ease: 'power2.out',
+      overwrite: 'auto',
+    })
+  }, [])
+
   const animateModuleHover = useCallback((moduleIndex, module, on) => {
     if (getState(module) !== 'active') return
 
@@ -381,9 +410,11 @@ export default function CircularLauncher({ modules, onOpen }) {
 
     // ── Transform del botón: composited, sin paint ─────────────────────────
     gsap.to(buttonEl, {
-      scale: on ? 1.08 : 1,
-      y:     on ? -3   : 0,
-      duration: on ? 0.32 : 0.24,
+      scale:   on ? 1.08 : 1,
+      y:       on ? -3   : 0,
+      rotateX: on ? undefined : 0,
+      rotateY: on ? undefined : 0,
+      duration: on ? 0.32 : 0.28,
       ease:     on ? 'expo.out' : 'power3.out',
       overwrite: 'auto',
       force3D: true,
@@ -476,7 +507,7 @@ export default function CircularLauncher({ modules, onOpen }) {
       >
         <defs />
 
-        {/* Orbit guide */}
+        {/* Orbit guide exterior */}
         <circle
           ref={orbitRef}
           cx={CX} cy={CY} r={ORBIT_R}
@@ -487,6 +518,19 @@ export default function CircularLauncher({ modules, onOpen }) {
           style={{
             opacity: 0,
             animation: 'orbit-spin 30s linear infinite',
+            transformBox: 'fill-box',
+            transformOrigin: 'center center',
+          }}
+        />
+        {/* Anillo interior contra-rotante decorativo */}
+        <circle
+          cx={CX} cy={CY} r={ORBIT_R - 44}
+          fill="none"
+          stroke="rgba(120,140,175,0.18)"
+          strokeWidth="1"
+          strokeDasharray="1 9"
+          style={{
+            animation: 'spin-ccw 120s linear infinite',
             transformBox: 'fill-box',
             transformOrigin: 'center center',
           }}
@@ -567,13 +611,23 @@ export default function CircularLauncher({ modules, onOpen }) {
           }}
         />
 
-        {/* Hub surface — sombra estática, sin animación de paint */}
+        {/* Hub surface */}
         <div className="absolute inset-0 rounded-full" style={{
-          background: 'linear-gradient(145deg, #ffffff 0%, #f4f8ff 100%)',
-          border: '1px solid rgba(203,213,225,0.75)',
-          boxShadow: '0 4px 20px rgba(11,95,141,0.07), 0 1px 4px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,1)',
+          background: 'linear-gradient(160deg, #ffffff, #eef4fb)',
+          border: '1px solid rgba(255,255,255,0.90)',
+          boxShadow: '0 18px 48px -16px rgba(30,42,71,0.34), 0 4px 20px rgba(11,95,141,0.07), inset 0 2px 0 #fff',
         }} />
-        {/* Glow overlay — solo opacity pulsa → compositor path, cero paint */}
+
+        {/* Sweep — gradiente cónico giratorio que da vida al hub */}
+        <div className="absolute rounded-full pointer-events-none" style={{
+          inset: 6,
+          background: 'conic-gradient(from 0deg, transparent 0 70%, rgba(79,138,214,0.20) 86%, transparent 100%)',
+          animation: 'spin 8s linear infinite',
+          maskImage: 'radial-gradient(circle, transparent 58%, #000 60%)',
+          WebkitMaskImage: 'radial-gradient(circle, transparent 58%, #000 60%)',
+        }} />
+
+        {/* Glow overlay — solo opacity pulsa */}
         <div className="absolute rounded-full pointer-events-none" style={{
           inset: -2,
           boxShadow: '0 6px 28px rgba(11,95,141,0.13), 0 2px 8px rgba(15,23,42,0.06), 0 0 0 5px rgba(11,95,141,0.035)',
@@ -590,7 +644,7 @@ export default function CircularLauncher({ modules, onOpen }) {
           }} />
         </div>
 
-        {/* Logo watermark */}
+        {/* Logo watermark con bob */}
         <img
           src="/logo-icon.png"
           alt="" aria-hidden
@@ -598,6 +652,7 @@ export default function CircularLauncher({ modules, onOpen }) {
             position: 'absolute', width: '62%', height: 'auto',
             opacity: 0.07, filter: 'grayscale(1) brightness(0)',
             pointerEvents: 'none', userSelect: 'none',
+            animation: 'bob 5s ease-in-out infinite',
           }}
         />
 
@@ -706,6 +761,7 @@ export default function CircularLauncher({ modules, onOpen }) {
             }}
             onPointerEnter={() => isActive && !isBusy && animateModuleHover(i, m, true)}
             onPointerLeave={() => animateModuleHover(i, m, false)}
+            onPointerMove={(e) => !isBusy && handlePointerMove(e, i, m)}
           >
             {/* Button surface: GSAP animates hover zoom without moving the hitbox */}
             <button
@@ -765,35 +821,45 @@ export default function CircularLauncher({ modules, onOpen }) {
                 }} />
               </div>
 
-              {/* Icon — position:relative para quedar encima del hover overlay (que es absolute) */}
-              {state === 'inactive' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, position: 'relative' }}>
-                  <HardHat data-module-icon style={{
-                    width: 24, height: 24,
-                    color: '#2563EB',
+              {/* Icon con float animation por módulo (CSS, no interfiere con GSAP) */}
+              <div style={{
+                position: 'relative',
+                animation: state === 'active'
+                  ? `floaty ${5 + i * 0.45}s ease-in-out ${i * 0.5}s infinite`
+                  : 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 4,
+              }}>
+                {state === 'inactive' ? (
+                  <>
+                    <HardHat data-module-icon style={{
+                      width: 24, height: 24,
+                      color: '#2563EB',
+                      flexShrink: 0,
+                      animation: 'hardhat-bob 2.4s ease-in-out infinite',
+                    }} />
+                    <span style={{
+                      fontSize: '8.5px',
+                      fontWeight: 600,
+                      letterSpacing: '0.06em',
+                      color: '#2563EB',
+                      fontFamily: '"Inter", system-ui, sans-serif',
+                      textTransform: 'uppercase',
+                      opacity: 0.85,
+                    }}>Trabajando...</span>
+                  </>
+                ) : (
+                  <Icon data-module-icon style={{
+                    width: 26, height: 26,
+                    color: iconColor(state, isHov),
+                    transition: 'color 220ms ease',
                     flexShrink: 0,
-                    animation: 'hardhat-bob 2.4s ease-in-out infinite',
+                    filter: state === 'blocked' ? 'grayscale(100%) opacity(0.35)' : 'none',
                   }} />
-                  <span style={{
-                    fontSize: '8.5px',
-                    fontWeight: 600,
-                    letterSpacing: '0.06em',
-                    color: '#2563EB',
-                    fontFamily: '"Inter", system-ui, sans-serif',
-                    textTransform: 'uppercase',
-                    opacity: 0.85,
-                  }}>Trabajando...</span>
-                </div>
-              ) : (
-                <Icon data-module-icon style={{
-                  width: 26, height: 26,
-                  color: iconColor(state, isHov),
-                  transition: 'color 220ms ease',
-                  flexShrink: 0,
-                  filter: state === 'blocked' ? 'grayscale(100%) opacity(0.35)' : 'none',
-                  position: 'relative',
-                }} />
-              )}
+                )}
+              </div>
 
               {/* Locked overlay lock icon */}
               {state === 'blocked' && (

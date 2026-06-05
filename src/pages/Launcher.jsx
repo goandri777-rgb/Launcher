@@ -70,8 +70,16 @@ export default function Launcher() {
 
   return (
     <>
+    {/* Aurora background — fijo, no participa en animaciones de salida */}
+    <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      <div className="alas-aurora alas-aurora-1" />
+      <div className="alas-aurora alas-aurora-2" />
+      <div className="alas-aurora alas-aurora-3" />
+    </div>
+
     <motion.div
       className="h-full flex flex-col"
+      style={{ position: 'relative', zIndex: 1 }}
       initial={{ opacity: 0, y: 10, scale: 0.985 }}
       animate={exitState}
       exit={{ opacity: 0, y: -7, scale: 0.992, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}

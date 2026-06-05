@@ -1,5 +1,5 @@
-# Guía de Setup — ALAS Launcher 2.0 en Linux
-> Seguí esta guía de arriba a abajo. Al final tenés el ambiente 100% idéntico al de Windows.
+# Guía de Setup — ALAS Launcher 2.0 en Arch Linux
+> Guía actualizada para este sistema exacto. Tachado = ya está hecho.
 
 ---
 
@@ -16,86 +16,43 @@
 
 ---
 
-## PASO 1 — Actualizar el sistema
+## Estado actual de este sistema (junio 2026)
 
-Abrí una terminal (`Ctrl + Alt + T`) y ejecutá:
-
-```bash
-sudo apt update && sudo apt upgrade -y
-```
+| Herramienta | Estado |
+|---|---|
+| Arch Linux | ✅ Instalado |
+| Git 2.54.0 | ✅ Instalado |
+| Node.js v26.2.0 | ✅ Instalado |
+| npm 11.13.0 | ✅ Instalado |
+| yay (AUR helper) | ✅ Instalado |
+| VS Code | ✅ Instalado (en uso) |
+| Claude Code | ✅ Instalado y activo |
+| SSH keys (4 claves) | ❌ Pendiente — pasos 1-3 abajo |
+| Remotes → SSH | ❌ Pendiente — paso 4 abajo |
+| Repos clonados | ✅ En `/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/` |
+| Emails por repo | ✅ Corregidos |
+| Dependencias (npm install) | Verificar por repo |
 
 ---
 
-## PASO 2 — Instalar Git
+## PASO 1 — Configurar identidad global de Git
 
 ```bash
-sudo apt install git -y
-git --version
-```
-
-### Configurar identidad global (nombre base — el email se configura por repo)
-
-```bash
-git config --global user.name "AGOMEZ"
+git config --global user.name "eladripc"
 git config --global user.email "therminator298@gmail.com"
 ```
 
-> El email global es el de respaldo. Más adelante configuramos el email correcto
-> en cada repositorio individualmente.
+> El email global es de respaldo. Cada repo tiene su email correcto configurado individualmente.
 
 ---
 
-## PASO 3 — Instalar Node.js (via NVM)
+## PASO 2 — Generar las 4 claves SSH
 
 ```bash
-# Instalar NVM
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+# Crear la carpeta si no existe
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
 
-# Recargar terminal
-source ~/.bashrc
-
-# Instalar Node.js LTS
-nvm install --lts
-nvm use --lts
-
-# Verificar
-node --version    # debe mostrar v20.x o superior
-npm --version
-```
-
----
-
-## PASO 4 — Instalar VS Code
-
-```bash
-sudo snap install code --classic
-```
-
----
-
-## PASO 5 — Instalar Claude Code
-
-```bash
-npm install -g @anthropic-ai/claude-code
-```
-
-Obtené tu API Key en **console.anthropic.com** → API Keys → Create key
-
-```bash
-claude
-# La primera vez te pide la API key — pegala y Enter
-```
-
----
-
-## PASO 6 — Configurar SSH para 4 cuentas de GitHub
-
-Como tenés 4 cuentas distintas, necesitás una clave SSH por cuenta y un archivo
-de configuración que le diga a Git cuál usar para cada repo.
-
-### 6.1 — Generar las 4 claves SSH
-
-```bash
 # Clave para el Launcher (goandri777)
 ssh-keygen -t ed25519 -C "goandri777@gmail.com" -f ~/.ssh/id_launcher
 # Presionar Enter 2 veces (sin passphrase)
@@ -110,7 +67,9 @@ ssh-keygen -t ed25519 -C "lcc1alasdeposito@gmail.com" -f ~/.ssh/id_itemsborrados
 ssh-keygen -t ed25519 -C "therminator298@gmail.com" -f ~/.ssh/id_calendario
 ```
 
-### 6.2 — Crear el archivo de configuración SSH
+---
+
+## PASO 3 — Crear el archivo de configuración SSH
 
 ```bash
 nano ~/.ssh/config
@@ -147,40 +106,35 @@ Host github-calendario
 Guardá: `Ctrl + O` → Enter → `Ctrl + X`
 
 ```bash
-# Ajustar permisos (obligatorio)
 chmod 600 ~/.ssh/config
 ```
 
-### 6.3 — Agregar cada clave pública a su cuenta de GitHub
+### 3.1 — Agregar cada clave pública a su cuenta de GitHub
 
 Hacé esto 4 veces, una por cuenta:
 
 ```bash
-# Ver la clave pública del Launcher
 cat ~/.ssh/id_launcher.pub
 ```
-Copiá todo el texto → abrí **github.com** → iniciar sesión con **goandri777@gmail.com**
-→ tu foto → **Settings** → **SSH and GPG keys** → **New SSH key** → pegá → **Add SSH key**
+Copiá todo → abrí **github.com** → iniciá sesión con **goandri777@gmail.com**
+→ foto → **Settings** → **SSH and GPG keys** → **New SSH key** → pegá → **Add SSH key**
 
 ```bash
-# Ver la clave pública de CajaVenta
 cat ~/.ssh/id_cajaventa.pub
 ```
 Copiá → **github.com** → iniciá sesión con **cajaventas8@gmail.com** → mismos pasos
 
 ```bash
-# Ver la clave pública de ItemsBorrados
 cat ~/.ssh/id_itemsborrados.pub
 ```
 Copiá → **github.com** → iniciá sesión con **lcc1alasdeposito@gmail.com** → mismos pasos
 
 ```bash
-# Ver la clave pública de Calendario
 cat ~/.ssh/id_calendario.pub
 ```
 Copiá → **github.com** → iniciá sesión con **therminator298@gmail.com** → mismos pasos
 
-### 6.4 — Verificar que las 4 conexiones funcionan
+### 3.2 — Verificar que las 4 conexiones funcionan
 
 ```bash
 ssh -T git@github-launcher
@@ -198,72 +152,61 @@ ssh -T git@github-calendario
 
 ---
 
-## PASO 7 — Crear la carpeta y clonar los repositorios
+## PASO 4 — Cambiar los remotes de HTTPS a SSH
+
+Los repos fueron clonados con HTTPS. Después de configurar SSH, cambiar cada remote:
 
 ```bash
-mkdir -p ~/Escritorio/LAUNCHER-2.0
-cd ~/Escritorio/LAUNCHER-2.0
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/logistic-launcher"
+git remote set-url origin git@github-launcher:goandri777-rgb/Launcher.git
+
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/cajaventa"
+git remote set-url cajaventas8 git@github-cajaventa:cajaventas8-ux/Cajaventa.git
+
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/itemsborrados"
+git remote set-url origin git@github-itemsborrados:lcc1alasdeposito-a11y/ITEMSBORRADOS.git
+
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/Calendario\ tareas\ Alas"
+git remote set-url origin git@github-calendario:therminator298-source/ALAS.git
 ```
 
-```bash
-# Launcher — usa el alias github-launcher
-git clone git@github-launcher:goandri777-rgb/Launcher.git logistic-launcher
-
-# CajaVenta — usa el alias github-cajaventa
-git clone git@github-cajaventa:cajaventas8-ux/Cajaventa.git cajaventa
-
-# ItemsBorrados — usa el alias github-itemsborrados
-git clone git@github-itemsborrados:lcc1alasdeposito-a11y/ITEMSBORRADOS.git itemsborrados
-
-# Calendario — usa el alias github-calendario
-git clone git@github-calendario:therminator298-source/ALAS.git "Calendario tareas Alas"
-```
-
-### Configurar el email correcto en cada repo
+Verificar que quedó bien:
 
 ```bash
-cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
-git config user.email "goandri777@gmail.com"
-
-cd ~/Escritorio/LAUNCHER-2.0/cajaventa
-git config user.email "cajaventas8@gmail.com"
-
-cd ~/Escritorio/LAUNCHER-2.0/itemsborrados
-git config user.email "lcc1alasdeposito@gmail.com"
-
-cd ~/Escritorio/LAUNCHER-2.0/Calendario\ tareas\ Alas
-git config user.email "therminator298@gmail.com"
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/logistic-launcher"
+git remote -v
+# origin  git@github-launcher:goandri777-rgb/Launcher.git (fetch)
 ```
 
 ---
 
-## PASO 8 — Instalar dependencias
+## PASO 5 — Instalar dependencias (si aún no se hizo)
 
 ```bash
-cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/logistic-launcher"
 npm install
 
-cd ~/Escritorio/LAUNCHER-2.0/cajaventa
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/cajaventa"
 npm install
 
-cd ~/Escritorio/LAUNCHER-2.0/ACUSE
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/ACUSE"
 npm install
 ```
 
 ---
 
-## PASO 9 — Copiar los archivos secretos (.env y configs SSO)
+## PASO 6 — Copiar los archivos secretos (.env y configs SSO)
 
-Estos NO están en Git. Tenés que copiarlos desde tu PC de trabajo (USB o email a vos mismo).
+Estos NO están en Git. Copiá desde tu PC de trabajo (USB o email a vos mismo).
 
 | Archivo | Destino |
 |---------|---------|
-| `logistic-launcher/.env` | `~/Escritorio/LAUNCHER-2.0/logistic-launcher/.env` |
-| `cajaventa/js/alas-sso-config.js` | `~/Escritorio/LAUNCHER-2.0/cajaventa/js/alas-sso-config.js` |
-| `itemsborrados/alas-sso-config.js` | `~/Escritorio/LAUNCHER-2.0/itemsborrados/alas-sso-config.js` |
-| `Calendario tareas Alas/sso-config.js` | `~/Escritorio/LAUNCHER-2.0/Calendario tareas Alas/sso-config.js` |
+| `logistic-launcher/.env` | `/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/logistic-launcher/.env` |
+| `cajaventa/js/alas-sso-config.js` | `/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/cajaventa/js/alas-sso-config.js` |
+| `itemsborrados/alas-sso-config.js` | `/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/itemsborrados/alas-sso-config.js` |
+| `Calendario tareas Alas/sso-config.js` | `/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/Calendario tareas Alas/sso-config.js` |
 
-### Contenido del .env del Launcher (completar con tus valores):
+### Contenido del .env del Launcher:
 
 ```env
 VITE_SUPABASE_URL=https://xkgumqztscqcwamtimuh.supabase.co
@@ -274,27 +217,29 @@ VITE_LAUNCHER_URL=https://launcher-tawny.vercel.app
 
 ---
 
-## PASO 10 — Levantar los proyectos
+## PASO 7 — Levantar los proyectos
+
+Abrí terminales separadas para cada servidor:
 
 ```bash
-# Launcher
-cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
+# Terminal 1 — Launcher
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/logistic-launcher"
 npm run dev
 # → http://localhost:5173
 
-# CajaVenta
-cd ~/Escritorio/LAUNCHER-2.0/cajaventa
+# Terminal 2 — CajaVenta
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/cajaventa"
 node server.js
 # → http://localhost:3000
 
-# Calendario (rebuild si cambiaste src/)
-cd ~/Escritorio/LAUNCHER-2.0/Calendario\ tareas\ Alas
+# Terminal 3 — Calendario (rebuild si cambiaste src/)
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/Calendario tareas Alas"
 node scripts/build.js
 npx http-server -p 8080 --cors -c-1 .
 # → http://localhost:8080
 
-# ItemsBorrados
-cd ~/Escritorio/LAUNCHER-2.0/itemsborrados
+# Terminal 4 — ItemsBorrados
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/itemsborrados"
 node server.js
 # → http://localhost:4000
 ```
@@ -305,33 +250,19 @@ node server.js
 
 ```bash
 # 1. Antes de empezar — bajar los últimos cambios
-cd ~/Escritorio/LAUNCHER-2.0/logistic-launcher
-git pull origin main
+cd "/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/logistic-launcher"
+git pull
 
-# 2. Trabajar con Claude Code
-claude
+# 2. Trabajar con Claude Code (ya está activo en VS Code)
 
 # 3. Al terminar — subir cambios
 git add nombre-archivo.jsx
 git commit -m "descripcion del cambio"
-git push origin main
+git push
 ```
 
 > Cada repo usa automáticamente la cuenta de GitHub correcta gracias al archivo
-> ~/.ssh/config que configuramos en el Paso 6.
-
----
-
-## Extensiones de VS Code recomendadas
-
-Abrí VS Code y buscalas en el marketplace (icono de cuadraditos a la izquierda):
-
-- **Claude Code** (Anthropic)
-- **ES7+ React/Redux/React-Native snippets**
-- **Tailwind CSS IntelliSense**
-- **GitLens**
-- **Prettier**
-- **Auto Rename Tag**
+> `~/.ssh/config` configurado en el Paso 3.
 
 ---
 
@@ -339,21 +270,36 @@ Abrí VS Code y buscalas en el marketplace (icono de cuadraditos a la izquierda)
 
 ### "Permission denied (publickey)" al hacer push
 ```bash
-# Verificar que el agente SSH tiene las claves cargadas
+# Iniciar el agente SSH y cargar las claves
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_launcher
 ssh-add ~/.ssh/id_cajaventa
 ssh-add ~/.ssh/id_itemsborrados
 ssh-add ~/.ssh/id_calendario
 
-# Probar la conexión de nuevo
+# Para que el agente arranque automáticamente, agregá esto a ~/.bashrc:
+# eval "$(ssh-agent -s)" > /dev/null 2>&1
+
+# Probar la conexión
 ssh -T git@github-launcher
 ```
 
-### "command not found: node"
+### El agente SSH no persiste entre reinicios (Arch Linux)
 ```bash
-source ~/.bashrc
-nvm use --lts
+# Opción 1 — Agregar al ~/.bashrc (inicia el agente en cada terminal):
+echo 'eval "$(ssh-agent -s)" > /dev/null 2>&1' >> ~/.bashrc
+echo 'ssh-add ~/.ssh/id_launcher ~/.ssh/id_cajaventa ~/.ssh/id_itemsborrados ~/.ssh/id_calendario 2>/dev/null' >> ~/.bashrc
+
+# Opción 2 — Usar el agente de GNOME Keyring (si usás entorno gráfico):
+# ya gestiona las claves automáticamente al iniciar sesión
+```
+
+### "command not found: node" en terminal nueva
+```bash
+# Node fue instalado con pacman, debería estar siempre disponible.
+# Si no aparece, verificar:
+which node
+node --version
 ```
 
 ### Puerto ocupado
@@ -368,23 +314,51 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
----
-
-## Resumen final — checklist
-
-- [ ] Git instalado y configurado
-- [ ] SSH keys generadas (4 claves — una por cuenta)
-- [ ] Archivo `~/.ssh/config` creado con los 4 alias
-- [ ] Claves públicas agregadas a cada cuenta de GitHub
-- [ ] Node.js instalado via NVM
-- [ ] VS Code instalado
-- [ ] Claude Code instalado con API key
-- [ ] 4 repositorios clonados
-- [ ] Email configurado en cada repo individualmente
-- [ ] Dependencias instaladas (`npm install`)
-- [ ] Archivos `.env` y `sso-config.js` copiados desde Windows
-- [ ] Proyectos corriendo correctamente
+### Instalar herramientas adicionales en Arch Linux
+```bash
+# En Arch se usa pacman (no apt ni snap):
+sudo pacman -S git                        # git
+sudo pacman -S nodejs npm                 # Node.js y npm
+yay -S visual-studio-code-bin             # VS Code (via AUR)
+npm install -g @anthropic-ai/claude-code  # Claude Code
+```
 
 ---
 
-*Guía generada para el ecosistema ALAS Launcher 2.0 — junio 2026*
+## Emails configurados por repo (ya corregidos)
+
+| Repo | Email local | Cuenta GitHub |
+|---|---|---|
+| `logistic-launcher` | goandri777@gmail.com | goandri777-rgb |
+| `cajaventa` | cajaventas8@gmail.com | cajaventas8-ux |
+| `itemsborrados` | lcc1alasdeposito@gmail.com | lcc1alasdeposito-a11y |
+| `Calendario tareas Alas` | therminator298@gmail.com | therminator298-source |
+
+Para verificar o cambiar en cualquier repo:
+```bash
+git config user.email              # ver el actual
+git config user.email "nuevo@mail" # cambiar
+```
+
+---
+
+## Checklist final
+
+- [x] Git instalado y configurado
+- [x] Node.js v26 instalado
+- [x] VS Code instalado
+- [x] Claude Code activo
+- [x] 4 repositorios clonados en `/home/eladripc/LAUNCHER ALAS/LAUNCHER 2.0/`
+- [x] Email configurado correctamente en cada repo
+- [ ] SSH keys generadas (4 claves — una por cuenta) → Paso 2
+- [ ] Archivo `~/.ssh/config` creado con los 4 alias → Paso 3
+- [ ] Claves públicas agregadas a cada cuenta de GitHub → Paso 3.1
+- [ ] Conexiones SSH verificadas → Paso 3.2
+- [ ] Remotes cambiados de HTTPS a SSH → Paso 4
+- [ ] Archivos `.env` y `sso-config.js` copiados desde Windows → Paso 6
+- [ ] Dependencias instaladas (`npm install`) → Paso 5
+- [ ] Proyectos corriendo correctamente → Paso 7
+
+---
+
+*Guía actualizada para Arch Linux — junio 2026*

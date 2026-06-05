@@ -93,6 +93,37 @@ body::before {
   color: #dc2626;
 }
 
+/* ── Aurora background blobs ─────────────────────────────────────────────── */
+.alas-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.52;
+  will-change: transform;
+  pointer-events: none;
+}
+.alas-aurora-1 {
+  width: 580px; height: 580px;
+  left: -8%; top: -14%;
+  background: radial-gradient(circle, #9cc3f0, transparent 65%);
+  animation: aurora-drift-1 28s ease-in-out infinite alternate;
+}
+.alas-aurora-2 {
+  width: 640px; height: 640px;
+  right: -14%; bottom: -20%;
+  background: radial-gradient(circle, #bfe0f5, transparent 65%);
+  animation: aurora-drift-2 34s ease-in-out infinite alternate;
+}
+.alas-aurora-3 {
+  width: 440px; height: 440px;
+  left: 52%; top: 48%;
+  background: radial-gradient(circle, #cdd9f2, transparent 65%);
+  animation: aurora-drift-3 24s ease-in-out infinite alternate;
+}
+@keyframes aurora-drift-1 { to { transform: translate(80px, 60px)  scale(1.10); } }
+@keyframes aurora-drift-2 { to { transform: translate(-70px,-50px) scale(1.08); } }
+@keyframes aurora-drift-3 { to { transform: translate(-90px, 40px) scale(0.92); } }
+
 /* ── Animaciones ─────────────────────────────────────────────────────────── */
 @keyframes spin     { to { transform: rotate( 360deg); } }
 @keyframes spin-cw  { to { transform: rotate( 360deg); } }
@@ -110,6 +141,18 @@ body::before {
 @keyframes dash-march {
   from { stroke-dashoffset: 12; }
   to   { stroke-dashoffset:  0; }
+}
+
+/* Float suave por módulo — CSS, no interfiere con GSAP */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0px);   }
+  50%       { transform: translateY(-7px);  }
+}
+
+/* Bob del logo del hub */
+@keyframes bob {
+  0%, 100% { transform: translateY(0px);  }
+  50%       { transform: translateY(-4px); }
 }
 
 /* Casco — bob suave para módulos en proceso */
