@@ -796,10 +796,10 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
                 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }}
               >
-                <p style={{ fontFamily: '"Sora", system-ui, sans-serif', fontWeight: 700, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: C.brand, margin: 0 }}>
+                <p style={{ fontFamily: '"Sora", system-ui, sans-serif', fontWeight: 700, fontSize: '12px', letterSpacing: '0.12em', textTransform: 'uppercase', color: C.brand, margin: 0 }}>
                   EDITANDO
                 </p>
-                <p style={{ fontFamily: '"Inter", system-ui, sans-serif', fontSize: '9px', color: C.text3, margin: '3px 0 0', letterSpacing: '0.03em' }}>
+                <p style={{ fontFamily: '"Inter", system-ui, sans-serif', fontSize: '11px', color: C.text3, margin: '4px 0 0', letterSpacing: '0.01em' }}>
                   arrastrá módulos
                 </p>
               </motion.div>
