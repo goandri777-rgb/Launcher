@@ -244,12 +244,20 @@ export default function Launcher() {
         </motion.div>
       </motion.header>
 
-      {/* ════ Body = Sidebar + Main ═════════════════════════════════════ */}
-      <div className="relative z-10 flex-1 flex overflow-hidden">
+      {/* ════ Body — sidebar flotante + main siempre centrado ══════════ */}
+      <div className="relative z-10 flex-1" style={{ position: 'relative', overflow: 'hidden' }}>
 
-        <ProjectsSidebar />
+        {/* Sidebar overlay — no desplaza el launcher, flota sobre él */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 5 }}>
+          <ProjectsSidebar />
+        </div>
 
-        <main className="flex-1 grid place-items-center overflow-hidden">
+        {/* Main ocupa todo el ancho → launcher siempre centrado en pantalla */}
+        <main style={{
+          position: 'absolute', inset: 0,
+          display: 'grid', placeItems: 'center',
+          overflow: 'hidden',
+        }}>
           {modulesLoading ? (
             null
           ) : modules.length === 0 ? (
