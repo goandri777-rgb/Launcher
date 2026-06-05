@@ -9,14 +9,25 @@ import AlasTransitionLoader from '../components/AlasTransitionLoader'
 import ProjectsSidebar from '../components/ProjectsSidebar'
 
 // ── Helpers orden personalizado por usuario ───────────────────────────────
-const orderKey   = (uid) => `alas.hub.order.${uid}`
-const loadOrder  = (uid) => { try { return JSON.parse(localStorage.getItem(orderKey(uid)) ?? 'null') } catch { return null } }
-const saveOrder  = (uid, keys) => { try { localStorage.setItem(orderKey(uid), JSON.stringify(keys)) } catch {} }
+const orderKey  = (uid) => `alas.hub.order.${uid}`
+const loadOrder = (uid) => { try { return JSON.parse(localStorage.getItem(orderKey(uid)) ?? 'null') } catch { return null } }
+const saveOrder = (uid, keys) => { try { localStorage.setItem(orderKey(uid), JSON.stringify(keys)) } catch {} }
+
+// Orden base automático: Habilitados → Sin permiso → En desarrollo
+function groupByState(modules) {
+  const active   = modules.filter(m => !m.is_blocked && m.is_active !== false)
+  const blocked  = modules.filter(m =>  m.is_blocked)
+  const inactive = modules.filter(m =>  m.is_active === false)
+  return [...active, ...blocked, ...inactive]
+}
+
 function applyOrder(modules, savedKeys) {
-  if (!savedKeys?.length) return modules
+  // Sin orden guardado → agrupación automática por estado
+  if (!savedKeys?.length) return groupByState(modules)
   const map     = Object.fromEntries(modules.map(m => [m.key, m]))
   const ordered = savedKeys.filter(k => map[k]).map(k => map[k])
-  const rest    = modules.filter(m => !savedKeys.includes(m.key))
+  // Módulos nuevos que no estaban en el orden guardado → al final, agrupados
+  const rest    = groupByState(modules.filter(m => !savedKeys.includes(m.key)))
   return [...ordered, ...rest]
 }
 
