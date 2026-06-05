@@ -76,16 +76,18 @@ export default function ProjectsSidebar() {
     if (!newName.trim() || !isAdmin) return
     setSaveError(null)
     const maxPos = projects.length > 0 ? Math.max(...projects.map(p => p.position)) + 1 : 0
-    const { error } = await supabase.from('sidebar_projects').insert({
-      name:     newName.trim(),
-      status:   newStatus,
-      position: maxPos,
-    })
+    const { data, error } = await supabase
+      .from('sidebar_projects')
+      .insert({ name: newName.trim(), status: newStatus, position: maxPos })
+      .select()
+      .single()
     if (error) {
       console.error('[ALAS] sidebar insert error:', error)
       setSaveError(error.message)
       return
     }
+    // Actualizar estado local de inmediato sin esperar realtime
+    setProjects(prev => [...prev, data])
     setNewName('')
     setNewStatus('trabajando')
     setAdding(false)
