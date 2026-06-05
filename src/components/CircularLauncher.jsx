@@ -916,8 +916,21 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
               className="relative grid place-items-center flex-shrink-0"
               style={{
                 ...nodeStyles(state, isHov),
-                ...(isTarget ? { boxShadow: '0 0 0 2.5px rgba(11,95,141,0.55), 0 8px 24px rgba(11,95,141,0.18)', background: 'rgba(240,247,255,0.90)' } : {}),
-                ...(isDragging ? { boxShadow: '0 20px 52px rgba(11,95,141,0.28), 0 4px 14px rgba(11,95,141,0.16)' } : {}),
+                ...(editMode && !isTarget && !isDragging ? {
+                  background:  'rgba(255,251,235,0.88)',
+                  border:      '1px solid rgba(245,158,11,0.45)',
+                  boxShadow:   '0 0 0 1.5px rgba(245,158,11,0.30), 0 6px 20px rgba(245,158,11,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
+                } : {}),
+                ...(isTarget ? {
+                  background:  'rgba(240,247,255,0.92)',
+                  border:      '1px solid rgba(11,95,141,0.40)',
+                  boxShadow:   '0 0 0 2.5px rgba(11,95,141,0.55), 0 8px 24px rgba(11,95,141,0.18)',
+                } : {}),
+                ...(isDragging ? {
+                  background:  'rgba(255,251,235,0.97)',
+                  border:      '1px solid rgba(245,158,11,0.65)',
+                  boxShadow:   '0 0 0 2px rgba(245,158,11,0.50), 0 20px 52px rgba(245,158,11,0.22), 0 4px 14px rgba(245,158,11,0.14)',
+                } : {}),
               }}
             >
               {/* Hover overlay — visual hover baked in, solo opacity cambia (compositor) */}
