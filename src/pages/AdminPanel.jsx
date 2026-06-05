@@ -61,8 +61,8 @@ function normalizeUsernameInput(value) {
 function StatusPill({ status }) {
   const s = statusMap[status] || statusMap.inactive
   return (
-    <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 7px',borderRadius:99,fontSize:10,fontWeight:500,background:s.bg,color:s.fg,border:`1px solid ${s.border}`}}>
-      <span style={{width:4,height:4,borderRadius:'50%',background:s.dot,flexShrink:0}}/>
+    <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:99,fontSize:11,fontWeight:500,background:s.bg,color:s.fg,border:`1px solid ${s.border}`}}>
+      <span style={{width:5,height:5,borderRadius:'50%',background:s.dot,flexShrink:0}}/>
       {s.label}
     </span>
   )
@@ -70,7 +70,7 @@ function StatusPill({ status }) {
 function RolePill({ role }) {
   const r = roleMap[role] || roleMap.operador
   return (
-    <span style={{display:'inline-block',padding:'2px 7px',borderRadius:99,fontSize:10,fontWeight:500,background:r.bg,color:r.fg,border:`1px solid ${r.border}`,textTransform:'capitalize'}}>{role}</span>
+    <span style={{display:'inline-block',padding:'2px 9px',borderRadius:99,fontSize:11,fontWeight:500,background:r.bg,color:r.fg,border:`1px solid ${r.border}`,textTransform:'capitalize'}}>{role}</span>
   )
 }
 function ActionPill({ action }) {
@@ -114,7 +114,7 @@ function CardHeader({ title, right }) {
 
 function Th({ children, right }) {
   return (
-    <th style={{padding:'6px 12px',textAlign:right?'right':'left',fontWeight:600,color:C.text4,fontSize:10,fontFamily:'"JetBrains Mono", monospace',letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap'}}>
+    <th style={{padding:'10px 8px',textAlign:right?'right':'left',fontWeight:600,color:C.text4,fontSize:10.5,fontFamily:'"JetBrains Mono", monospace',letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap'}}>
       {children}
     </th>
   )
@@ -692,12 +692,12 @@ export default function AdminPanel() {
               }/>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,tableLayout:'fixed', '--border': C.border}}>
                 <colgroup>
-                  <col style={{width:'30%'}}/>  {/* Usuario */}
+                  <col style={{width:'26%'}}/>  {/* Usuario */}
                   <col style={{width:'10%'}}/>  {/* Rol */}
-                  <col style={{width:'12%'}}/>  {/* Estado */}
-                  <col style={{width:'20%'}}/>  {/* Último acceso */}
-                  <col style={{width:'14%'}}/>  {/* Acceso */}
-                  <col style={{width:'14%'}}/>  {/* Acciones */}
+                  <col style={{width:'11%'}}/>  {/* Estado */}
+                  <col style={{width:'17%'}}/>  {/* Último acceso */}
+                  <col style={{width:'12%'}}/>  {/* Permisos */}
+                  <col style={{width:'24%'}}/>  {/* Acciones */}
                 </colgroup>
                 <thead style={{borderBottom:`1px solid ${C.border}`}}>
                   <tr>
@@ -714,34 +714,34 @@ export default function AdminPanel() {
                     const st=u.is_blocked?'blocked':u.is_active?'active':'inactive'
                     return (
                       <tr key={u.id} className="alas-tr" style={{animationDelay:`${Math.min(i, 7) * 0.055}s`}}>
-                        <td style={{padding:'7px 12px'}}>
-                          <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
-                            <div style={{width:26,height:26,borderRadius:8,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:11,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
+                        <td style={{padding:'11px 8px'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
+                            <div style={{width:30,height:30,borderRadius:9,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:12,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
                               {(u.full_name||u.username||u.email||'U').charAt(0).toUpperCase()}
                             </div>
                             <div style={{minWidth:0}}>
-                              <div style={{fontWeight:600,color:C.text1,fontSize:12,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
-                              <div style={{fontSize:10,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.username || u.email}</div>
+                              <div style={{fontWeight:600,color:C.text1,fontSize:13,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
+                              <div style={{fontSize:11,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.username || u.email}</div>
                             </div>
                           </div>
                         </td>
-                        <td style={{padding:'7px 12px'}}><RolePill role={u.role}/></td>
-                        <td style={{padding:'7px 12px'}}><StatusPill status={st}/></td>
-                        <td style={{padding:'7px 12px',color:C.text4,fontSize:10,whiteSpace:'nowrap'}}>
+                        <td style={{padding:'11px 8px'}}><RolePill role={u.role}/></td>
+                        <td style={{padding:'11px 8px'}}><StatusPill status={st}/></td>
+                        <td style={{padding:'11px 8px',color:C.text4,fontSize:11,whiteSpace:'nowrap'}}>
                           {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'}
                         </td>
-                        <td style={{padding:'7px 12px'}}>
+                        <td style={{padding:'11px 8px'}}>
                           {!isReadOnly && (
                             <button onClick={()=>setSelected(u)}
-                              style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 8px',borderRadius:7,background:'transparent',border:`1px solid ${C.border}`,color:C.text3,fontSize:10,fontWeight:500,cursor:'pointer',transition:'all 150ms ease',whiteSpace:'nowrap'}}
+                              style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:8,background:'transparent',border:`1px solid ${C.border}`,color:C.text3,fontSize:11,fontWeight:500,cursor:'pointer',transition:'all 150ms ease',whiteSpace:'nowrap'}}
                               onMouseEnter={e=>{e.currentTarget.style.borderColor=C.borderHov;e.currentTarget.style.color=C.brand;e.currentTarget.style.background=C.brandLight}}
                               onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background='transparent'}}
                             >
-                              <ShieldCheck style={{width:10,height:10}}/> Módulos
+                              <ShieldCheck style={{width:11,height:11}}/> Módulos
                             </button>
                           )}
                         </td>
-                        <td style={{padding:'7px 12px'}}>
+                        <td style={{padding:'11px 8px'}}>
                           <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:2}}>
                             {!isReadOnly && <>
                               <IconBtn title="Editar usuario" onClick={()=>setEditingUser(u)} icon={UserCog} variant="default"/>
