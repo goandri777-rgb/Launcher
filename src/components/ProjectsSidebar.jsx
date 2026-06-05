@@ -6,10 +6,9 @@ import { Plus, X, ChevronLeft, ChevronRight, GripVertical, FolderKanban, Check }
 const EASE = [0.16, 1, 0.3, 1]
 
 const STATUS = [
-  { value: 'en-progreso', label: 'En progreso', color: '#10b981' },
-  { value: 'revision',    label: 'En revisión',  color: '#f59e0b' },
-  { value: 'planificado', label: 'Planificado',  color: '#3b82f6' },
-  { value: 'pausado',     label: 'Pausado',       color: '#94a3b8' },
+  { value: 'trabajando',  label: 'Trabajando',  color: '#10b981' },
+  { value: 'en-pruebas',  label: 'En Pruebas',  color: '#f59e0b' },
+  { value: 'pausado',     label: 'Pausado',      color: '#94a3b8' },
 ]
 
 const statusColor  = (v) => STATUS.find(s => s.value === v)?.color  ?? '#94a3b8'
@@ -40,7 +39,7 @@ export default function ProjectsSidebar() {
   const [projects,  setProjects]  = useState(load)
   const [adding,    setAdding]    = useState(false)
   const [newName,   setNewName]   = useState('')
-  const [newStatus, setNewStatus] = useState('en-progreso')
+  const [newStatus, setNewStatus] = useState('trabajando')
   const [hovered,   setHovered]   = useState(null)
   const nameInputRef = useRef(null)
 
@@ -58,7 +57,7 @@ export default function ProjectsSidebar() {
       createdAt: new Date().toISOString(),
     }])
     setNewName('')
-    setNewStatus('en-progreso')
+    setNewStatus('trabajando')
     setAdding(false)
   }
 
