@@ -180,10 +180,10 @@ export default function ProjectsSidebar() {
                   <Reorder.Item
                     key={p.id}
                     value={p}
-                    style={{ borderRadius: 12, cursor: 'grab' }}
+                    style={{ borderRadius: 14, cursor: 'grab' }}
                     whileDrag={{
                       scale: 1.03,
-                      boxShadow: '0 12px 28px rgba(11,95,141,0.18)',
+                      boxShadow: '0 16px 32px rgba(11,95,141,0.18)',
                       zIndex: 99,
                       cursor: 'grabbing',
                     }}
@@ -192,82 +192,85 @@ export default function ProjectsSidebar() {
                       onMouseEnter={() => setHovered(p.id)}
                       onMouseLeave={() => setHovered(null)}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        background: hovered === p.id ? 'rgba(255,255,255,0.90)' : T.surface,
-                        border: '1px solid rgba(226,232,240,0.80)',
-                        borderRadius: 12, padding: '9px 10px',
-                        transition: 'background 150ms ease',
+                        background: hovered === p.id ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.78)',
+                        border: hovered === p.id
+                          ? `1px solid ${statusColor(p.status)}40`
+                          : '1px solid rgba(226,232,240,0.85)',
+                        borderRadius: 14,
+                        padding: '11px 12px 10px',
+                        transition: 'background 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
+                        boxShadow: hovered === p.id
+                          ? `0 6px 20px rgba(11,95,141,0.09), 0 0 0 3px ${statusColor(p.status)}12`
+                          : '0 2px 8px rgba(11,95,141,0.04)',
                         position: 'relative',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
                       }}
                     >
-                      {/* Grip */}
-                      <GripVertical style={{
-                        width: 13, height: 13, color: T.text3,
-                        flexShrink: 0, opacity: hovered === p.id ? 1 : 0,
-                        transition: 'opacity 150ms ease',
-                      }} />
+                      {/* Fila superior: grip + nombre + eliminar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+                        <GripVertical style={{
+                          width: 12, height: 12, color: T.text3, flexShrink: 0,
+                          opacity: hovered === p.id ? 0.6 : 0,
+                          transition: 'opacity 150ms ease',
+                        }} />
 
-                      {/* Status dot — click para ciclar */}
+                        <span style={{
+                          flex: 1, fontSize: 12.5, fontWeight: 700,
+                          color: T.text1, fontFamily: '"Inter", sans-serif',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          letterSpacing: '-0.015em', lineHeight: 1.3,
+                        }}>
+                          {p.name}
+                        </span>
+
+                        <button
+                          onPointerDown={e => e.stopPropagation()}
+                          onClick={() => handleDelete(p.id)}
+                          title="Eliminar proyecto"
+                          style={{
+                            width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                            border: 'none', background: 'rgba(239,68,68,0.08)',
+                            color: T.danger, cursor: 'pointer',
+                            display: 'grid', placeItems: 'center',
+                            opacity: hovered === p.id ? 1 : 0,
+                            transition: 'opacity 120ms ease, background 120ms ease',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                        >
+                          <X style={{ width: 10, height: 10 }} />
+                        </button>
+                      </div>
+
+                      {/* Fila inferior: dot de estado + etiqueta legible */}
                       <button
                         onPointerDown={e => e.stopPropagation()}
                         onClick={() => handleCycleStatus(p.id)}
-                        title={`Estado: ${statusLabel(p.status)} — clic para cambiar`}
+                        title="Clic para cambiar estado"
                         style={{
-                          width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-                          background: statusColor(p.status),
-                          border: 'none', cursor: 'pointer', padding: 0,
-                          boxShadow: `0 0 6px ${statusColor(p.status)}80`,
-                          transition: 'transform 150ms ease',
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          border: 'none', background: `${statusColor(p.status)}14`,
+                          borderRadius: 99, padding: '3px 9px 3px 7px',
+                          cursor: 'pointer',
+                          transition: 'background 150ms ease, transform 150ms ease',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.4)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                      />
-
-                      {/* Nombre */}
-                      <span style={{
-                        flex: 1, fontSize: 12.5, fontWeight: 600,
-                        color: T.text1, fontFamily: '"Inter", sans-serif',
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                        letterSpacing: '-0.01em',
-                      }}>
-                        {p.name}
-                      </span>
-
-                      {/* Badge estado */}
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
-                        textTransform: 'uppercase',
-                        color: statusColor(p.status),
-                        background: `${statusColor(p.status)}18`,
-                        borderRadius: 99, padding: '2px 7px',
-                        flexShrink: 0,
-                        opacity: hovered === p.id ? 0 : 1,
-                        transition: 'opacity 120ms ease',
-                        fontFamily: '"Inter", sans-serif',
-                      }}>
-                        {p.status === 'en-progreso' ? 'WIP' :
-                         p.status === 'revision'    ? 'REV' :
-                         p.status === 'planificado' ? 'TODO' : 'STOP'}
-                      </span>
-
-                      {/* Botón eliminar */}
-                      <button
-                        onPointerDown={e => e.stopPropagation()}
-                        onClick={() => handleDelete(p.id)}
-                        title="Eliminar proyecto"
-                        style={{
-                          position: 'absolute', right: 8,
-                          width: 22, height: 22, borderRadius: 7,
-                          border: 'none', background: 'rgba(239,68,68,0.10)',
-                          color: T.danger, cursor: 'pointer',
-                          display: 'grid', placeItems: 'center',
-                          opacity: hovered === p.id ? 1 : 0,
-                          transition: 'opacity 120ms ease, background 120ms ease',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.20)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.10)'}
+                        onMouseEnter={e => { e.currentTarget.style.background = `${statusColor(p.status)}26`; e.currentTarget.style.transform = 'scale(1.04)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = `${statusColor(p.status)}14`; e.currentTarget.style.transform = 'scale(1)' }}
                       >
-                        <X style={{ width: 11, height: 11 }} />
+                        <span style={{
+                          width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                          background: statusColor(p.status),
+                          boxShadow: `0 0 5px ${statusColor(p.status)}90`,
+                        }} />
+                        <span style={{
+                          fontSize: 10.5, fontWeight: 600,
+                          color: statusColor(p.status),
+                          fontFamily: '"Inter", sans-serif',
+                          letterSpacing: '-0.01em',
+                        }}>
+                          {statusLabel(p.status)}
+                        </span>
                       </button>
                     </div>
                   </Reorder.Item>
