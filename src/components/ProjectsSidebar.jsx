@@ -93,7 +93,14 @@ export default function ProjectsSidebar() {
 
   const handleDelete = async (id) => {
     if (!isAdmin) return
-    await supabase.from('sidebar_projects').delete().eq('id', id)
+    // Optimistic: quitar de la UI de inmediato
+    const prev = projects
+    setProjects(p => p.filter(x => x.id !== id))
+    const { error } = await supabase.from('sidebar_projects').delete().eq('id', id)
+    if (error) {
+      console.error('[ALAS] sidebar delete error:', error)
+      setProjects(prev) // revertir si falla
+    }
   }
 
   const handleCycleStatus = async (id) => {
@@ -299,7 +306,7 @@ export default function ProjectsSidebar() {
                           {isAdmin && (
                             <button
                               onPointerDown={e => e.stopPropagation()}
-                              onClick={() => handleDelete(p.id)}
+                              onClick={e => { e.stopPropagation(); handleDelete(p.id) }}
                               title="Eliminar proyecto"
                               style={{
                                 width: 20, height: 20, borderRadius: 6, flexShrink: 0,
@@ -307,6 +314,7 @@ export default function ProjectsSidebar() {
                                 color: T.danger, cursor: 'pointer',
                                 display: 'grid', placeItems: 'center',
                                 opacity: hovered === p.id ? 1 : 0,
+                                pointerEvents: hovered === p.id ? 'auto' : 'none',
                                 transition: 'opacity 120ms ease, background 120ms ease',
                               }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
