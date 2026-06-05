@@ -723,51 +723,69 @@ export default function AdminPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u,i)=>{
-                    const st=u.is_blocked?'blocked':u.is_active?'active':'inactive'
-                    return (
-                      <tr key={u.id} className="alas-tr" style={{animationDelay:`${Math.min(i, 7) * 0.055}s`}}>
-                        <td style={{padding:'9px 6px'}}>
-                          <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
-                            <div style={{width:26,height:26,borderRadius:8,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:11,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
-                              {(u.full_name||u.username||u.email||'U').charAt(0).toUpperCase()}
-                            </div>
-                            <div style={{minWidth:0}}>
-                              <div style={{fontWeight:600,color:C.text1,fontSize:12.5,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
-                              <div style={{fontSize:10,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                                {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'Sin acceso'}
+                  {(() => {
+                    const sorted = [...users].sort((a,b) => ROLES.indexOf(a.role) - ROLES.indexOf(b.role))
+                    const rows = []
+                    let lastRole = null
+                    let rowIdx = 0
+                    sorted.forEach(u => {
+                      const st = u.is_blocked ? 'blocked' : u.is_active ? 'active' : 'inactive'
+                      const r  = roleMap[u.role] || roleMap.operador
+                      if (u.role !== lastRole) {
+                        lastRole = u.role
+                        rows.push(
+                          <tr key={`group-${u.role}`}>
+                            <td colSpan={5} style={{padding:'6px 8px 4px',background:C.surfaceHov,borderBottom:`1px solid ${C.border}`,borderTop:rows.length?`1px solid ${C.border}`:'none'}}>
+                              <span style={{fontSize:10,fontWeight:700,color:r.fg,letterSpacing:'0.07em',textTransform:'uppercase'}}>{u.role}</span>
+                            </td>
+                          </tr>
+                        )
+                      }
+                      rows.push(
+                        <tr key={u.id} className="alas-tr" style={{animationDelay:`${Math.min(rowIdx++, 7) * 0.055}s`}}>
+                          <td style={{padding:'9px 6px'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
+                              <div style={{width:26,height:26,borderRadius:8,flexShrink:0,background:`linear-gradient(135deg,${C.brand},${C.brandDark})`,display:'grid',placeItems:'center',fontFamily:'"Sora",system-ui',fontWeight:800,fontSize:11,color:'#fff',boxShadow:'0 2px 6px rgba(11,95,141,0.28)'}}>
+                                {(u.full_name||u.username||u.email||'U').charAt(0).toUpperCase()}
+                              </div>
+                              <div style={{minWidth:0}}>
+                                <div style={{fontWeight:600,color:C.text1,fontSize:12.5,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
+                                <div style={{fontSize:10,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'Sin acceso'}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td style={{padding:'9px 6px'}}><RolePill role={u.role}/></td>
-                        <td style={{padding:'9px 6px'}}><StatusPill status={st}/></td>
-                        <td style={{padding:'9px 6px'}}>
-                          {!isReadOnly && (
-                            <button onClick={()=>setSelected(u)}
-                              style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:8,background:'transparent',border:`1px solid ${C.border}`,color:C.text3,fontSize:11,fontWeight:500,cursor:'pointer',transition:'all 150ms ease',whiteSpace:'nowrap'}}
-                              onMouseEnter={e=>{e.currentTarget.style.borderColor=C.borderHov;e.currentTarget.style.color=C.brand;e.currentTarget.style.background=C.brandLight}}
-                              onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background='transparent'}}
-                            >
-                              <ShieldCheck style={{width:11,height:11}}/> Módulos
-                            </button>
-                          )}
-                        </td>
-                        <td style={{padding:'9px 6px'}}>
-                          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:2}}>
-                            {!isReadOnly && <>
-                              <IconBtn title="Editar usuario" onClick={()=>setEditingUser(u)} icon={UserCog} variant="default"/>
-                              <IconBtn title={u.is_active?'Desactivar':'Activar'} onClick={()=>toggleActive(u)} icon={u.is_active?ShieldX:CheckCircle2} variant={u.is_active?'ghost':'success'}/>
-                              <IconBtn title={u.is_blocked?'Desbloquear':'Bloquear'} onClick={()=>toggleBlocked(u)} icon={u.is_blocked?CheckCircle2:Ban} variant={u.is_blocked?'success':'danger'}/>
-                              {u.role !== 'admin' && (
-                                <IconBtn title="Eliminar usuario" onClick={()=>setDeletingUser(u)} icon={Trash2} variant="danger"/>
-                              )}
-                            </>}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                          </td>
+                          <td style={{padding:'9px 6px'}}><RolePill role={u.role}/></td>
+                          <td style={{padding:'9px 6px'}}><StatusPill status={st}/></td>
+                          <td style={{padding:'9px 6px'}}>
+                            {!isReadOnly && (
+                              <button onClick={()=>setSelected(u)}
+                                style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:8,background:'transparent',border:`1px solid ${C.border}`,color:C.text3,fontSize:11,fontWeight:500,cursor:'pointer',transition:'all 150ms ease',whiteSpace:'nowrap'}}
+                                onMouseEnter={e=>{e.currentTarget.style.borderColor=C.borderHov;e.currentTarget.style.color=C.brand;e.currentTarget.style.background=C.brandLight}}
+                                onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.text3;e.currentTarget.style.background='transparent'}}
+                              >
+                                <ShieldCheck style={{width:11,height:11}}/> Módulos
+                              </button>
+                            )}
+                          </td>
+                          <td style={{padding:'9px 6px'}}>
+                            <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:2}}>
+                              {!isReadOnly && <>
+                                <IconBtn title="Editar usuario" onClick={()=>setEditingUser(u)} icon={UserCog} variant="default"/>
+                                <IconBtn title={u.is_active?'Desactivar':'Activar'} onClick={()=>toggleActive(u)} icon={u.is_active?ShieldX:CheckCircle2} variant={u.is_active?'ghost':'success'}/>
+                                <IconBtn title={u.is_blocked?'Desbloquear':'Bloquear'} onClick={()=>toggleBlocked(u)} icon={u.is_blocked?CheckCircle2:Ban} variant={u.is_blocked?'success':'danger'}/>
+                                {u.role !== 'admin' && (
+                                  <IconBtn title="Eliminar usuario" onClick={()=>setDeletingUser(u)} icon={Trash2} variant="danger"/>
+                                )}
+                              </>}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                    return rows
+                  })()}
                   {users.length===0 && (
                     <tr>
                       <td colSpan={5} style={{padding:'36px 20px',textAlign:'center',color:C.text4,fontSize:13,borderBottom:'none'}}>Sin usuarios registrados</td>
