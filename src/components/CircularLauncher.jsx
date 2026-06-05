@@ -108,10 +108,11 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
   const [hubAlert,   setHubAlert]   = useState(null)
   const [editOrder,  setEditOrder]  = useState([])
   const [dragVisual, setDragVisual] = useState(null) // { dragKey, targetSlot }
-  const alertTimer = useRef(null)
-  const nodeByKey      = useRef({})
-  const dragRef        = useRef(null)
+  const alertTimer       = useRef(null)
+  const nodeByKey        = useRef({})
+  const dragRef          = useRef(null)
   const editModeDidMount = useRef(false)
+  const wasBusy          = useRef(false)
 
   const triggerHubAlert = useCallback((msg) => {
     clearTimeout(alertTimer.current)
@@ -294,6 +295,7 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
   useEffect(() => {
     const ease = 'expo.out'
     if (busyKey) {
+      wasBusy.current = true
       nodeRefs.current.forEach((el, i) => {
         if (!el) return
         const isBusyNode = modules[i]?.key === busyKey
@@ -325,6 +327,11 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
         })
       }
     } else {
+      // Solo resetear si realmente hubo un estado busy previo.
+      // En el mount inicial (nunca hubo busy) no tocar los tweens de la
+      // entrance animation.
+      if (!wasBusy.current) return
+      wasBusy.current = false
       gsap.to(nodeRefs.current.filter(Boolean), {
         autoAlpha: 1, scale: 1,
         duration: 0.5, ease, overwrite: 'auto',
