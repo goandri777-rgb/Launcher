@@ -109,8 +109,9 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
   const [editOrder,  setEditOrder]  = useState([])
   const [dragVisual, setDragVisual] = useState(null) // { dragKey, targetSlot }
   const alertTimer = useRef(null)
-  const nodeByKey  = useRef({})
-  const dragRef    = useRef(null)
+  const nodeByKey      = useRef({})
+  const dragRef        = useRef(null)
+  const editModeDidMount = useRef(false)
 
   const triggerHubAlert = useCallback((msg) => {
     clearTimeout(alertTimer.current)
@@ -363,6 +364,12 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
 
   // ── Edit mode — wiggle, drag-to-swap ─────────────────────────────────────
   useEffect(() => {
+    // Saltear el mount inicial: editMode=false en mount mataría los tweens
+    // de la entrance animation con gsap.killTweensOf, dejando los nodos invisible.
+    if (!editModeDidMount.current) {
+      editModeDidMount.current = true
+      return
+    }
     if (editMode) {
       setEditOrder([...modules])
       setDragVisual(null)
