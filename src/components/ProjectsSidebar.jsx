@@ -254,7 +254,7 @@ export default function ProjectsSidebar() {
                   onReorder={handleReorder}
                   style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}
                 >
-                  {projects.map((p) => (
+                  {projects.map((p, i) => (
                     <Reorder.Item
                       key={p.id}
                       value={p}
@@ -286,8 +286,21 @@ export default function ProjectsSidebar() {
                           WebkitBackdropFilter: 'blur(8px)',
                         }}
                       >
-                        {/* Fila superior: grip + nombre + eliminar */}
+                        {/* Fila superior: número + grip + nombre + eliminar */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+                          {/* Número de orden */}
+                          <span style={{
+                            width: 18, height: 18, borderRadius: 6, flexShrink: 0,
+                            background: 'rgba(11,95,141,0.08)',
+                            color: T.brand,
+                            fontSize: 9.5, fontWeight: 800,
+                            fontFamily: '"JetBrains Mono", monospace',
+                            display: 'grid', placeItems: 'center',
+                            letterSpacing: '-0.02em',
+                          }}>
+                            {i + 1}
+                          </span>
+
                           {isAdmin && (
                             <GripVertical style={{
                               width: 12, height: 12, color: T.text3, flexShrink: 0,
