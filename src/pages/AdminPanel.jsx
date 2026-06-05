@@ -695,7 +695,7 @@ export default function AdminPanel() {
         </div>
 
         {/* Main grid */}
-        <div style={{display:'grid',gridTemplateColumns:'minmax(0,640px) 420px',gap:18,alignItems:'start'}}>
+        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:18,alignItems:'start'}}>
 
           {/* ── Usuarios ───────────────────────────────────────────────────── */}
           <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.26,ease:EASE}}>
@@ -778,11 +778,8 @@ export default function AdminPanel() {
             </Card>
           </motion.div>
 
-          {/* ── Columna derecha ─────────────────────────────────────────────── */}
-          <div style={{display:'flex',flexDirection:'column',gap:18}}>
-
-            {/* Módulos */}
-            <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.32,ease:EASE}}>
+          {/* ── Módulos ─────────────────────────────────────────────────────── */}
+          <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.32,ease:EASE}}>
               <Card>
                 <CardHeader title="Módulos" right={
                   <span style={{fontSize:11,color:C.text4,background:C.surfaceHov,padding:'3px 9px',borderRadius:99,border:`1px solid ${C.border}`}}>
@@ -819,8 +816,8 @@ export default function AdminPanel() {
               </Card>
             </motion.div>
 
-            {/* Actividad */}
-            <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.38,ease:EASE}}>
+          {/* ── Actividad ───────────────────────────────────────────────────── */}
+          <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.38,ease:EASE}}>
               <Card>
                 <CardHeader title="Actividad reciente"/>
                 <div>
@@ -852,9 +849,8 @@ export default function AdminPanel() {
                   )}
                 </div>
               </Card>
-            </motion.div>
+          </motion.div>
 
-          </div>
         </div>
       </div>
 
