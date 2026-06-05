@@ -297,8 +297,8 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
         if (!el) return
         const isBusyNode = modules[i]?.key === busyKey
         gsap.to(el, {
-          opacity: isBusyNode ? 1 : 0.15, // Mayor enfoque en el nodo seleccionado
-          scale:   isBusyNode ? 1.04 : 0.94,
+          autoAlpha: isBusyNode ? 1 : 0.15,
+          scale:     isBusyNode ? 1.04 : 0.94,
           duration: 0.45, ease, overwrite: 'auto',
         })
       })
@@ -325,7 +325,7 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
       }
     } else {
       gsap.to(nodeRefs.current.filter(Boolean), {
-        opacity: 1, scale: 1,
+        autoAlpha: 1, scale: 1,
         duration: 0.5, ease, overwrite: 'auto',
       })
       lineBaseRefs.current.forEach((el, i) => {
