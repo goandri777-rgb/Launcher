@@ -1,12 +1,25 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { LogOut, Settings2, Lock } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { LogOut, Settings2, Lock, LayoutGrid } from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
 import { useModules } from '../hooks/useModules'
 import CircularLauncher from '../components/CircularLauncher'
 import AlasTransitionLoader from '../components/AlasTransitionLoader'
 import ProjectsSidebar from '../components/ProjectsSidebar'
+import HubOrderPanel from '../components/HubOrderPanel'
+
+// ── Helpers orden personalizado por usuario ───────────────────────────────
+const orderKey   = (uid) => `alas.hub.order.${uid}`
+const loadOrder  = (uid) => { try { return JSON.parse(localStorage.getItem(orderKey(uid)) ?? 'null') } catch { return null } }
+const saveOrder  = (uid, keys) => { try { localStorage.setItem(orderKey(uid), JSON.stringify(keys)) } catch {} }
+function applyOrder(modules, savedKeys) {
+  if (!savedKeys?.length) return modules
+  const map     = Object.fromEntries(modules.map(m => [m.key, m]))
+  const ordered = savedKeys.filter(k => map[k]).map(k => map[k])
+  const rest    = modules.filter(m => !savedKeys.includes(m.key))
+  return [...ordered, ...rest]
+}
 
 const ROLE_LABEL = {
   admin:      'Administrador',
@@ -46,8 +59,20 @@ export default function Launcher() {
     }, 400)
     return () => clearTimeout(t)
   }, [modulesLoading, authLoading, stopEntry])
-  const [isExiting,   setIsExiting]   = useState(false)
-  const [isLaunching, setIsLaunching] = useState(false)
+  const [isExiting,    setIsExiting]    = useState(false)
+  const [isLaunching,  setIsLaunching]  = useState(false)
+  const [hubOrderOpen, setHubOrderOpen] = useState(false)
+
+  // Módulos reordenados según preferencia del usuario actual
+  const orderedModules = useMemo(() => {
+    if (!profile?.id || !modules.length) return modules
+    return applyOrder(modules, loadOrder(profile.id))
+  }, [modules, profile?.id])
+
+  const handleSaveHubOrder = (newOrder) => {
+    saveOrder(profile.id, newOrder.map(m => m.key))
+    setHubOrderOpen(false)
+  }
 
   const handleSignOut = () => setIsExiting(true)
 
@@ -182,6 +207,27 @@ export default function Launcher() {
           animate="visible"
           variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.06 } } }}
         >
+          {/* Ordenar Hub — visible para todos */}
+          <motion.div variants={btnItem}>
+            <button onClick={() => setHubOrderOpen(true)} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '10px 20px', borderRadius: 12,
+              background: 'rgba(255, 255, 255, 0.75)',
+              border: '1px solid rgba(11, 95, 141, 0.18)',
+              boxShadow: '0 2px 10px rgba(11, 95, 141, 0.07)',
+              fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+              fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em',
+              color: '#0B5F8D', cursor: 'pointer',
+              transition: 'all 150ms ease',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#f0f7ff'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.35)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.18)' }}
+            >
+              <LayoutGrid style={{ width: 14, height: 14 }} />
+              <span>ORDENAR HUB</span>
+            </button>
+          </motion.div>
+
           {(() => {
             const canAccess = profile?.role === 'admin'
             return (
@@ -274,7 +320,7 @@ export default function Launcher() {
               </p>
             </motion.div>
           ) : (
-            <CircularLauncher modules={modules} onOpen={handleOpenModule} />
+            <CircularLauncher modules={orderedModules} onOpen={handleOpenModule} />
           )}
         </main>
 
@@ -282,6 +328,16 @@ export default function Launcher() {
 
     </motion.div>
     <AlasTransitionLoader active={isLaunching} label="Abriendo módulo" />
+
+    <AnimatePresence>
+      {hubOrderOpen && (
+        <HubOrderPanel
+          modules={orderedModules}
+          onSave={handleSaveHubOrder}
+          onClose={() => setHubOrderOpen(false)}
+        />
+      )}
+    </AnimatePresence>
     </>
   )
 }
