@@ -39,6 +39,7 @@ export default function ProjectsSidebar() {
   const [newName,   setNewName]   = useState('')
   const [newStatus, setNewStatus] = useState('trabajando')
   const [hovered,   setHovered]   = useState(null)
+  const [saveError, setSaveError] = useState(null)
   const nameInputRef  = useRef(null)
   const refetchTimer  = useRef(null)
 
@@ -73,12 +74,18 @@ export default function ProjectsSidebar() {
   // ── Acciones (solo admin) ─────────────────────────────────────────────────
   const handleAdd = async () => {
     if (!newName.trim() || !isAdmin) return
+    setSaveError(null)
     const maxPos = projects.length > 0 ? Math.max(...projects.map(p => p.position)) + 1 : 0
-    await supabase.from('sidebar_projects').insert({
+    const { error } = await supabase.from('sidebar_projects').insert({
       name:     newName.trim(),
       status:   newStatus,
       position: maxPos,
     })
+    if (error) {
+      console.error('[ALAS] sidebar insert error:', error)
+      setSaveError(error.message)
+      return
+    }
     setNewName('')
     setNewStatus('trabajando')
     setAdding(false)
@@ -376,7 +383,7 @@ export default function ProjectsSidebar() {
                         type="text"
                         placeholder="Nombre del proyecto..."
                         value={newName}
-                        onChange={e => setNewName(e.target.value)}
+                        onChange={e => { setNewName(e.target.value); setSaveError(null) }}
                         onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAdding(false) }}
                         style={{
                           width: '100%', boxSizing: 'border-box',
@@ -411,6 +418,21 @@ export default function ProjectsSidebar() {
                           </button>
                         ))}
                       </div>
+
+                      {saveError && (
+                        <div style={{
+                          fontSize: 10.5, color: T.danger,
+                          background: 'rgba(239,68,68,0.07)',
+                          border: '1px solid rgba(239,68,68,0.20)',
+                          borderRadius: 8, padding: '6px 10px',
+                          fontFamily: '"Inter", sans-serif',
+                          lineHeight: 1.4,
+                        }}>
+                          {saveError.includes('does not exist')
+                            ? 'La tabla no existe aún. Corré el SQL en Supabase Studio primero.'
+                            : saveError}
+                        </div>
+                      )}
 
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
