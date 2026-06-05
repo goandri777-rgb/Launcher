@@ -287,7 +287,7 @@ export default function ProjectsSidebar() {
                         }}
                       >
                         {/* Fila superior: número + grip + nombre + eliminar */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
                           {/* Número de orden */}
                           <span style={{
                             width: 18, height: 18, borderRadius: 6, flexShrink: 0,
@@ -301,12 +301,17 @@ export default function ProjectsSidebar() {
                             {i + 1}
                           </span>
 
+                          {/* Grip — colapsa a ancho 0 cuando no hay hover */}
                           {isAdmin && (
-                            <GripVertical style={{
-                              width: 12, height: 12, color: T.text3, flexShrink: 0,
-                              opacity: hovered === p.id ? 0.6 : 0,
-                              transition: 'opacity 150ms ease',
-                            }} />
+                            <div style={{
+                              overflow: 'hidden', flexShrink: 0,
+                              width: hovered === p.id ? 12 : 0,
+                              opacity: hovered === p.id ? 0.5 : 0,
+                              transition: 'width 150ms ease, opacity 150ms ease',
+                              display: 'flex', alignItems: 'center',
+                            }}>
+                              <GripVertical style={{ width: 12, height: 12, color: T.text3, flexShrink: 0 }} />
+                            </div>
                           )}
 
                           <span style={{
