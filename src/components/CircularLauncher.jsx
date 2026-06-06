@@ -210,66 +210,74 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
         return
       }
 
-      const goLive = () => {
-        gsap.to(dashLines, {
-          opacity: 1,
-          duration: 0.50,
-          stagger: { each: 0.035, from: 'center' },
-          ease: 'power2.out',
-        })
-      }
+      const tl = gsap.timeline({ delay: 0.02 })
 
-      const tl = gsap.timeline({ delay: 0.02, onComplete: goLive })
-
-      // ── FASE 1: Tilt suave — el disco sube desde 32° inclinado a plano
+      // ── FASE 1: Sistema surge desde ángulo — más rápido, mismo feeling
       tl.to(systemRef.current, {
         autoAlpha: 1,
         rotationX: 0,
         scale: 1,
-        duration: 0.65,
+        duration: 0.50,
         ease: 'expo.out',
         force3D: true,
       }, 0)
 
-      // ── FASE 2: Hub emerge del centro
+      // ── FASE 2: Hub emerge — más spring, empieza antes que antes
       tl.to(hubRef.current, {
         autoAlpha: 1,
-        scale: 1.10,
-        duration: 0.42,
-        ease: 'back.out(1.5)',
+        scale: 1.12,
+        duration: 0.30,
+        ease: 'back.out(2)',
         force3D: true,
-      }, 0.38)
+      }, 0.22)
       tl.to(hubRef.current, {
         scale: 1,
-        duration: 0.24,
-        ease: 'power2.out',
+        duration: 0.18,
+        ease: 'power3.out',
         force3D: true,
-      }, 0.80)
-
-      // ── FASE 3: Órbita snap ───────────────────────────────────────────────
-      tl.set(orbitRef.current, { autoAlpha: 1 }, 0.46)
-
-      // ── FASE 4: Líneas explotan desde el centro — simultáneas ────────────
-      tl.to(lineBaseRefs.current.filter(Boolean), {
-        strokeDashoffset: 0,
-        duration: 0.48,
-        stagger: 0,
-        ease: 'power4.out',
       }, 0.52)
 
-      // ── FASE 5: Módulos en cascada al extremo de cada línea ───────────────
+      // ── FASE 3: Órbita snap — antes ──────────────────────────────────────
+      tl.set(orbitRef.current, { autoAlpha: 1 }, 0.28)
+
+      // ── FASE 4: Líneas explotan — más temprano ────────────────────────────
+      tl.to(lineBaseRefs.current.filter(Boolean), {
+        strokeDashoffset: 0,
+        duration: 0.38,
+        stagger: 0,
+        ease: 'power4.out',
+      }, 0.34)
+
+      // ── FASE 5: Módulos en cascada — empiezan a 0.42 (antes era 0.70) ─────
       nodes.forEach((node, i) => {
         if (!node) return
-        const t = 0.70 + i * 0.048
+        const t = 0.42 + i * 0.050
         tl.call(() => firePulse(i), [], t)
         tl.to(node, {
           autoAlpha: 1,
           scale: 1,
-          duration: 0.46,
-          ease: 'back.out(1.4)',
+          duration: 0.40,
+          ease: 'back.out(1.6)',
           force3D: true,
         }, t)
       })
+
+      // ── FASE 6: Dashes fade-in junto a la cascada de nodos ───────────────
+      tl.to(dashLines, {
+        opacity: 1,
+        duration: 0.50,
+        stagger: { each: 0.03, from: 'center' },
+        ease: 'power2.out',
+      }, 0.52)
+
+      // ── FASE 7: Hub float arranca tras el último nodo ─────────────────────
+      const lastNodeT = 0.42 + Math.max(0, nodes.length - 1) * 0.050
+      tl.call(() => {
+        floatTween.current?.kill()
+        floatTween.current = gsap.to(hubRef.current, {
+          y: -5, duration: 2.8, ease: 'sine.inOut', yoyo: true, repeat: -1,
+        })
+      }, [], lastNodeT + 0.20)
     })
 
     return () => {
@@ -532,14 +540,18 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
     if (nodeEl) gsap.set(nodeEl, { zIndex: on ? 32 : 20 })
     if (!buttonEl) return
 
+    // Pausa el float del hub en hover para no luchar con el tilt magnético
+    if (on) floatTween.current?.pause()
+    else    floatTween.current?.resume()
+
     // ── Transform del botón: composited, sin paint ─────────────────────────
     gsap.to(buttonEl, {
-      scale:   on ? 1.08 : 1,
-      y:       on ? -3   : 0,
+      scale:   on ? 1.10 : 1,
+      y:       on ? -4   : 0,
       rotateX: on ? undefined : 0,
       rotateY: on ? undefined : 0,
-      duration: on ? 0.32 : 0.28,
-      ease:     on ? 'expo.out' : 'power3.out',
+      duration: on ? 0.30 : 0.26,
+      ease:     on ? 'back.out(1.8)' : 'power3.out',
       overwrite: 'auto',
       force3D: true,
     })
@@ -599,6 +611,11 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
     }
     if (state !== 'active') return
     const idx = modules.findIndex(mod => mod.key === m.key)
+    const pressEl = buttonRefs.current[idx]
+    if (pressEl) {
+      gsap.to(pressEl, { scale: 0.91, duration: 0.08, ease: 'power2.in', overwrite: 'auto' })
+      gsap.to(pressEl, { scale: 1, duration: 0.40, ease: 'elastic.out(1, 0.4)', delay: 0.08 })
+    }
     firePulse(idx)
     setBusyKey(m.key)
     try {
@@ -752,7 +769,7 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
           style={{
             inset: -8,
             border: '1px solid rgba(11,95,141,0.14)',
-            animation: 'hub-ring 4s ease-in-out infinite',
+            animation: 'hub-ring 5.5s ease-out infinite',
             willChange: 'transform, opacity',
           }}
         />
