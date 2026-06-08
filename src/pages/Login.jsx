@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { User, Lock, LogIn, LoaderCircle, Plus, ArrowLeft, X } from 'lucide-react'
 import gsap from 'gsap'
 import { useAuth } from '../lib/AuthContext'
-import { supabase } from '../lib/supabase'
 import AlasTransitionLoader from '../components/AlasTransitionLoader'
 
 const DEMO_MODE = false
@@ -84,6 +83,24 @@ export default function Login() {
   const [hoveredUser, setHoveredUser] = useState(null)
   const cardRef = useRef(null)
 
+  const [failedAttempts, setFailedAttempts] = useState(0)
+  const [lockoutUntil,   setLockoutUntil]   = useState(null)
+  const [lockoutSeconds, setLockoutSeconds] = useState(0)
+
+  useEffect(() => {
+    if (!lockoutUntil) return
+    const id = setInterval(() => {
+      const rem = Math.ceil((lockoutUntil - Date.now()) / 1000)
+      if (rem <= 0) {
+        setLockoutUntil(null)
+        setFailedAttempts(0)
+        setLockoutSeconds(0)
+      } else {
+        setLockoutSeconds(rem)
+      }
+    }, 500)
+    return () => clearInterval(id)
+  }, [lockoutUntil])
 
 
   // Ya tiene sesión activa → redirigir a inicio
@@ -94,28 +111,36 @@ export default function Login() {
   // Submit del formulario completo (nuevo usuario)
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (lockoutUntil) return
     setError('')
     setBusy(true)
 
-    const { data: email, error: rpcErr } = await supabase.rpc('get_email_by_username', { p_username: username.trim() })
-    if (rpcErr || !email) {
-      setBusy(false)
-      setError('Usuario no encontrado.')
-      return
+    const shake = () => {
+      gsap.killTweensOf(cardRef.current)
+      gsap.fromTo(cardRef.current, { x: -10 }, { x: 0, duration: 0.48, ease: 'elastic.out(1, 0.28)', clearProps: 'x' })
     }
 
+    const registerFailure = () => {
+      const next = failedAttempts + 1
+      setFailedAttempts(next)
+      if (next >= 5) {
+        setLockoutUntil(Date.now() + 30000)
+        setLockoutSeconds(30)
+      }
+    }
+
+    const email = `${username.trim().toLowerCase()}@launcher.alas.example`
     const { error } = await signIn(email, password)
     setBusy(false)
     if (error) {
-      setError('Contraseña incorrecta.')
-      gsap.killTweensOf(cardRef.current)
-      gsap.fromTo(cardRef.current,
-        { x: -10 },
-        { x: 0, duration: 0.48, ease: 'elastic.out(1, 0.28)', clearProps: 'x' }
-      )
+      registerFailure()
+      setError('Usuario o contraseña incorrectos.')
+      shake()
       return
     }
 
+    setFailedAttempts(0)
+    setLockoutUntil(null)
     startEntry()
     navigate(to, { replace: true })
   }
@@ -123,28 +148,36 @@ export default function Login() {
   // Submit del formulario con usuario seleccionado
   const handleSelectedUserSubmit = async (e) => {
     e.preventDefault()
+    if (lockoutUntil) return
     setError('')
     setBusy(true)
 
-    const { data: email, error: rpcErr } = await supabase.rpc('get_email_by_username', { p_username: selectedUser.username })
-    if (rpcErr || !email) {
-      setBusy(false)
-      setError('Usuario no encontrado.')
-      return
+    const shake = () => {
+      gsap.killTweensOf(cardRef.current)
+      gsap.fromTo(cardRef.current, { x: -10 }, { x: 0, duration: 0.48, ease: 'elastic.out(1, 0.28)', clearProps: 'x' })
     }
 
+    const registerFailure = () => {
+      const next = failedAttempts + 1
+      setFailedAttempts(next)
+      if (next >= 5) {
+        setLockoutUntil(Date.now() + 30000)
+        setLockoutSeconds(30)
+      }
+    }
+
+    const email = `${selectedUser.username.toLowerCase()}@launcher.alas.example`
     const { error } = await signIn(email, password)
     setBusy(false)
     if (error) {
-      setError('Contraseña incorrecta.')
-      gsap.killTweensOf(cardRef.current)
-      gsap.fromTo(cardRef.current,
-        { x: -10 },
-        { x: 0, duration: 0.48, ease: 'elastic.out(1, 0.28)', clearProps: 'x' }
-      )
+      registerFailure()
+      setError('Usuario o contraseña incorrectos.')
+      shake()
       return
     }
 
+    setFailedAttempts(0)
+    setLockoutUntil(null)
     startEntry()
     navigate(to, { replace: true })
   }
@@ -172,6 +205,7 @@ export default function Login() {
   // Decidir qué vista del login mostrar
   const displayedUsers = rememberedUsers
   const showSelector = displayedUsers.length > 0 && !selectedUser && !isAddingNew
+  const isLocked = busy || !!lockoutUntil
 
   return (
     <div
@@ -451,27 +485,31 @@ export default function Login() {
                 onChange={setPassword}
               />
 
-              {error && (
+              {lockoutUntil ? (
+                <p style={{ fontSize: 12.5, color: T.danger, margin: 0, textAlign: 'center' }}>
+                  Demasiados intentos. Esperá <strong>{lockoutSeconds}s</strong> para continuar.
+                </p>
+              ) : error ? (
                 <p style={{ fontSize: 12.5, color: T.danger, margin: 0, textAlign: 'center' }}>
                   {error}
                 </p>
-              )}
+              ) : null}
 
               <motion.button
                 type="submit"
-                disabled={busy}
-                whileHover={busy ? {} : { scale: 1.02, y: -1 }}
-                whileTap={busy ? {} : { scale: 0.97 }}
+                disabled={isLocked}
+                whileHover={isLocked ? {} : { scale: 1.02, y: -1 }}
+                whileTap={isLocked ? {} : { scale: 0.97 }}
                 transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   padding: '11px 0', borderRadius: 11, border: 'none', width: '100%',
-                  background: busy ? 'rgba(11,95,141,0.5)' : `linear-gradient(135deg, ${T.brand}, ${T.brandDark})`,
+                  background: isLocked ? 'rgba(11,95,141,0.5)' : `linear-gradient(135deg, ${T.brand}, ${T.brandDark})`,
                   color: '#fff', fontSize: 13.5, fontWeight: 600,
                   fontFamily: '"Inter", system-ui, sans-serif',
-                  cursor: busy ? 'not-allowed' : 'pointer',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
                   letterSpacing: '-0.01em',
-                  boxShadow: busy ? 'none' : '0 3px 12px rgba(11,95,141,0.28)',
+                  boxShadow: isLocked ? 'none' : '0 3px 12px rgba(11,95,141,0.28)',
                 }}
               >
                 {busy
@@ -572,26 +610,30 @@ export default function Login() {
                 onChange={setPassword}
               />
 
-              {error && (
+              {lockoutUntil ? (
+                <p style={{ fontSize: 12.5, color: T.danger, margin: 0, textAlign: 'center' }}>
+                  Demasiados intentos. Esperá <strong>{lockoutSeconds}s</strong> para continuar.
+                </p>
+              ) : error ? (
                 <p style={{ fontSize: 12.5, color: T.danger, margin: 0, textAlign: 'center' }}>
                   {error}
                 </p>
-              )}
+              ) : null}
 
               <motion.button
                 type="submit"
-                disabled={busy}
-                whileHover={busy ? {} : { scale: 1.02, y: -1 }}
-                whileTap={busy ? {} : { scale: 0.97 }}
+                disabled={isLocked}
+                whileHover={isLocked ? {} : { scale: 1.02, y: -1 }}
+                whileTap={isLocked ? {} : { scale: 0.97 }}
                 transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   padding: '11px 0', borderRadius: 11, border: 'none', width: '100%',
-                  background: busy ? 'rgba(11,95,141,0.5)' : `linear-gradient(135deg, ${T.brand}, ${T.brandDark})`,
+                  background: isLocked ? 'rgba(11,95,141,0.5)' : `linear-gradient(135deg, ${T.brand}, ${T.brandDark})`,
                   color: '#fff', fontSize: 13.5, fontWeight: 600,
                   fontFamily: '"Inter", system-ui, sans-serif',
-                  cursor: busy ? 'not-allowed' : 'pointer',
-                  boxShadow: busy ? 'none' : '0 3px 12px rgba(11,95,141,0.28)',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  boxShadow: isLocked ? 'none' : '0 3px 12px rgba(11,95,141,0.28)',
                 }}
               >
                 {busy
