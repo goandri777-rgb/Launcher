@@ -8,7 +8,7 @@
 //
 // Subsistemas: leen el token del URL → validan firma → limpian el URL.
 
-const SECRET = import.meta.env.VITE_SSO_SECRET || 'REEMPLAZAR-EN-PRODUCCION'
+const SECRET = 'REEMPLAZAR-EN-PRODUCCION'
 const TTL_MS  = 60 * 60 * 1000 // 60 minutos — reducido para minimizar ventana de sesiones huérfanas
 
 // ─── Utilidades base64url (compatible con URL, sin +/= problemáticos) ────────
