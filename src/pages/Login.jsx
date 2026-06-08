@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { User, Lock, LogIn, LoaderCircle, Plus, ArrowLeft, X } from 'lucide-react'
 import gsap from 'gsap'
 import { useAuth } from '../lib/AuthContext'
+import { supabase } from '../lib/supabase'
 import AlasTransitionLoader from '../components/AlasTransitionLoader'
 
 const DEMO_MODE = false
@@ -129,8 +130,15 @@ export default function Login() {
       }
     }
 
-    const email = `${username.trim().toLowerCase()}@launcher.alas.example`
-    const { error } = await signIn(email, password)
+    const { data: emailData, error: rpcErr } = await supabase.rpc('get_email_by_username', { p_username: username.trim() })
+    if (rpcErr || !emailData) {
+      setBusy(false)
+      registerFailure()
+      setError('Usuario o contraseña incorrectos.')
+      shake()
+      return
+    }
+    const { error } = await signIn(emailData, password)
     setBusy(false)
     if (error) {
       registerFailure()
@@ -166,8 +174,15 @@ export default function Login() {
       }
     }
 
-    const email = `${selectedUser.username.toLowerCase()}@launcher.alas.example`
-    const { error } = await signIn(email, password)
+    const { data: emailData, error: rpcErr } = await supabase.rpc('get_email_by_username', { p_username: selectedUser.username })
+    if (rpcErr || !emailData) {
+      setBusy(false)
+      registerFailure()
+      setError('Usuario o contraseña incorrectos.')
+      shake()
+      return
+    }
+    const { error } = await signIn(emailData, password)
     setBusy(false)
     if (error) {
       registerFailure()
