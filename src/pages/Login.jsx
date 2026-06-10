@@ -246,7 +246,7 @@ export default function Login() {
           width: '100%',
           maxWidth: showSelector ? 580 : 360,
           boxShadow: '0 16px 40px rgba(15,23,42,0.06), 0 1px 4px rgba(15,23,42,0.02)',
-          transition: 'max-width 300ms cubic-bezier(0.16, 1, 0.3, 1)',
+          transition: 'max-width 300ms var(--alas-ease)',
         }}
       >
         <div ref={cardRef}>

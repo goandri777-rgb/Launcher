@@ -15,7 +15,7 @@
   --text-1:      #1e293b;
   --text-2:      #475569;
   --text-3:      #94a3b8;
-  --ease-expo:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-expo:   var(--alas-ease);
 }
 
 html, body, #root {
@@ -208,19 +208,16 @@ body::before {
    Compartidos entre Launcher, CajaVenta y Calendario para lenguaje visual unificado
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Duraciones */
-  --alas-dur-instant:  100ms;   /* tap feedback, respuestas inmediatas */
-  --alas-dur-fast:     150ms;   /* hover, tooltips, microinteracciones */
-  --alas-dur-normal:   250ms;   /* transiciones de componente */
-  --alas-dur-slow:     400ms;   /* modales, paneles laterales */
-  --alas-dur-page:     420ms;   /* transiciones entre páginas */
-  --alas-dur-view:     300ms;   /* cambio de sección/vista */
+  /* Duraciones launcher-específicas (no están en alas-motion.css) */
+  --alas-dur-instant:  100ms;  /* tap feedback, respuestas inmediatas */
+  --alas-dur-normal:   250ms;  /* transiciones de componente — launcher prefiere 250ms vs 280ms canónico */
+  --alas-dur-slow:     400ms;  /* modales, paneles laterales */
+  --alas-dur-view:     300ms;  /* cambio de sección/vista */
+  /* --alas-dur-fast y --alas-dur-page: idénticos al canónico → los provee alas-motion.css */
 
-  /* Easings — todos los demás proyectos deben usar estas curvas */
-  --alas-ease-expo:    cubic-bezier(0.16, 1, 0.3, 1);      /* entrada suave */
-  --alas-ease-spring:  cubic-bezier(0.34, 1.15, 0.64, 1);  /* spring sutil, sin rebote */
-  --alas-ease-in:      cubic-bezier(0.4, 0, 1, 1);         /* salida (ease-in) */
-  --alas-ease-std:     cubic-bezier(0.25, 0.1, 0.25, 1);   /* estándar CSS */
+  /* Alias legacy → canónico (alas-motion.css define los valores reales) */
+  --alas-ease-expo: var(--alas-ease);  /* nombre anterior; no redefinir spring/in: son idénticos en canónico */
+  --alas-ease-std:  var(--alas-ease);  /* sin equivalente exacto → expo */
 }
 
 /* ── Transiciones de página (usadas en los 3 sistemas) ──────────────────── */

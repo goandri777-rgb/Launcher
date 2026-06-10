@@ -996,7 +996,7 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
                   position: 'absolute', inset: -1,
                   borderRadius: '50%',
                   background: state === 'active' ? '#10b981' : state === 'inactive' ? '#2563EB' : '#ef4444',
-                  animation: 'status-dot-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite',
+                  animation: 'status-dot-pulse 2s var(--alas-ease) infinite',
                   transformBox: 'fill-box',
                   transformOrigin: 'center',
                   pointerEvents: 'none',
