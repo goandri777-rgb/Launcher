@@ -28,7 +28,8 @@ export const MODULE_ICONS = {
   recepcion:    PackageCheck,
   inventario:   Boxes,
   facturacion:  GuaraniIcon,
-  flete:        Truck,
+  flete:              Truck,
+  'calculadora-flete': Truck,
   admin:        Settings2,
 }
 
