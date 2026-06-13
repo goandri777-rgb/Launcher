@@ -96,7 +96,9 @@ export function AuthProvider({ children }) {
     }
 
     // Garantizar un mínimo de 1400ms para la carga inicial / reload
-    const minTimer = new Promise(resolve => setTimeout(resolve, 1400))
+    const minTimer     = new Promise(resolve => setTimeout(resolve,  1400))
+    // Seguridad: si getSession o loadProfile cuelgan, forzar fin de boot a los 10s
+    const safetyTimer  = new Promise(resolve => setTimeout(resolve, 10000))
 
     // Carga de sesión inicial + perfil
     const sessionPromise = supabase.auth.getSession().then(({ data: { session } }) => {
@@ -104,7 +106,12 @@ export function AuthProvider({ children }) {
       return loadProfile(session?.user?.id)
     })
 
-    Promise.all([sessionPromise, minTimer]).finally(() => {
+    // Normal: espera sesión + perfil + mínimo 1400ms
+    // Fallback: si cualquier paso cuelga, safetyTimer desbloquea el loader a los 10s
+    Promise.race([
+      Promise.all([sessionPromise, minTimer]),
+      safetyTimer,
+    ]).finally(() => {
       setAppBooting(false)
     })
 

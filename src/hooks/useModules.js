@@ -12,6 +12,7 @@ const DEMO_MODE = false
 // En producción con DEMO_MODE=false, la URL viene del RPC `open_module` de Supabase.
 const IS_DEV = import.meta.env.DEV
 const LAUNCH_TRANSITION_MS = 1400
+const RPC_TIMEOUT_MS = 8000
 const DEMO_MODULES = [
   { key: 'calendario', name: 'Calendario Tareas',     url: IS_DEV ? 'http://localhost:8080'  : import.meta.env.VITE_URL_CALENDARIO  || '', is_active: true, is_blocked: false },
   { key: 'acuses',     name: 'Acuses de Recibo',      url: IS_DEV ? ''                       : import.meta.env.VITE_URL_ACUSES       || '', is_active: true, is_blocked: false },
@@ -34,33 +35,46 @@ export function useModules() {
 
   const fetchModules = useCallback(async () => {
     setLoading(true)
+    try {
+      // Busca en paralelo: módulos permitidos + catálogo sin URLs.
+      // Si los RPCs no responden en RPC_TIMEOUT_MS, se aborta y el loader se libera.
+      const rpcResult = await Promise.race([
+        Promise.all([
+          supabase.rpc('get_allowed_modules'),
+          supabase.rpc('get_module_catalog'),
+        ]),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('RPC timeout')), RPC_TIMEOUT_MS)
+        ),
+      ])
 
-    // Busca en paralelo: módulos permitidos + catálogo sin URLs.
-    const [{ data: allowed, error }, { data: allMods }] = await Promise.all([
-      supabase.rpc('get_allowed_modules'),
-      supabase.rpc('get_module_catalog'),
-    ])
+      const [{ data: allowed, error }, { data: allMods }] = rpcResult
 
-    if (error) {
-      if (import.meta.env.DEV) console.error('[ALAS] Error cargando módulos:', error.message)
+      if (error) {
+        if (import.meta.env.DEV) console.error('[ALAS] Error cargando módulos:', error.message)
+        setModules([])
+      } else {
+        const allowedMap = Object.fromEntries((allowed || []).map(m => [m.key, m]))
+
+        // Si pudimos leer la tabla de módulos: mostrar todos, marcar sin permiso como bloqueados
+        // Si no (RLS): caer al comportamiento anterior (solo permitidos)
+        const combined = allMods?.length
+          ? allMods.map(m => {
+              if (!m.is_active) return { ...m, url: '', is_blocked: false }  // globalmente desactivado → Trabajando
+              if (m.is_blocked) return { ...m, url: '', is_blocked: true }   // globalmente bloqueado
+              if (allowedMap[m.key]) return allowedMap[m.key]                // activo + tiene permiso → datos completos
+              return { ...m, url: '', is_blocked: true }                     // activo + sin permiso → bloqueado
+            })
+          : (allowed || [])
+
+        setModules(combined)
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('[ALAS] Timeout/error cargando módulos:', err.message)
       setModules([])
-    } else {
-      const allowedMap = Object.fromEntries((allowed || []).map(m => [m.key, m]))
-
-      // Si pudimos leer la tabla de módulos: mostrar todos, marcar sin permiso como bloqueados
-      // Si no (RLS): caer al comportamiento anterior (solo permitidos)
-      const combined = allMods?.length
-        ? allMods.map(m => {
-            if (!m.is_active) return { ...m, url: '', is_blocked: false }  // globalmente desactivado → Trabajando
-            if (m.is_blocked) return { ...m, url: '', is_blocked: true }   // globalmente bloqueado
-            if (allowedMap[m.key]) return allowedMap[m.key]                // activo + tiene permiso → datos completos
-            return { ...m, url: '', is_blocked: true }                     // activo + sin permiso → bloqueado
-          })
-        : (allowed || [])
-
-      setModules(combined)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
