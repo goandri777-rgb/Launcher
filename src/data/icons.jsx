@@ -8,6 +8,7 @@ import {
   Box,
   Settings2,
   Truck,
+  BarChart3,
 } from 'lucide-react'
 
 const GuaraniIcon = (props) => (
@@ -30,6 +31,7 @@ export const MODULE_ICONS = {
   facturacion:  GuaraniIcon,
   flete:              Truck,
   'calculadora-flete': Truck,
+  'productividad-picking': BarChart3,
   admin:        Settings2,
 }
 
