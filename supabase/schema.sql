@@ -408,8 +408,8 @@ insert into public.modules(key, name, url, is_active, sort_order) values
   ('acuses',      'Acuses de Recibo',      'https://PENDIENTE.vercel.app', false, 3),
   ('borrados',    'Items Borrados',        'https://PENDIENTE.vercel.app', false, 4),
   ('recepcion',   'Recepción Mercaderías', 'https://PENDIENTE.vercel.app', false, 5),
-  ('inventario',  'Inventario',            'https://PENDIENTE.vercel.app', false, 6),
-  ('facturacion', 'Facturacion',           'https://PENDIENTE.vercel.app', false, 7)
+  ('inventario',       'Inventario',           'https://PENDIENTE.vercel.app', false, 6),
+  ('control-facturas', 'Control de Facturas',  'https://PENDIENTE.vercel.app', false, 7)
 on conflict (key) do nothing;
 
 -- =====================================================================

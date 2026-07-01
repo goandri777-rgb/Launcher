@@ -9,17 +9,8 @@ import {
   Settings2,
   Truck,
   BarChart3,
+  ReceiptText,
 } from 'lucide-react'
-
-const GuaraniIcon = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    {...props}
-  >
-    <text x="2" y="17" fontSize="14" fontWeight="700" fontFamily="Inter,sans-serif"
-      stroke="none" fill="currentColor">Gs</text>
-  </svg>
-)
 
 export const MODULE_ICONS = {
   calendario:   CalendarDays,
@@ -28,7 +19,7 @@ export const MODULE_ICONS = {
   pedidos:      Store,
   recepcion:    PackageCheck,
   inventario:   Boxes,
-  facturacion:  GuaraniIcon,
+  'control-facturas':  ReceiptText,
   flete:              Truck,
   'calculadora-flete': Truck,
   'productividad-picking': BarChart3,

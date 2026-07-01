@@ -62,7 +62,7 @@ Los módulos demo usan `*.example.vercel.app`. Cámbialos:
 
 ```sql
 update public.modules set url='https://tu-app-real.vercel.app' where key='pedidos';
--- repite para calendario, acuses, borrados, recepcion, inventario, facturacion
+-- repite para calendario, acuses, borrados, recepcion, inventario, control-facturas
 ```
 
 ## 7. Asignar permisos

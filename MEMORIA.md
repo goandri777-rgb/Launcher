@@ -141,7 +141,7 @@ text3:      '#94a3b8'
 | `borrados` | Items Borrados | — | pendiente |
 | `recepcion` | Recepción Mercaderías | — | pendiente |
 | `inventario` | Inventario | — | pendiente |
-| `facturacion` | Facturacion | — | pendiente |
+| `control-facturas` | Control de Facturas | — | pendiente |
 
 ---
 
