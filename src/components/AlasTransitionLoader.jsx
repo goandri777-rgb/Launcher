@@ -1,5 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { forwardRef, useLayoutEffect, useRef, useState, useEffect } from 'react'
 import gsap from 'gsap'
 
 // ── Geometría ─────────────────────────────────────────────────────────────
@@ -8,16 +7,39 @@ const ARC_R  = HUB_D / 2 + 18
 const C      = 2 * Math.PI * ARC_R
 const SIZE   = ARC_R * 2 + 44
 
+// 100% GSAP — sin framer-motion.
+// El montaje/desmontaje y el fade de salida se orquestan con GSAP: cuando
+// `active` pasa a false, se anima la salida y recién en onComplete se desmonta.
 export default function AlasTransitionLoader({ active, label = 'Abriendo módulo' }) {
-  return (
-    <AnimatePresence>
-      {active && <LoaderStage label={label} />}
-    </AnimatePresence>
-  )
+  const [render, setRender] = useState(active)
+  const shellRef = useRef(null)
+
+  // Entrada: al activarse, montar de inmediato.
+  useEffect(() => {
+    if (active) setRender(true)
+  }, [active])
+
+  // Salida: al desactivarse (aún montado), animar el shell y desmontar en onComplete.
+  useEffect(() => {
+    if (active || !render) return undefined
+    const el = shellRef.current
+    if (!el) { setRender(false); return undefined }
+
+    const noMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (noMotion) { setRender(false); return undefined }
+
+    const tw = gsap.to(el, {
+      autoAlpha: 0, y: -10, duration: 0.6, ease: 'power2.in',
+      onComplete: () => setRender(false),
+    })
+    return () => tw.kill()
+  }, [active, render])
+
+  if (!render) return null
+  return <LoaderStage ref={shellRef} label={label} />
 }
 
-function LoaderStage({ label }) {
-  const shellRef    = useRef(null)
+const LoaderStage = forwardRef(function LoaderStage({ label }, ref) {
   const stageRef    = useRef(null)
   const coreRef     = useRef(null)
   const logoRef     = useRef(null)
@@ -28,7 +50,7 @@ function LoaderStage({ label }) {
   // useLayoutEffect: dispara sincrónicamente ANTES del primer paint.
   // Evita el flash de elementos visibles antes de que GSAP los oculte.
   useLayoutEffect(() => {
-    if (!shellRef.current) return undefined
+    if (!ref || !ref.current) return undefined
 
     const ctx = gsap.context(() => {
       const noMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -63,7 +85,7 @@ function LoaderStage({ label }) {
         .to([trackRef.current, logoRef.current], { autoAlpha: 1, duration: 0.36 }, '-=0.28')
         .to(arcGroupRef.current, { autoAlpha: 1, duration: 0.38 }, '-=0.20')
 
-      // ── Idle: hub flota (1 RAF listener unificado) ───────────────────────
+      // ── Idle: hub flota ──────────────────────────────────────────────────
       gsap.to(coreRef.current, {
         y: -5, scale: 1.022, duration: 2.6,
         repeat: -1, yoyo: true, ease: 'sine.inOut',
@@ -78,24 +100,20 @@ function LoaderStage({ label }) {
         strokeDashoffset: C * 0.82, duration: 0.75,
         repeat: -1, yoyo: true, ease: 'sine.inOut',
       })
-    }, shellRef)
+    }, ref)
 
     return () => ctx.revert()
-  }, [])
+  }, [ref])
 
   const CX = SIZE / 2
   const CY = SIZE / 2
 
   return (
-    <motion.div
-      ref={shellRef}
+    <div
+      ref={ref}
       role="status"
       aria-live="polite"
       aria-label={label}
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, y: -10, transition: { duration: 0.60, ease: [0.4, 0, 0.8, 1] } }}
-      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
       style={{
         position: 'fixed',
         inset: 0,
@@ -205,6 +223,6 @@ function LoaderStage({ label }) {
         </div>
 
       </div>
-    </motion.div>
+    </div>
   )
-}
+})
