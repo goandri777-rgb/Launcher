@@ -10,7 +10,7 @@ import { adminApi } from '../lib/adminApi'
 import { getModuleIcon } from '../data/icons'
 import { useAuth } from '../lib/AuthContext'
 
-const ROLES  = ['admin', 'supervisor', 'operador', 'invitado']
+const ROLES  = ['admin', 'supervisor', 'operador', 'registro', 'invitado']
 const EASE   = [0.16, 1, 0.3, 1]
 const SPRING = { type: 'spring', stiffness: 400, damping: 30, mass: 0.5 }
 
@@ -44,6 +44,7 @@ const roleMap = {
   admin:      { bg:'rgba(11, 95, 141, 0.08)', fg:'#0b5f8d',   border:'rgba(11, 95, 141, 0.25)' },
   supervisor: { bg:'rgba(168, 85, 247, 0.08)', fg:'#7c3aed',   border:'rgba(168, 85, 247, 0.22)' },
   operador:   { bg:'rgba(71, 85, 105, 0.06)', fg:'#475569',   border:'rgba(71, 85, 105, 0.18)'  },
+  registro:   { bg:'rgba(13, 148, 136, 0.08)', fg:'#0d9488',   border:'rgba(13, 148, 136, 0.22)'  },
   invitado:   { bg:'rgba(100, 116, 139, 0.06)', fg:'#64748b',   border:'rgba(100, 116, 139, 0.18)'  },
 }
 
