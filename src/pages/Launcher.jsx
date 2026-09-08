@@ -7,6 +7,19 @@ import { useModules } from '../hooks/useModules'
 import CircularLauncher from '../components/CircularLauncher'
 import AlasTransitionLoader from '../components/AlasTransitionLoader'
 import ProjectsSidebar from '../components/ProjectsSidebar'
+import MobileHub from '../components/MobileHub'
+
+// Detecta pantallas chicas para servir la vista móvil PRO (grilla) en vez del radial.
+function useIsMobile(bp = 820) {
+  const [m, setM] = useState(() => typeof window !== 'undefined' && window.matchMedia(`(max-width:${bp}px)`).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width:${bp}px)`)
+    const on = () => setM(mq.matches)
+    mq.addEventListener ? mq.addEventListener('change', on) : mq.addListener(on)
+    return () => { mq.removeEventListener ? mq.removeEventListener('change', on) : mq.removeListener(on) }
+  }, [bp])
+  return m
+}
 
 // ── Helpers orden personalizado por usuario ───────────────────────────────
 const orderKey  = (uid) => `alas.hub.order.${uid}`
@@ -35,6 +48,8 @@ const ROLE_LABEL = {
   admin:      'Administrador',
   operador:   'Operador',
   supervisor: 'Supervisor',
+  registro:   'Registro',
+  calendario: 'Calendario',
   invitado:   'Invitado',
 }
 
@@ -59,6 +74,7 @@ const T = {
 export default function Launcher() {
   const { profile, loading: authLoading, signOut, stopEntry } = useAuth()
   const { modules, loading: modulesLoading, openModule } = useModules()
+  const isMobile = useIsMobile()
 
   // El AppLoader se oculta solo cuando AMBOS terminaron: módulos Y perfil.
   // Evita que el usuario pueda clicar ADMIN antes de que profile esté listo.
@@ -137,6 +153,18 @@ export default function Launcher() {
       onAnimationComplete={() => { if (isExiting) signOut() }}
     >
 
+      {isMobile ? (
+        <MobileHub
+          profile={profile}
+          modules={orderedModules}
+          onOpen={handleOpenModule}
+          onSignOut={handleSignOut}
+          canAdmin={profile?.role === 'admin'}
+          roleLabel={ROLE_LABEL[profile?.role] || profile?.role || '—'}
+          onAdminNav={stopEntry}
+        />
+      ) : (
+      <>
       {/* ════ Header ════════════════════════════════════════════════════ */}
       <motion.header
         style={{
@@ -388,6 +416,8 @@ export default function Launcher() {
         </main>
 
       </div>
+      </>
+      )}
 
     </motion.div>
     <AlasTransitionLoader active={isLaunching} label="Abriendo módulo" />
