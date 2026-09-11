@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { generateToken } from '../lib/sessionBridge'
@@ -13,6 +13,7 @@ const DEMO_MODE = false
 const IS_DEV = import.meta.env.DEV
 const LAUNCH_TRANSITION_MS = 1400
 const RPC_TIMEOUT_MS = 8000
+const CALENDAR_MODULE_KEY = 'calendario'
 const DEMO_MODULES = [
   { key: 'calendario', name: 'Calendario Tareas',     url: IS_DEV ? 'http://localhost:8080'  : import.meta.env.VITE_URL_CALENDARIO  || '', is_active: true, is_blocked: false },
   { key: 'acuses',     name: 'Acuses de Recibo',      url: IS_DEV ? ''                       : import.meta.env.VITE_URL_ACUSES       || '', is_active: true, is_blocked: false },
@@ -22,6 +23,15 @@ const DEMO_MODULES = [
   { key: 'inventario', name: 'Inventario',            url: IS_DEV ? ''                       : import.meta.env.VITE_URL_INVENTARIO   || '', is_active: true, is_blocked: false },
   { key: 'flete',      name: 'Calculadora de Flete', url: IS_DEV ? ''                       : import.meta.env.VITE_URL_FLETE        || '', is_active: false, is_blocked: false },
 ]
+
+function isCalendarRole(role) {
+  return String(role || '').toLowerCase() === 'calendario'
+}
+
+function filterModulesForRole(list, role) {
+  if (!isCalendarRole(role)) return list
+  return list.filter(m => m.key === CALENDAR_MODULE_KEY)
+}
 // ──────────────────────────────────────────────────────────────────────────
 
 // Obtiene SOLO los módulos que el usuario puede abrir.
@@ -32,6 +42,10 @@ export function useModules() {
 
   const [modules, setModules] = useState(DEMO_MODE ? DEMO_MODULES : [])
   const [loading, setLoading] = useState(!DEMO_MODE)
+  const visibleModules = useMemo(
+    () => filterModulesForRole(modules, profile?.role),
+    [modules, profile?.role],
+  )
 
   const fetchModules = useCallback(async () => {
     setLoading(true)
@@ -85,6 +99,10 @@ export function useModules() {
   // En modo producción: reverifica el permiso en servidor antes de abrir.
   // En modo demo: usa la URL configurada en DEMO_MODULES.
   const openModule = useCallback(async (moduleKey) => {
+    if (isCalendarRole(profile?.role) && moduleKey !== CALENDAR_MODULE_KEY) {
+      return { ok: false, reason: 'Rol calendario: solo puede abrir Calendario Tareas' }
+    }
+
     // ── Bloqueo de seguridad: sin sesión no se genera ningún token ──────
     if (!session) {
       if (import.meta.env.DEV) console.warn('[ALAS SSO] openModule bloqueado: sin sesión activa.')
@@ -120,7 +138,7 @@ export function useModules() {
         email:       session?.user?.email || 'demo@alas.com',
         role:        profile?.role      || 'operador',
         // Solo los módulos activos y no bloqueados que el usuario puede ver
-        permissions: modules
+        permissions: filterModulesForRole(modules, profile?.role)
           .filter(m => m.is_active && !m.is_blocked)
           .map(m => m.key),
       })
@@ -140,5 +158,5 @@ export function useModules() {
     return { ok: true }
   }, [modules, profile, session])
 
-  return { modules, loading, openModule, refresh: fetchModules }
+  return { modules: visibleModules, loading, openModule, refresh: fetchModules }
 }

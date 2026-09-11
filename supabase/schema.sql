@@ -9,8 +9,10 @@ do $$ begin
   create type user_role as enum ('admin','supervisor','operador','invitado');
 exception when duplicate_object then null; end $$;
 
--- Garantiza que 'admin' existe aunque el enum haya sido creado con nombre antiguo ('administración').
+-- Garantiza roles agregados en versiones posteriores del Launcher.
 alter type user_role add value if not exists 'admin';
+alter type user_role add value if not exists 'registro';
+alter type user_role add value if not exists 'calendario';
 
 -- ---------- TABLAS ----------
 
@@ -167,8 +169,11 @@ language sql stable security definer set search_path = public
 as $$
   select m.key, m.name, m.is_active, m.is_blocked, m.sort_order
   from public.modules m
-  join public.permissions p on p.module_id = m.id
-  where p.user_id = auth.uid()
+  join public.profiles pr on pr.id = auth.uid()
+  left join public.permissions p on p.module_id = m.id and p.user_id = pr.id
+  where
+    (pr.role::text = 'calendario' and m.key = 'calendario')
+    or (pr.role::text <> 'calendario' and p.user_id is not null)
   order by m.sort_order;
 $$;
 
@@ -179,7 +184,8 @@ language sql stable security definer set search_path = public
 as $$
   select m.id, m.key, m.name, m.is_active, m.is_blocked, m.sort_order
   from public.modules m
-  where auth.uid() is not null
+  join public.profiles pr on pr.id = auth.uid()
+  where pr.role::text <> 'calendario' or m.key = 'calendario'
   order by m.sort_order;
 $$;
 
@@ -200,6 +206,11 @@ begin
     return json_build_object('url', null, 'reason', 'cuenta no disponible');
   end if;
 
+  if v_prof.role::text = 'calendario' and p_module_key <> 'calendario' then
+    insert into public.access_logs(user_id, action) values (auth.uid(), 'denied');
+    return json_build_object('url', null, 'reason', 'rol calendario limitado a Calendario Tareas');
+  end if;
+
   select * into v_mod from public.modules where key = p_module_key;
   if not found or not v_mod.is_active or v_mod.is_blocked then
     insert into public.access_logs(user_id, module_id, action)
@@ -207,10 +218,14 @@ begin
     return json_build_object('url', null, 'reason', 'módulo no disponible');
   end if;
 
-  select exists(
-    select 1 from public.permissions
-    where user_id = auth.uid() and module_id = v_mod.id
-  ) into v_ok;
+  if v_prof.role::text = 'calendario' then
+    v_ok := v_mod.key = 'calendario';
+  else
+    select exists(
+      select 1 from public.permissions
+      where user_id = auth.uid() and module_id = v_mod.id
+    ) into v_ok;
+  end if;
 
   if not v_ok then
     insert into public.access_logs(user_id, module_id, action)
