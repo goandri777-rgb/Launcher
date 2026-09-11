@@ -28,6 +28,18 @@ function isCalendarRole(role) {
   return String(role || '').toLowerCase() === 'calendario'
 }
 
+function getModuleEntryUrl(rawUrl, moduleKey) {
+  if (moduleKey !== CALENDAR_MODULE_KEY) return rawUrl
+
+  try {
+    const url = new URL(rawUrl)
+    url.pathname = '/calendario'
+    return url.toString()
+  } catch {
+    return rawUrl
+  }
+}
+
 function filterModulesForRole(list, role) {
   if (!isCalendarRole(role)) return list
   return list.filter(m => m.key === CALENDAR_MODULE_KEY)
@@ -119,14 +131,14 @@ export function useModules() {
         if (import.meta.env.DEV) console.info(`[ALAS SSO] El módulo "${moduleKey}" no tiene URL configurada aún.`)
         return { ok: false, reason: 'URL del módulo no configurada' }
       }
-      destUrl = mod.url
+      destUrl = getModuleEntryUrl(mod.url, moduleKey)
     } else {
       // Producción: el RPC verifica permisos en servidor y devuelve la URL
       const { data, error } = await supabase.rpc('open_module', { p_module_key: moduleKey })
       if (error || !data?.url) {
         return { ok: false, reason: error?.message || 'No autorizado' }
       }
-      destUrl = data.url
+      destUrl = getModuleEntryUrl(data.url, moduleKey)
     }
 
     // ── Generar token SSO firmado ────────────────────────────────────────
