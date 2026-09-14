@@ -47,7 +47,6 @@ export default function ProjectsSidebar({
   const [newName, setNewName] = useState('')
   const [newStatus, setNewStatus] = useState('trabajando')
   const [saveError, setSaveError] = useState('')
-  const [hovered, setHovered] = useState(null)
   const nameInputRef = useRef(null)
   const refetchTimer = useRef(null)
 
@@ -255,16 +254,22 @@ export default function ProjectsSidebar({
                           key={project.id}
                           value={project}
                           dragListener={isAdmin}
-                          onMouseEnter={() => setHovered(project.id)}
-                          onMouseLeave={() => setHovered(null)}
-                          className="side-panel-project"
+                          className={`side-panel-project${isAdmin ? ' is-draggable' : ''}`}
                           whileDrag={isAdmin ? { scale: 1.025, zIndex: 20 } : undefined}
                         >
                           <div>
-                            {isAdmin && <GripVertical className={hovered === project.id ? 'visible' : ''} aria-hidden />}
+                            {isAdmin && <GripVertical aria-hidden />}
                             <strong>{project.name}</strong>
-                            {isAdmin && hovered === project.id && (
-                              <button type="button" onClick={() => handleDelete(project.id)} aria-label={`Eliminar ${project.name}`}>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onPointerDown={(event) => event.stopPropagation()}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleDelete(project.id)
+                                }}
+                                aria-label={`Eliminar ${project.name}`}
+                              >
                                 <X aria-hidden />
                               </button>
                             )}
@@ -273,6 +278,7 @@ export default function ProjectsSidebar({
                             type="button"
                             className="side-panel-status"
                             disabled={!isAdmin}
+                            onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => handleCycleStatus(project.id)}
                             style={{ '--project-status': status.color }}
                           >

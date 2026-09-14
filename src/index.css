@@ -639,11 +639,28 @@ body::before {
 }
 
 .side-panel-project {
+  position: relative;
   padding: 10px 10px 9px;
-  cursor: grab;
+  cursor: default;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 10px;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.side-panel-project:hover,
+.side-panel-project:focus-within {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 5px 14px rgba(2,32,48,0.12);
+}
+
+.side-panel-project.is-draggable {
+  cursor: grab;
+}
+
+.side-panel-project.is-draggable:active {
+  cursor: grabbing;
 }
 
 .side-panel-project > div {
@@ -653,6 +670,7 @@ body::before {
 }
 
 .side-panel-project > div > svg {
+  flex: 0 0 11px;
   width: 11px;
   height: 11px;
   color: rgba(255,255,255,0.38);
@@ -660,7 +678,8 @@ body::before {
   transition: opacity 140ms ease;
 }
 
-.side-panel-project > div > svg.visible {
+.side-panel-project:hover > div > svg,
+.side-panel-project:focus-within > div > svg {
   opacity: 1;
 }
 
@@ -679,12 +698,29 @@ body::before {
   display: grid;
   width: 20px;
   height: 20px;
+  flex: 0 0 20px;
   place-items: center;
   color: #fda4af;
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.86);
   background: rgba(244,63,94,0.1);
   border: 0;
   border-radius: 5px;
+  transition: opacity 140ms ease, transform 140ms ease, background 140ms ease;
+}
+
+.side-panel-project:hover > div > button,
+.side-panel-project:focus-within > div > button,
+.side-panel-project > div > button:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.side-panel-project > div > button:hover {
+  background: rgba(244,63,94,0.22);
 }
 
 .side-panel-project > div > button svg {
