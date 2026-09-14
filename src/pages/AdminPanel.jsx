@@ -258,7 +258,7 @@ function PermissionsModal({ user, modules, onClose, notify }) {
   const [granted, setGranted] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(null)
-  const exclusiveModuleKey = { calendario: 'calendario', acuses: 'acuses' }[user.role] || null
+  const exclusiveModuleKey = { calendario: 'calendario', acuses: 'calendario' }[user.role] || null
   const visibleModules = exclusiveModuleKey
     ? modules.filter(m => m.key === exclusiveModuleKey)
     : modules

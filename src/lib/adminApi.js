@@ -12,11 +12,9 @@ const DEMO_USERS = [
 ]
 
 const DEMO_MODULES = [
-  { id: 'm1', key: 'calendario', name: 'Calendario Tareas',     url: 'https://app.alas.com/calendario', is_active: true,  sort_order: 1 },
-  { id: 'm2', key: 'acuses',     name: 'Acuses de Recibo',      url: 'https://app.alas.com/acuses',     is_active: true,  sort_order: 2 },
+  { id: 'm1', key: 'calendario', name: 'Calendario · Incidencias · Acuses', url: 'https://app.alas.com/calendario', is_active: true, sort_order: 1 },
   { id: 'm3', key: 'borrados',   name: 'Items Borrados',        url: 'https://app.alas.com/borrados',   is_active: true,  sort_order: 3 },
   { id: 'm4', key: 'pedidos',    name: 'Pedidos Caja Venta',    url: 'https://app.alas.com/pedidos',    is_active: true,  sort_order: 4 },
-  { id: 'm5', key: 'recepcion',  name: 'Recepción Mercaderías', url: 'https://app.alas.com/recepcion',  is_active: true,  sort_order: 5 },
   { id: 'm6', key: 'inventario', name: 'Inventario',            url: '',                                is_active: false, sort_order: 6 },
 ]
 

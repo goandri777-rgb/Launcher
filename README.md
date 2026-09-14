@@ -62,7 +62,7 @@ Los módulos demo usan `*.example.vercel.app`. Cámbialos:
 
 ```sql
 update public.modules set url='https://tu-app-real.vercel.app' where key='pedidos';
--- repite para calendario, acuses, borrados, recepcion, inventario, control-facturas
+-- repite para calendario, borrados, inventario y control-facturas
 ```
 
 ## 7. Asignar permisos
@@ -110,7 +110,7 @@ logistic-launcher/
 
 ## Roles
 
-`admin` · `supervisor` · `operador` · `registro` · `calendario` · `acuses` · `invitado`. El rol vive en `profiles.role`. Solo `admin` accede a `/admin` (doble guard: cliente y RLS). Los roles `calendario` y `acuses` son exclusivos: solo descubren y abren su módulo correspondiente.
+`admin` · `supervisor` · `operador` · `registro` · `calendario` · `acuses` · `invitado`. El rol vive en `profiles.role`. Solo `admin` accede a `/admin` (doble guard: cliente y RLS). Los roles `calendario` y `acuses` abren el módulo combinado; ALAS dirige a cada uno a su apartado exclusivo.
 
 ## Scripts
 

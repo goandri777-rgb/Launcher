@@ -15,18 +15,15 @@ const LAUNCH_TRANSITION_MS = 1400
 const RPC_TIMEOUT_MS = 8000
 const EXCLUSIVE_ROLE_MODULE = {
   calendario: 'calendario',
-  acuses: 'acuses',
+  acuses: 'calendario',
 }
 const MODULE_ENTRY_PATH = {
   calendario: '/calendario',
-  acuses: '/acuses',
 }
 const DEMO_MODULES = [
-  { key: 'calendario', name: 'Calendario Tareas',     url: IS_DEV ? 'http://localhost:8080'  : import.meta.env.VITE_URL_CALENDARIO  || '', is_active: true, is_blocked: false },
-  { key: 'acuses',     name: 'Acuses de Recibo',      url: IS_DEV ? ''                       : import.meta.env.VITE_URL_ACUSES       || '', is_active: true, is_blocked: false },
+  { key: 'calendario', name: 'Calendario · Incidencias · Acuses', url: IS_DEV ? 'http://localhost:8080' : import.meta.env.VITE_URL_CALENDARIO || '', is_active: true, is_blocked: false },
   { key: 'borrados',   name: 'Items Borrados',        url: IS_DEV ? 'http://localhost:4000'  : import.meta.env.VITE_URL_BORRADOS     || '', is_active: true, is_blocked: false },
   { key: 'pedidos',    name: 'Pedidos Caja Venta',    url: IS_DEV ? 'http://localhost:3000'  : import.meta.env.VITE_URL_PEDIDOS      || '', is_active: true, is_blocked: false },
-  { key: 'recepcion',  name: 'Recepción Mercaderías', url: IS_DEV ? ''                       : import.meta.env.VITE_URL_RECEPCION    || '', is_active: true, is_blocked: false },
   { key: 'inventario', name: 'Inventario',            url: IS_DEV ? ''                       : import.meta.env.VITE_URL_INVENTARIO   || '', is_active: true, is_blocked: false },
   { key: 'flete',      name: 'Calculadora de Flete', url: IS_DEV ? ''                       : import.meta.env.VITE_URL_FLETE        || '', is_active: false, is_blocked: false },
 ]
@@ -35,8 +32,10 @@ function getExclusiveModuleKey(role) {
   return EXCLUSIVE_ROLE_MODULE[String(role || '').toLowerCase()] || null
 }
 
-function getModuleEntryUrl(rawUrl, moduleKey) {
-  const pathname = MODULE_ENTRY_PATH[moduleKey]
+function getModuleEntryUrl(rawUrl, moduleKey, role) {
+  const pathname = String(role || '').toLowerCase() === 'acuses'
+    ? '/acuses'
+    : MODULE_ENTRY_PATH[moduleKey]
   if (!pathname) return rawUrl
 
   try {
@@ -141,14 +140,14 @@ export function useModules() {
         if (import.meta.env.DEV) console.info(`[ALAS SSO] El módulo "${moduleKey}" no tiene URL configurada aún.`)
         return { ok: false, reason: 'URL del módulo no configurada' }
       }
-      destUrl = getModuleEntryUrl(mod.url, moduleKey)
+      destUrl = getModuleEntryUrl(mod.url, moduleKey, profile?.role)
     } else {
       // Producción: el RPC verifica permisos en servidor y devuelve la URL
       const { data, error } = await supabase.rpc('open_module', { p_module_key: moduleKey })
       if (error || !data?.url) {
         return { ok: false, reason: error?.message || 'No autorizado' }
       }
-      destUrl = getModuleEntryUrl(data.url, moduleKey)
+      destUrl = getModuleEntryUrl(data.url, moduleKey, profile?.role)
     }
 
     // ── Generar token SSO firmado ────────────────────────────────────────

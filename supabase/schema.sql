@@ -172,10 +172,12 @@ as $$
   from public.modules m
   join public.profiles pr on pr.id = auth.uid()
   left join public.permissions p on p.module_id = m.id and p.user_id = pr.id
-  where
-    (pr.role::text = 'calendario' and m.key = 'calendario')
-    or (pr.role::text = 'acuses' and m.key = 'acuses')
-    or (pr.role::text not in ('calendario', 'acuses') and p.user_id is not null)
+  where m.key not in ('acuses', 'recepcion')
+    and (
+      (pr.role::text = 'calendario' and m.key = 'calendario')
+      or (pr.role::text = 'acuses' and m.key = 'calendario')
+      or (pr.role::text not in ('calendario', 'acuses') and p.user_id is not null)
+    )
   order by m.sort_order;
 $$;
 
@@ -187,10 +189,12 @@ as $$
   select m.id, m.key, m.name, m.is_active, m.is_blocked, m.sort_order
   from public.modules m
   join public.profiles pr on pr.id = auth.uid()
-  where
-    pr.role::text not in ('calendario', 'acuses')
-    or (pr.role::text = 'calendario' and m.key = 'calendario')
-    or (pr.role::text = 'acuses' and m.key = 'acuses')
+  where m.key not in ('acuses', 'recepcion')
+    and (
+      pr.role::text not in ('calendario', 'acuses')
+      or (pr.role::text = 'calendario' and m.key = 'calendario')
+      or (pr.role::text = 'acuses' and m.key = 'calendario')
+    )
   order by m.sort_order;
 $$;
 
@@ -215,9 +219,14 @@ begin
     insert into public.access_logs(user_id, action) values (auth.uid(), 'denied');
     return json_build_object('url', null, 'reason', 'rol calendario limitado a Calendario Tareas');
   end if;
-  if v_prof.role::text = 'acuses' and p_module_key <> 'acuses' then
+
+  if p_module_key in ('acuses', 'recepcion') then
     insert into public.access_logs(user_id, action) values (auth.uid(), 'denied');
-    return json_build_object('url', null, 'reason', 'rol acuses limitado a Acuses de Recibo');
+    return json_build_object('url', null, 'reason', 'módulo retirado del launcher');
+  end if;
+  if v_prof.role::text = 'acuses' and p_module_key <> 'calendario' then
+    insert into public.access_logs(user_id, action) values (auth.uid(), 'denied');
+    return json_build_object('url', null, 'reason', 'rol acuses limitado al módulo combinado');
   end if;
 
   select * into v_mod from public.modules where key = p_module_key;
@@ -230,7 +239,7 @@ begin
   if v_prof.role::text = 'calendario' then
     v_ok := v_mod.key = 'calendario';
   elsif v_prof.role::text = 'acuses' then
-    v_ok := v_mod.key = 'acuses';
+    v_ok := v_mod.key = 'calendario';
   else
     select exists(
       select 1 from public.permissions
@@ -429,11 +438,9 @@ create trigger on_auth_user_created
 --       o reemplazar los placeholder antes de ejecutar.
 -- =====================================================================
 insert into public.modules(key, name, url, is_active, sort_order) values
-  ('calendario',  'Calendario Tareas',     'https://PENDIENTE.vercel.app', true,  1),
+  ('calendario',  'Calendario · Incidencias · Acuses', 'https://PENDIENTE.vercel.app', true, 1),
   ('pedidos',     'Pedidos Caja Venta',    'https://PENDIENTE.vercel.app', true,  2),
-  ('acuses',      'Acuses de Recibo',      'https://PENDIENTE.vercel.app', false, 3),
   ('borrados',    'Items Borrados',        'https://PENDIENTE.vercel.app', false, 4),
-  ('recepcion',   'Recepción Mercaderías', 'https://PENDIENTE.vercel.app', false, 5),
   ('inventario',       'Inventario',           'https://PENDIENTE.vercel.app', false, 6),
   ('control-facturas', 'Control de Facturas',  'https://PENDIENTE.vercel.app', false, 7)
 on conflict (key) do nothing;
