@@ -286,17 +286,19 @@ body::before {
 .launcher-brand {
   position: absolute;
   top: 26px;
-  left: 50%;
+  left: 0;
+  right: 0;
   z-index: 20;
-  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
   pointer-events: none;
 }
 
 .launcher-brand img {
   display: block;
   width: auto;
-  height: 48px;
-  filter: brightness(0) saturate(100%) invert(32%) sepia(94%) saturate(1164%) hue-rotate(174deg) brightness(80%) contrast(103%);
+  height: 50px;
+  max-width: 165px;
   object-fit: contain;
 }
 
@@ -999,6 +1001,5 @@ body::before {
 
 @media (max-width: 1120px) and (min-width: 821px) {
   .launcher-side-panel { width: 310px; }
-  .launcher-brand { left: 43%; }
   .launcher-orbit-stage { right: 110px; transform: scale(0.86); }
 }

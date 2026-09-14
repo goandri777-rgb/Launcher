@@ -64,7 +64,7 @@ export default function MobileHub({ profile, modules, onOpen, onSignOut, canAdmi
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE, delay: 0.06 }}
         style={{ flexShrink: 0, padding: '16px 16px 8px' }}
       >
-        <img src="/logo.png" alt="ALAS" style={{ height: 26, width: 'auto', display: 'block', marginBottom: 10, filter: 'brightness(0) saturate(100%) invert(24%) sepia(61%) saturate(1200%) hue-rotate(183deg) brightness(85%)' }} />
+        <img src="/alas_logo.png" alt="ALAS" style={{ height: 28, width: 'auto', display: 'block', marginBottom: 10 }} />
         <p style={{ margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#64748b', fontFamily: '"JetBrains Mono",monospace' }}>Tus módulos</p>
       </motion.div>
 

@@ -169,7 +169,7 @@ export default function Launcher() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: EASE, delay: 0.08 }}
             >
-              <img src="/logo.png" alt="ALAS" />
+              <img src="/alas_logo.png" alt="ALAS" />
             </motion.header>
 
             <main className="launcher-orbit-stage">
