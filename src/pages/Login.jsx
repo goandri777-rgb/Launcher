@@ -45,6 +45,9 @@ const roleLabelMap = {
   admin:      'Administrador',
   supervisor: 'Supervisor',
   operador:   'Operador',
+  registro:   'Registro',
+  calendario: 'Calendario',
+  acuses:     'Acuses',
   invitado:   'Invitado',
 }
 

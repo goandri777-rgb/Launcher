@@ -10,7 +10,7 @@ import { adminApi } from '../lib/adminApi'
 import { getModuleIcon } from '../data/icons'
 import { useAuth } from '../lib/AuthContext'
 
-const ROLES  = ['admin', 'supervisor', 'operador', 'registro', 'calendario', 'invitado']
+const ROLES  = ['admin', 'supervisor', 'operador', 'registro', 'calendario', 'acuses', 'invitado']
 const EASE   = [0.16, 1, 0.3, 1]
 const SPRING = { type: 'spring', stiffness: 400, damping: 30, mass: 0.5 }
 
@@ -46,6 +46,7 @@ const roleMap = {
   operador:   { bg:'rgba(71, 85, 105, 0.06)', fg:'#475569',   border:'rgba(71, 85, 105, 0.18)'  },
   registro:   { bg:'rgba(13, 148, 136, 0.08)', fg:'#0d9488',   border:'rgba(13, 148, 136, 0.22)'  },
   calendario: { bg:'rgba(20, 120, 184, 0.08)', fg:'#1478b8',   border:'rgba(20, 120, 184, 0.22)'  },
+  acuses:     { bg:'rgba(37, 99, 235, 0.08)',  fg:'#2563eb',   border:'rgba(37, 99, 235, 0.22)'   },
   invitado:   { bg:'rgba(100, 116, 139, 0.06)', fg:'#64748b',   border:'rgba(100, 116, 139, 0.18)'  },
 }
 
@@ -257,6 +258,10 @@ function PermissionsModal({ user, modules, onClose, notify }) {
   const [granted, setGranted] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(null)
+  const exclusiveModuleKey = { calendario: 'calendario', acuses: 'acuses' }[user.role] || null
+  const visibleModules = exclusiveModuleKey
+    ? modules.filter(m => m.key === exclusiveModuleKey)
+    : modules
 
   useEffect(()=>{
     adminApi.getUserPermissions(user.id).then(({data})=>{
@@ -300,15 +305,16 @@ function PermissionsModal({ user, modules, onClose, notify }) {
           <motion.div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:320,overflowY:'auto'}}
             initial="h" animate="s" variants={{h:{},s:{transition:{staggerChildren:0.04}}}}
           >
-            {modules.map(m=>{
-              const on=granted.has(m.id), busy=saving===m.id
+            {visibleModules.map(m=>{
+              const on=exclusiveModuleKey === m.key || granted.has(m.id), busy=saving===m.id
               const Icon=getModuleIcon(m.key)
               return (
                 <motion.button key={m.id}
+                  disabled={!!exclusiveModuleKey}
                   variants={{h:{opacity:0,y:6},s:{opacity:1,y:0,transition:{duration:0.25,ease:EASE}}}}
-                  whileHover={{scale:1.01}} whileTap={{scale:0.99}} transition={SPRING}
-                  onClick={()=>!busy&&toggle(m)}
-                  style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',borderRadius:11,background:on?'#f0f7ff':C.surface,border:`1px solid ${on?'rgba(11,95,141,0.22)':C.border}`,cursor:busy?'wait':'pointer',transition:'background 150ms ease,border-color 150ms ease',fontFamily:'"Inter",system-ui,sans-serif',opacity:busy?0.5:1}}
+                  whileHover={exclusiveModuleKey?{}:{scale:1.01}} whileTap={exclusiveModuleKey?{}:{scale:0.99}} transition={SPRING}
+                  onClick={()=>!exclusiveModuleKey&&!busy&&toggle(m)}
+                  style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',borderRadius:11,background:on?'#f0f7ff':C.surface,border:`1px solid ${on?'rgba(11,95,141,0.22)':C.border}`,cursor:exclusiveModuleKey?'default':busy?'wait':'pointer',transition:'background 150ms ease,border-color 150ms ease',fontFamily:'"Inter",system-ui,sans-serif',opacity:busy?0.5:1}}
                 >
                   <div style={{width:32,height:32,borderRadius:9,background:on?C.brandLight:'#f8fafc',border:`1px solid ${on?'rgba(11,95,141,0.15)':C.border}`,display:'grid',placeItems:'center',flexShrink:0}}>
                     <Icon style={{width:14,height:14,color:on?C.brand:C.text4}}/>

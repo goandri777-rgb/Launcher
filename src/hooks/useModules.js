@@ -13,7 +13,14 @@ const DEMO_MODE = false
 const IS_DEV = import.meta.env.DEV
 const LAUNCH_TRANSITION_MS = 1400
 const RPC_TIMEOUT_MS = 8000
-const CALENDAR_MODULE_KEY = 'calendario'
+const EXCLUSIVE_ROLE_MODULE = {
+  calendario: 'calendario',
+  acuses: 'acuses',
+}
+const MODULE_ENTRY_PATH = {
+  calendario: '/calendario',
+  acuses: '/acuses',
+}
 const DEMO_MODULES = [
   { key: 'calendario', name: 'Calendario Tareas',     url: IS_DEV ? 'http://localhost:8080'  : import.meta.env.VITE_URL_CALENDARIO  || '', is_active: true, is_blocked: false },
   { key: 'acuses',     name: 'Acuses de Recibo',      url: IS_DEV ? ''                       : import.meta.env.VITE_URL_ACUSES       || '', is_active: true, is_blocked: false },
@@ -24,16 +31,17 @@ const DEMO_MODULES = [
   { key: 'flete',      name: 'Calculadora de Flete', url: IS_DEV ? ''                       : import.meta.env.VITE_URL_FLETE        || '', is_active: false, is_blocked: false },
 ]
 
-function isCalendarRole(role) {
-  return String(role || '').toLowerCase() === 'calendario'
+function getExclusiveModuleKey(role) {
+  return EXCLUSIVE_ROLE_MODULE[String(role || '').toLowerCase()] || null
 }
 
 function getModuleEntryUrl(rawUrl, moduleKey) {
-  if (moduleKey !== CALENDAR_MODULE_KEY) return rawUrl
+  const pathname = MODULE_ENTRY_PATH[moduleKey]
+  if (!pathname) return rawUrl
 
   try {
     const url = new URL(rawUrl)
-    url.pathname = '/calendario'
+    url.pathname = pathname
     return url.toString()
   } catch {
     return rawUrl
@@ -41,8 +49,9 @@ function getModuleEntryUrl(rawUrl, moduleKey) {
 }
 
 function filterModulesForRole(list, role) {
-  if (!isCalendarRole(role)) return list
-  return list.filter(m => m.key === CALENDAR_MODULE_KEY)
+  const exclusiveModuleKey = getExclusiveModuleKey(role)
+  if (!exclusiveModuleKey) return list
+  return list.filter(m => m.key === exclusiveModuleKey)
 }
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -111,8 +120,9 @@ export function useModules() {
   // En modo producción: reverifica el permiso en servidor antes de abrir.
   // En modo demo: usa la URL configurada en DEMO_MODULES.
   const openModule = useCallback(async (moduleKey) => {
-    if (isCalendarRole(profile?.role) && moduleKey !== CALENDAR_MODULE_KEY) {
-      return { ok: false, reason: 'Rol calendario: solo puede abrir Calendario Tareas' }
+    const exclusiveModuleKey = getExclusiveModuleKey(profile?.role)
+    if (exclusiveModuleKey && moduleKey !== exclusiveModuleKey) {
+      return { ok: false, reason: `Rol ${profile?.role}: solo puede abrir su módulo asignado` }
     }
 
     // ── Bloqueo de seguridad: sin sesión no se genera ningún token ──────

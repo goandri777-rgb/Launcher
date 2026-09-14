@@ -110,7 +110,7 @@ logistic-launcher/
 
 ## Roles
 
-`admin` · `supervisor` · `operador` · `invitado`. El rol vive en `profiles.role`. Solo `admin` accede a `/admin` (doble guard: cliente y RLS).
+`admin` · `supervisor` · `operador` · `registro` · `calendario` · `acuses` · `invitado`. El rol vive en `profiles.role`. Solo `admin` accede a `/admin` (doble guard: cliente y RLS). Los roles `calendario` y `acuses` son exclusivos: solo descubren y abren su módulo correspondiente.
 
 ## Scripts
 

@@ -50,6 +50,7 @@ const ROLE_LABEL = {
   supervisor: 'Supervisor',
   registro:   'Registro',
   calendario: 'Calendario',
+  acuses:     'Acuses',
   invitado:   'Invitado',
 }
 
