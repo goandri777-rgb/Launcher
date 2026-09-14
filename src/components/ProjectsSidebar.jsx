@@ -1,67 +1,73 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
-import { Plus, X, ChevronLeft, ChevronRight, GripVertical, FolderKanban, Check } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { AnimatePresence, motion, Reorder, useReducedMotion } from 'framer-motion'
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  FolderKanban,
+  GripVertical,
+  LayoutGrid,
+  LogOut,
+  Plus,
+  Settings2,
+  X,
+} from 'lucide-react'
 import { useAuth } from '../lib/AuthContext'
+import { supabase } from '../lib/supabase'
 
-// ── Constantes ────────────────────────────────────────────────────────────────
 const EASE = [0.16, 1, 0.3, 1]
 
 const STATUS = [
-  { value: 'trabajando',  label: 'Trabajando',  color: '#10b981' },
-  { value: 'en-pruebas',  label: 'En Pruebas',  color: '#f59e0b' },
-  { value: 'pausado',     label: 'Pausado',      color: '#94a3b8' },
+  { value: 'trabajando', label: 'Trabajando', color: '#34d399' },
+  { value: 'en-pruebas', label: 'En pruebas', color: '#fbbf24' },
+  { value: 'pausado', label: 'Pausado', color: '#94a3b8' },
 ]
 
-const statusColor = (v) => STATUS.find(s => s.value === v)?.color ?? '#94a3b8'
-const statusLabel = (v) => STATUS.find(s => s.value === v)?.label ?? v
+const statusData = (value) => STATUS.find((status) => status.value === value) || STATUS[0]
 
-// ── Estilos reutilizables ─────────────────────────────────────────────────────
-const T = {
-  brand:   '#0B5F8D',
-  text1:   '#1e293b',
-  text2:   '#475569',
-  text3:   '#94a3b8',
-  border:  'rgba(11,95,141,0.10)',
-  surface: 'rgba(255,255,255,0.70)',
-  danger:  '#ef4444',
-}
-
-// ── Componente principal ──────────────────────────────────────────────────────
-export default function ProjectsSidebar() {
+export default function ProjectsSidebar({
+  open,
+  setOpen,
+  roleLabel,
+  editMode,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onSignOut,
+  onAdminNav,
+}) {
   const { profile } = useAuth()
+  const reduceMotion = useReducedMotion()
   const isAdmin = profile?.role === 'admin'
 
-  const [open,      setOpen]      = useState(true)
-  const [projects,  setProjects]  = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [adding,    setAdding]    = useState(false)
-  const [newName,   setNewName]   = useState('')
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
   const [newStatus, setNewStatus] = useState('trabajando')
-  const [hovered,   setHovered]   = useState(null)
-  const [saveError, setSaveError] = useState(null)
-  const nameInputRef  = useRef(null)
-  const refetchTimer  = useRef(null)
+  const [saveError, setSaveError] = useState('')
+  const [hovered, setHovered] = useState(null)
+  const nameInputRef = useRef(null)
+  const refetchTimer = useRef(null)
 
-  // ── Carga desde Supabase ──────────────────────────────────────────────────
   const fetchProjects = useCallback(async () => {
     const { data, error } = await supabase
       .from('sidebar_projects')
       .select('*')
-      .order('position', { ascending: true })
+      .order('position')
+
     if (!error && data) setProjects(data)
     setLoading(false)
   }, [])
 
   useEffect(() => {
     fetchProjects()
-
-    // Realtime: cualquier cambio recarga la lista (debounced para reorden masivo)
     const channel = supabase
-      .channel('sidebar_projects_rt')
+      .channel('sidebar_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sidebar_projects' }, () => {
         clearTimeout(refetchTimer.current)
-        refetchTimer.current = setTimeout(fetchProjects, 350)
+        refetchTimer.current = setTimeout(fetchProjects, 300)
       })
       .subscribe()
 
@@ -71,23 +77,32 @@ export default function ProjectsSidebar() {
     }
   }, [fetchProjects])
 
-  // ── Acciones (solo admin) ─────────────────────────────────────────────────
+  const openAdding = () => {
+    setSaveError('')
+    setAdding(true)
+    setTimeout(() => nameInputRef.current?.focus(), 80)
+  }
+
   const handleAdd = async () => {
-    if (!newName.trim() || !isAdmin) return
-    setSaveError(null)
-    const maxPos = projects.length > 0 ? Math.max(...projects.map(p => p.position)) + 1 : 0
+    const cleanName = newName.trim()
+    if (!cleanName || !isAdmin) return
+
+    setSaveError('')
+    const maxPosition = projects.length
+      ? Math.max(...projects.map((project) => Number(project.position) || 0)) + 1
+      : 0
     const { data, error } = await supabase
       .from('sidebar_projects')
-      .insert({ name: newName.trim(), status: newStatus, position: maxPos })
+      .insert({ name: cleanName, status: newStatus, position: maxPosition })
       .select()
       .single()
+
     if (error) {
-      console.error('[ALAS] sidebar insert error:', error)
       setSaveError(error.message)
       return
     }
-    // Actualizar estado local de inmediato sin esperar realtime
-    setProjects(prev => [...prev, data])
+
+    setProjects((current) => [...current, data])
     setNewName('')
     setNewStatus('trabajando')
     setAdding(false)
@@ -95,476 +110,237 @@ export default function ProjectsSidebar() {
 
   const handleDelete = async (id) => {
     if (!isAdmin) return
-    // Optimistic: quitar de la UI de inmediato
-    const prev = projects
-    setProjects(p => p.filter(x => x.id !== id))
+    const previous = projects
+    setProjects((current) => current.filter((project) => project.id !== id))
     const { error } = await supabase.from('sidebar_projects').delete().eq('id', id)
-    if (error) {
-      console.error('[ALAS] sidebar delete error:', error)
-      setProjects(prev) // revertir si falla
-    }
+    if (error) setProjects(previous)
   }
 
   const handleCycleStatus = async (id) => {
     if (!isAdmin) return
-    const p = projects.find(p => p.id === id)
-    if (!p) return
-    const idx  = STATUS.findIndex(s => s.value === p.status)
-    const next = STATUS[(idx + 1) % STATUS.length]
-    // Optimistic
-    setProjects(prev => prev.map(x => x.id === id ? { ...x, status: next.value } : x))
-    await supabase.from('sidebar_projects').update({ status: next.value }).eq('id', id)
+    const project = projects.find((item) => item.id === id)
+    if (!project) return
+    const currentIndex = STATUS.findIndex((status) => status.value === project.status)
+    const nextStatus = STATUS[(currentIndex + 1) % STATUS.length]
+    setProjects((current) => current.map((item) => (
+      item.id === id ? { ...item, status: nextStatus.value } : item
+    )))
+    await supabase.from('sidebar_projects').update({ status: nextStatus.value }).eq('id', id)
   }
 
   const handleReorder = useCallback(async (newOrder) => {
     if (!isAdmin) return
     setProjects(newOrder)
-    await Promise.all(
-      newOrder.map((p, i) =>
-        supabase.from('sidebar_projects').update({ position: i }).eq('id', p.id)
-      )
-    )
+    await Promise.all(newOrder.map((project, index) => (
+      supabase.from('sidebar_projects').update({ position: index }).eq('id', project.id)
+    )))
   }, [isAdmin])
 
-  const openAdding = () => {
-    setAdding(true)
-    setTimeout(() => nameInputRef.current?.focus(), 80)
-  }
+  const initial = (profile?.full_name || profile?.username || 'U').charAt(0).toUpperCase()
 
   return (
-    <motion.aside
-      animate={{ width: open ? 272 : 52 }}
-      transition={{ duration: 0.35, ease: EASE }}
-      style={{
-        flexShrink: 0,
-        height: '100%',
-        background: 'rgba(255,255,255,0.52)',
-        backdropFilter: 'blur(18px) saturate(130%)',
-        WebkitBackdropFilter: 'blur(18px) saturate(130%)',
-        borderRight: `1px solid ${T.border}`,
-        boxShadow: '2px 0 16px rgba(11,95,141,0.04)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        position: 'relative',
-        zIndex: 5,
-        userSelect: 'none',
-      }}
-    >
-      {/* ── Toggle ──────────────────────────────────────────────────────────── */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        title={open ? 'Colapsar panel' : 'Expandir panel'}
-        style={{
-          position: 'absolute', top: 14, right: 10,
-          width: 28, height: 28, borderRadius: 8, border: 'none',
-          background: 'rgba(11,95,141,0.07)', color: T.brand,
-          display: 'grid', placeItems: 'center', cursor: 'pointer', zIndex: 2,
-          transition: 'background 150ms ease',
-          flexShrink: 0,
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(11,95,141,0.14)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'rgba(11,95,141,0.07)'}
-      >
-        {open
-          ? <ChevronLeft  style={{ width: 14, height: 14 }} />
-          : <ChevronRight style={{ width: 14, height: 14 }} />
-        }
-      </button>
+    <>
+      <AnimatePresence>
+        {!open && (
+          <motion.button
+            type="button"
+            className="launcher-panel-trigger"
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.7, x: 18 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.85, x: 18 }}
+            transition={{ duration: reduceMotion ? 0 : 0.3, ease: EASE }}
+            onClick={() => setOpen(true)}
+            aria-label="Abrir panel de operaciones"
+          >
+            <ChevronLeft aria-hidden />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
-      {/* ── Contenido expandido ──────────────────────────────────────────────── */}
       <AnimatePresence>
         {open && (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { delay: 0.08, duration: 0.25 } }}
-            exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            style={{ display: 'flex', flexDirection: 'column', height: '100%', minWidth: 272 }}
+          <motion.aside
+            className="launcher-side-panel"
+            initial={reduceMotion ? false : { x: 370, opacity: 0.6 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 370, opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.52, ease: EASE }}
+            aria-label="Panel de operaciones"
           >
-            {/* Header */}
-            <div style={{
-              padding: '18px 16px 12px',
-              borderBottom: `1px solid ${T.border}`,
-              display: 'flex', alignItems: 'center', gap: 8,
-              paddingRight: 48,
-            }}>
-              <FolderKanban style={{ width: 15, height: 15, color: T.brand, flexShrink: 0 }} />
-              <span style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 10.5, fontWeight: 700, letterSpacing: '0.10em',
-                textTransform: 'uppercase', color: T.brand,
-              }}>
-                Proyectos
-              </span>
-              <span style={{
-                marginLeft: 'auto',
-                fontSize: 10, fontWeight: 700,
-                background: 'rgba(11,95,141,0.10)',
-                color: T.brand, borderRadius: 99, padding: '2px 8px',
-                fontFamily: '"Inter", sans-serif',
-              }}>
-                {loading ? '…' : projects.length}
-              </span>
+            <div className="side-panel-profile">
+              <button
+                type="button"
+                className="side-panel-close"
+                onClick={() => setOpen(false)}
+                aria-label="Cerrar panel"
+              >
+                <ChevronRight aria-hidden />
+              </button>
+
+              <div className="side-panel-user">
+                <span className="side-panel-avatar">{initial}</span>
+                <span className="side-panel-user-copy">
+                  <strong>{profile?.full_name || profile?.username || 'Usuario'}</strong>
+                  <small><i />{roleLabel}</small>
+                </span>
+              </div>
+
+              <AnimatePresence mode="wait" initial={false}>
+                {editMode ? (
+                  <motion.div
+                    key="editing"
+                    className="side-panel-edit-actions"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                  >
+                    <button type="button" onClick={onCancelEdit}><X aria-hidden />Cancelar</button>
+                    <button type="button" className="primary" onClick={onSaveEdit}><Check aria-hidden />Guardar</button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="order"
+                    type="button"
+                    className="side-panel-order"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onStartEdit}
+                  >
+                    <LayoutGrid aria-hidden /> Ordenar hub
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              <div className="side-panel-account-actions">
+                {isAdmin && (
+                  <Link to="/admin" onClick={onAdminNav}>
+                    <Settings2 aria-hidden /> Admin
+                  </Link>
+                )}
+                <button type="button" onClick={onSignOut}>
+                  <LogOut aria-hidden /> Salir
+                </button>
+              </div>
             </div>
 
-            {/* Lista */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 0', scrollbarWidth: 'none' }}>
+            <div className="side-panel-divider" />
 
-              {/* Estado vacío */}
-              {!loading && projects.length === 0 && !adding && (
-                <div style={{
-                  textAlign: 'center', padding: '32px 16px',
-                  color: T.text3, fontSize: 12, lineHeight: 1.6,
-                  fontFamily: '"Inter", sans-serif',
-                }}>
-                  Sin proyectos aún.
-                  {isAdmin && (
-                    <>
-                      <br />
-                      <span
-                        style={{ color: T.brand, fontWeight: 600, cursor: 'pointer' }}
-                        onClick={openAdding}
-                      >
-                        Añadí el primero
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
+            <section className="side-panel-projects">
+              <header>
+                <span><FolderKanban aria-hidden /> Proyectos</span>
+                <b>{loading ? '…' : projects.length}</b>
+              </header>
 
-              {/* Skeleton carga */}
-              {loading && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {[1, 2, 3].map(i => (
-                    <div key={i} style={{
-                      height: 68, borderRadius: 14,
-                      background: 'rgba(11,95,141,0.05)',
-                      animation: `bob ${1.2 + i * 0.2}s ease-in-out infinite`,
-                    }} />
-                  ))}
-                </div>
-              )}
+              <div className="side-panel-project-list">
+                {!loading && projects.length === 0 && !adding && (
+                  <div className="side-panel-empty">
+                    <p>Sin proyectos aún.</p>
+                    {isAdmin && <button type="button" onClick={openAdding}>Añadir el primero</button>}
+                  </div>
+                )}
 
-              {/* Lista reordenable (solo admin arrastra) */}
-              {!loading && (
-                <Reorder.Group
-                  axis="y"
-                  values={projects}
-                  onReorder={handleReorder}
-                  style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}
-                >
-                  {projects.map((p, i) => (
-                    <Reorder.Item
-                      key={p.id}
-                      value={p}
-                      dragListener={isAdmin}
-                      style={{ borderRadius: 14, cursor: isAdmin ? 'grab' : 'default' }}
-                      whileDrag={isAdmin ? {
-                        scale: 1.03,
-                        boxShadow: '0 16px 32px rgba(11,95,141,0.18)',
-                        zIndex: 99,
-                        cursor: 'grabbing',
-                      } : {}}
-                    >
-                      <div
-                        onMouseEnter={() => setHovered(p.id)}
-                        onMouseLeave={() => setHovered(null)}
-                        style={{
-                          background: hovered === p.id ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.78)',
-                          border: hovered === p.id
-                            ? `1px solid ${statusColor(p.status)}40`
-                            : '1px solid rgba(226,232,240,0.85)',
-                          borderRadius: 14,
-                          padding: '11px 12px 10px',
-                          transition: 'background 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
-                          boxShadow: hovered === p.id
-                            ? `0 6px 20px rgba(11,95,141,0.09), 0 0 0 3px ${statusColor(p.status)}12`
-                            : '0 2px 8px rgba(11,95,141,0.04)',
-                          position: 'relative',
-                          backdropFilter: 'blur(8px)',
-                          WebkitBackdropFilter: 'blur(8px)',
-                        }}
-                      >
-                        {/* Fila superior: número + grip + nombre + eliminar */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
-                          {/* Número de orden */}
-                          <span style={{
-                            width: 18, height: 18, borderRadius: 6, flexShrink: 0,
-                            background: 'rgba(11,95,141,0.08)',
-                            color: T.brand,
-                            fontSize: 9.5, fontWeight: 800,
-                            fontFamily: '"JetBrains Mono", monospace',
-                            display: 'grid', placeItems: 'center',
-                            letterSpacing: '-0.02em',
-                          }}>
-                            {i + 1}
-                          </span>
+                {loading && (
+                  <div className="side-panel-skeletons" aria-label="Cargando proyectos">
+                    <i /><i /><i />
+                  </div>
+                )}
 
-                          {/* Grip — colapsa a ancho 0 cuando no hay hover */}
-                          {isAdmin && (
-                            <div style={{
-                              overflow: 'hidden', flexShrink: 0,
-                              width: hovered === p.id ? 12 : 0,
-                              opacity: hovered === p.id ? 0.5 : 0,
-                              transition: 'width 150ms ease, opacity 150ms ease',
-                              display: 'flex', alignItems: 'center',
-                            }}>
-                              <GripVertical style={{ width: 12, height: 12, color: T.text3, flexShrink: 0 }} />
-                            </div>
-                          )}
-
-                          <span style={{
-                            flex: 1, fontSize: 12.5, fontWeight: 700,
-                            color: T.text1, fontFamily: '"Inter", sans-serif',
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                            letterSpacing: '-0.015em', lineHeight: 1.3,
-                          }}>
-                            {p.name}
-                          </span>
-
-                          {isAdmin && (
-                            <button
-                              onPointerDown={e => e.stopPropagation()}
-                              onClick={e => { e.stopPropagation(); handleDelete(p.id) }}
-                              title="Eliminar proyecto"
-                              style={{
-                                width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                                border: 'none', background: 'rgba(239,68,68,0.08)',
-                                color: T.danger, cursor: 'pointer',
-                                display: 'grid', placeItems: 'center',
-                                opacity: hovered === p.id ? 1 : 0,
-                                pointerEvents: hovered === p.id ? 'auto' : 'none',
-                                transition: 'opacity 120ms ease, background 120ms ease',
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                            >
-                              <X style={{ width: 10, height: 10 }} />
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Fila inferior: pill de estado */}
-                        <div
-                          onPointerDown={e => e.stopPropagation()}
-                          onClick={() => isAdmin && handleCycleStatus(p.id)}
-                          title={isAdmin ? 'Clic para cambiar estado' : statusLabel(p.status)}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: `${statusColor(p.status)}14`,
-                            borderRadius: 99, padding: '3px 9px 3px 7px',
-                            cursor: isAdmin ? 'pointer' : 'default',
-                            transition: 'background 150ms ease, transform 150ms ease',
-                            border: 'none',
-                          }}
-                          onMouseEnter={e => {
-                            if (!isAdmin) return
-                            e.currentTarget.style.background = `${statusColor(p.status)}26`
-                            e.currentTarget.style.transform = 'scale(1.04)'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = `${statusColor(p.status)}14`
-                            e.currentTarget.style.transform = 'scale(1)'
-                          }}
+                {!loading && projects.length > 0 && (
+                  <Reorder.Group axis="y" values={projects} onReorder={handleReorder}>
+                    {projects.map((project) => {
+                      const status = statusData(project.status)
+                      return (
+                        <Reorder.Item
+                          key={project.id}
+                          value={project}
+                          dragListener={isAdmin}
+                          onMouseEnter={() => setHovered(project.id)}
+                          onMouseLeave={() => setHovered(null)}
+                          className="side-panel-project"
+                          whileDrag={isAdmin ? { scale: 1.025, zIndex: 20 } : undefined}
                         >
-                          <span style={{
-                            width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                            background: statusColor(p.status),
-                            boxShadow: `0 0 5px ${statusColor(p.status)}90`,
-                          }} />
-                          <span style={{
-                            fontSize: 10.5, fontWeight: 600,
-                            color: statusColor(p.status),
-                            fontFamily: '"Inter", sans-serif',
-                            letterSpacing: '-0.01em',
-                          }}>
-                            {statusLabel(p.status)}
-                          </span>
-                        </div>
-                      </div>
-                    </Reorder.Item>
-                  ))}
-                </Reorder.Group>
-              )}
+                          <div>
+                            {isAdmin && <GripVertical className={hovered === project.id ? 'visible' : ''} aria-hidden />}
+                            <strong>{project.name}</strong>
+                            {isAdmin && hovered === project.id && (
+                              <button type="button" onClick={() => handleDelete(project.id)} aria-label={`Eliminar ${project.name}`}>
+                                <X aria-hidden />
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="side-panel-status"
+                            disabled={!isAdmin}
+                            onClick={() => handleCycleStatus(project.id)}
+                            style={{ '--project-status': status.color }}
+                          >
+                            <i /> {status.label}
+                          </button>
+                        </Reorder.Item>
+                      )
+                    })}
+                  </Reorder.Group>
+                )}
 
-              {/* Formulario inline añadir (solo admin) */}
-              <AnimatePresence>
-                {adding && isAdmin && (
-                  <motion.div
-                    key="add-form"
-                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                    animate={{ opacity: 1, height: 'auto', marginTop: 6 }}
-                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                    transition={{ duration: 0.22, ease: EASE }}
-                    style={{ overflow: 'hidden' }}
-                  >
-                    <div style={{
-                      background: 'rgba(255,255,255,0.92)',
-                      border: `1px solid rgba(11,95,141,0.20)`,
-                      borderRadius: 14, padding: '12px 12px 10px',
-                      display: 'flex', flexDirection: 'column', gap: 10,
-                      boxShadow: '0 4px 16px rgba(11,95,141,0.08)',
-                    }}>
+                <AnimatePresence>
+                  {adding && isAdmin && (
+                    <motion.div
+                      className="side-panel-add-form"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
                       <input
                         ref={nameInputRef}
-                        type="text"
-                        placeholder="Nombre del proyecto..."
                         value={newName}
-                        onChange={e => { setNewName(e.target.value); setSaveError(null) }}
-                        onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAdding(false) }}
-                        style={{
-                          width: '100%', boxSizing: 'border-box',
-                          border: '1px solid rgba(226,232,240,0.9)',
-                          borderRadius: 9, padding: '8px 10px',
-                          fontSize: 12.5, fontFamily: '"Inter", sans-serif',
-                          color: T.text1, outline: 'none',
-                          background: '#ffffff',
+                        onChange={(event) => {
+                          setNewName(event.target.value)
+                          setSaveError('')
                         }}
-                        onFocus={e => e.target.style.borderColor = 'rgba(11,95,141,0.40)'}
-                        onBlur={e => e.target.style.borderColor = 'rgba(226,232,240,0.9)'}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') handleAdd()
+                          if (event.key === 'Escape') setAdding(false)
+                        }}
+                        placeholder="Nombre del proyecto…"
+                        aria-label="Nombre del proyecto"
                       />
-
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {STATUS.map(s => (
+                      <div className="side-panel-status-options">
+                        {STATUS.map((status) => (
                           <button
-                            key={s.value}
-                            onClick={() => setNewStatus(s.value)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 5,
-                              padding: '4px 9px', borderRadius: 99, border: 'none',
-                              background: newStatus === s.value ? `${s.color}20` : 'rgba(0,0,0,0.04)',
-                              color: newStatus === s.value ? s.color : T.text3,
-                              fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
-                              fontFamily: '"Inter", sans-serif',
-                              outline: newStatus === s.value ? `1.5px solid ${s.color}50` : 'none',
-                              transition: 'all 150ms ease',
-                            }}
+                            type="button"
+                            key={status.value}
+                            className={newStatus === status.value ? 'selected' : ''}
+                            onClick={() => setNewStatus(status.value)}
                           >
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                            {s.label}
+                            {status.label}
                           </button>
                         ))}
                       </div>
-
-                      {saveError && (
-                        <div style={{
-                          fontSize: 10.5, color: T.danger,
-                          background: 'rgba(239,68,68,0.07)',
-                          border: '1px solid rgba(239,68,68,0.20)',
-                          borderRadius: 8, padding: '6px 10px',
-                          fontFamily: '"Inter", sans-serif',
-                          lineHeight: 1.4,
-                        }}>
-                          {saveError.includes('does not exist')
-                            ? 'La tabla no existe aún. Corré el SQL en Supabase Studio primero.'
-                            : saveError}
-                        </div>
-                      )}
-
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          onClick={handleAdd}
-                          disabled={!newName.trim()}
-                          style={{
-                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                            padding: '7px 0', borderRadius: 9, border: 'none',
-                            background: newName.trim() ? `linear-gradient(135deg, #0B5F8D, #08486A)` : 'rgba(0,0,0,0.06)',
-                            color: newName.trim() ? '#fff' : T.text3,
-                            fontSize: 12, fontWeight: 700, cursor: newName.trim() ? 'pointer' : 'not-allowed',
-                            fontFamily: '"Inter", sans-serif',
-                            transition: 'all 150ms ease',
-                          }}
-                        >
-                          <Check style={{ width: 12, height: 12 }} />
-                          Añadir
+                      {saveError && <p>{saveError}</p>}
+                      <div className="side-panel-form-actions">
+                        <button type="button" className="primary" disabled={!newName.trim()} onClick={handleAdd}>
+                          <Check aria-hidden /> Añadir
                         </button>
-                        <button
-                          onClick={() => { setAdding(false); setNewName('') }}
-                          style={{
-                            width: 34, borderRadius: 9, border: '1px solid rgba(226,232,240,0.9)',
-                            background: '#fff', color: T.text3, cursor: 'pointer',
-                            display: 'grid', placeItems: 'center',
-                          }}
-                        >
-                          <X style={{ width: 12, height: 12 }} />
+                        <button type="button" onClick={() => setAdding(false)} aria-label="Cancelar">
+                          <X aria-hidden />
                         </button>
                       </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Footer — botón añadir (solo admin) */}
-            {!adding && isAdmin && (
-              <div style={{ padding: '10px 10px 14px', borderTop: `1px solid ${T.border}`, marginTop: 8 }}>
-                <button
-                  onClick={openAdding}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                    padding: '9px 0', borderRadius: 12,
-                    border: '1.5px dashed rgba(11,95,141,0.25)',
-                    background: 'transparent', color: T.brand,
-                    fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                    fontFamily: '"Inter", sans-serif', letterSpacing: '-0.01em',
-                    transition: 'background 150ms ease, border-color 150ms ease',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(11,95,141,0.05)'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.45)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.25)' }}
-                >
-                  <Plus style={{ width: 13, height: 13 }} />
-                  Nuevo proyecto
-                </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
+            </section>
+
+            {isAdmin && !adding && (
+              <footer className="side-panel-footer">
+                <button type="button" onClick={openAdding}><Plus aria-hidden /> Nuevo proyecto</button>
+              </footer>
             )}
-
-            {/* Leyenda de estados */}
-            <div style={{
-              padding: '8px 14px 14px',
-              display: 'flex', flexWrap: 'wrap', gap: '6px 10px',
-            }}>
-              {STATUS.map(s => (
-                <div key={s.value} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 9.5, color: T.text3, fontFamily: '"Inter", sans-serif', fontWeight: 600 }}>
-                    {s.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+          </motion.aside>
         )}
       </AnimatePresence>
-
-      {/* ── Vista colapsada — solo dots de color ─────────────────────────────── */}
-      <AnimatePresence>
-        {!open && (
-          <motion.div
-            key="collapsed"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { delay: 0.15 } }}
-            exit={{ opacity: 0 }}
-            style={{
-              paddingTop: 56, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 10,
-            }}
-          >
-            {projects.map(p => (
-              <div
-                key={p.id}
-                title={`${p.name} · ${statusLabel(p.status)}`}
-                style={{
-                  width: 10, height: 10, borderRadius: '50%',
-                  background: statusColor(p.status),
-                  boxShadow: `0 0 7px ${statusColor(p.status)}90`,
-                  cursor: 'default',
-                }}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.aside>
+    </>
   )
 }

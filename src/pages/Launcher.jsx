@@ -1,75 +1,73 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { LogOut, Settings2, Lock, LayoutGrid, Check, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import { useAuth } from '../lib/AuthContext'
 import { useModules } from '../hooks/useModules'
-import CircularLauncher from '../components/CircularLauncher'
 import AlasTransitionLoader from '../components/AlasTransitionLoader'
-import ProjectsSidebar from '../components/ProjectsSidebar'
+import CircularLauncher from '../components/CircularLauncher'
+import CommandPalette from '../components/CommandPalette'
 import MobileHub from '../components/MobileHub'
+import ProjectsSidebar from '../components/ProjectsSidebar'
 
-// Detecta pantallas chicas para servir la vista móvil PRO (grilla) en vez del radial.
-function useIsMobile(bp = 820) {
-  const [m, setM] = useState(() => typeof window !== 'undefined' && window.matchMedia(`(max-width:${bp}px)`).matches)
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width:${bp}px)`)
-    const on = () => setM(mq.matches)
-    mq.addEventListener ? mq.addEventListener('change', on) : mq.addListener(on)
-    return () => { mq.removeEventListener ? mq.removeEventListener('change', on) : mq.removeListener(on) }
-  }, [bp])
-  return m
+const EASE = [0.16, 1, 0.3, 1]
+
+const ROLE_LABEL = {
+  admin: 'Administrador',
+  supervisor: 'Supervisor',
+  operador: 'Operador',
+  registro: 'Registro',
+  calendario: 'Calendario',
+  acuses: 'Acuses',
+  invitado: 'Invitado',
 }
 
-// ── Helpers orden personalizado por usuario ───────────────────────────────
-const orderKey  = (uid) => `alas.hub.order.${uid}`
-const loadOrder = (uid) => { try { return JSON.parse(localStorage.getItem(orderKey(uid)) ?? 'null') } catch { return null } }
-const saveOrder = (uid, keys) => { try { localStorage.setItem(orderKey(uid), JSON.stringify(keys)) } catch {} }
+function useIsMobile(breakpoint = 820) {
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia(`(max-width:${breakpoint}px)`).matches
+  ))
 
-// Orden base automático: Habilitados → Sin permiso → En desarrollo
+  useEffect(() => {
+    const query = window.matchMedia(`(max-width:${breakpoint}px)`)
+    const update = () => setIsMobile(query.matches)
+    query.addEventListener ? query.addEventListener('change', update) : query.addListener(update)
+    return () => {
+      query.removeEventListener ? query.removeEventListener('change', update) : query.removeListener(update)
+    }
+  }, [breakpoint])
+
+  return isMobile
+}
+
+const orderKey = (userId) => `alas.hub.order.${userId}`
+
+function loadOrder(userId) {
+  try {
+    return JSON.parse(localStorage.getItem(orderKey(userId)) ?? 'null')
+  } catch {
+    return null
+  }
+}
+
+function saveOrder(userId, keys) {
+  try {
+    localStorage.setItem(orderKey(userId), JSON.stringify(keys))
+  } catch {
+    // La navegación no depende del orden visual guardado.
+  }
+}
+
 function groupByState(modules) {
-  const active   = modules.filter(m => !m.is_blocked && m.is_active !== false)
-  const blocked  = modules.filter(m =>  m.is_blocked)
-  const inactive = modules.filter(m =>  m.is_active === false)
+  const active = modules.filter((module) => !module.is_blocked && module.is_active !== false)
+  const blocked = modules.filter((module) => module.is_blocked)
+  const inactive = modules.filter((module) => module.is_active === false)
   return [...active, ...blocked, ...inactive]
 }
 
 function applyOrder(modules, savedKeys) {
-  // Sin orden guardado → agrupación automática por estado
   if (!savedKeys?.length) return groupByState(modules)
-  const map     = Object.fromEntries(modules.map(m => [m.key, m]))
-  const ordered = savedKeys.filter(k => map[k]).map(k => map[k])
-  // Módulos nuevos que no estaban en el orden guardado → al final, agrupados
-  const rest    = groupByState(modules.filter(m => !savedKeys.includes(m.key)))
-  return [...ordered, ...rest]
-}
-
-const ROLE_LABEL = {
-  admin:      'Administrador',
-  operador:   'Operador',
-  supervisor: 'Supervisor',
-  registro:   'Registro',
-  calendario: 'Calendario',
-  acuses:     'Acuses',
-  invitado:   'Invitado',
-}
-
-const EASE = [0.16, 1, 0.3, 1]
-
-const btnItem = {
-  hidden:  { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.4, ease: EASE } },
-}
-
-// ── Tokens inline para no depender de clases dark ────────────────────────
-const T = {
-  border:   'rgba(226,232,240,0.85)',
-  brand:    '#0B5F8D',
-  text1:    '#1e293b',
-  text2:    '#475569',
-  text3:    '#64748b',
-  surface:  '#ffffff',
-  bg:       'rgba(255,255,255,0.88)',
+  const moduleByKey = Object.fromEntries(modules.map((module) => [module.key, module]))
+  const ordered = savedKeys.filter((key) => moduleByKey[key]).map((key) => moduleByKey[key])
+  const remaining = groupByState(modules.filter((module) => !savedKeys.includes(module.key)))
+  return [...ordered, ...remaining]
 }
 
 export default function Launcher() {
@@ -77,31 +75,29 @@ export default function Launcher() {
   const { modules, loading: modulesLoading, openModule } = useModules()
   const isMobile = useIsMobile()
 
-  // El AppLoader se oculta solo cuando AMBOS terminaron: módulos Y perfil.
-  // Evita que el usuario pueda clicar ADMIN antes de que profile esté listo.
-  useEffect(() => {
-    if (modulesLoading || authLoading) return
-    const t = setTimeout(() => {
-      stopEntry();
-    }, 400)
-    return () => clearTimeout(t)
-  }, [modulesLoading, authLoading, stopEntry])
-  const [isExiting,    setIsExiting]    = useState(false)
-  const [isLaunching,  setIsLaunching]  = useState(false)
-  const [hubEditMode,  setHubEditMode]  = useState(false)
+  const [isExiting, setIsExiting] = useState(false)
+  const [isLaunching, setIsLaunching] = useState(false)
+  const [hubEditMode, setHubEditMode] = useState(false)
   const [pendingOrder, setPendingOrder] = useState(null)
-  const [hubOrderVer,  setHubOrderVer]  = useState(0)
+  const [hubOrderVersion, setHubOrderVersion] = useState(0)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [commandOpen, setCommandOpen] = useState(false)
+
+  useEffect(() => {
+    if (modulesLoading || authLoading) return undefined
+    const timer = setTimeout(stopEntry, 400)
+    return () => clearTimeout(timer)
+  }, [modulesLoading, authLoading, stopEntry])
 
   const orderedModules = useMemo(() => {
     if (!profile?.id || !modules.length) return modules
     return applyOrder(modules, loadOrder(profile.id))
-  // eslint-disable-next-line
-  }, [modules, profile?.id, hubOrderVer])
+  }, [modules, profile?.id, hubOrderVersion])
 
   const handleSaveHubOrder = () => {
-    if (pendingOrder?.length) {
-      saveOrder(profile.id, pendingOrder.map(m => m.key))
-      setHubOrderVer(v => v + 1)
+    if (profile?.id && pendingOrder?.length) {
+      saveOrder(profile.id, pendingOrder.map((module) => module.key))
+      setHubOrderVersion((version) => version + 1)
     }
     setHubEditMode(false)
     setPendingOrder(null)
@@ -112,9 +108,8 @@ export default function Launcher() {
     setPendingOrder(null)
   }
 
-  const handleSignOut = () => setIsExiting(true)
-
   const handleOpenModule = useCallback(async (key) => {
+    setCommandOpen(false)
     setIsLaunching(true)
     try {
       const result = await openModule(key)
@@ -127,302 +122,101 @@ export default function Launcher() {
   }, [openModule])
 
   const exitState = isExiting
-    ? { opacity: 0, scale: 0.98,  y:  8 }
+    ? { opacity: 0, scale: 0.965, filter: 'blur(8px)' }
     : isLaunching
-    ? { opacity: 0, scale: 0.992, y: -6 }
-    : { opacity: 1, scale: 1,     y:  0 }
+      ? { opacity: 0, scale: 0.985, filter: 'blur(5px)' }
+      : { opacity: 1, scale: 1, filter: 'blur(0px)' }
+
+  const roleLabel = ROLE_LABEL[profile?.role] || profile?.role || '—'
 
   return (
     <>
-    {/* Aurora background — fijo, no participa en animaciones de salida */}
-    <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      <div className="alas-aurora alas-aurora-1" />
-      <div className="alas-aurora alas-aurora-2" />
-      <div className="alas-aurora alas-aurora-3" />
-    </div>
+      <div className="launcher-background" aria-hidden>
+        <div className="launcher-world-map" />
+        <div className="launcher-vignette" />
+        <div className="alas-aurora alas-aurora-1" />
+        <div className="alas-aurora alas-aurora-2" />
+      </div>
 
-    <motion.div
-      className="h-full flex flex-col"
-      style={{ position: 'relative', zIndex: 1 }}
-      initial={{ opacity: 0, y: 10, scale: 0.985 }}
-      animate={exitState}
-      exit={{ opacity: 0, y: -7, scale: 0.992, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
-      transition={{
-        duration: 0.28,
-        ease:     (isExiting || isLaunching) ? [0.4, 0, 1, 1] : [0.16, 1, 0.3, 1],
-      }}
-      onAnimationComplete={() => { if (isExiting) signOut() }}
-    >
-
-      {isMobile ? (
-        <MobileHub
-          profile={profile}
-          modules={orderedModules}
-          onOpen={handleOpenModule}
-          onSignOut={handleSignOut}
-          canAdmin={profile?.role === 'admin'}
-          roleLabel={ROLE_LABEL[profile?.role] || profile?.role || '—'}
-          onAdminNav={stopEntry}
-        />
-      ) : (
-      <>
-      {/* ════ Header ════════════════════════════════════════════════════ */}
-      <motion.header
-        style={{
-          background: 'rgba(255, 255, 255, 0.45)',
-          backdropFilter: 'blur(12px) saturate(120%)',
-          WebkitBackdropFilter: 'blur(12px) saturate(120%)',
-          borderBottom: '1px solid rgba(11, 95, 141, 0.15)',
-          boxShadow: '0 8px 32px 0 rgba(11, 95, 141, 0.04), 0 1px 0 0 rgba(255, 255, 255, 0.35) inset',
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 24px',
-          zIndex: 10,
+      <motion.div
+        className="h-full"
+        style={{ position: 'relative', zIndex: 1 }}
+        initial={{ opacity: 0, y: 10, scale: 0.985 }}
+        animate={exitState}
+        transition={{
+          duration: isExiting || isLaunching ? 0.26 : 0.48,
+          ease: isExiting || isLaunching ? [0.4, 0, 1, 1] : EASE,
         }}
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, ease: EASE }}
+        onAnimationComplete={() => {
+          if (isExiting) signOut()
+        }}
       >
-        {/* Izquierda — tarjeta usuario */}
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            background: 'rgba(255, 255, 255, 0.65)',
-            border: '1px solid rgba(11, 95, 141, 0.12)',
-            borderRadius: 14,
-            padding: '10px 16px',
-            boxShadow: '0 4px 12px rgba(11, 95, 141, 0.04)',
-          }}
-        >
-          {/* Avatar */}
-          <div style={{
-            width: 40, height: 40, borderRadius: 11, flexShrink: 0,
-            background: 'linear-gradient(135deg, #0B5F8D, #08486A)',
-            display: 'grid', placeItems: 'center',
-            fontFamily: '"Sora", system-ui, sans-serif',
-            fontWeight: 700, fontSize: 16,
-            color: '#ffffff',
-            boxShadow: '0 3px 10px rgba(11, 95, 141, 0.25)',
-          }}>
-            {(profile?.full_name || 'U').charAt(0).toUpperCase()}
-          </div>
-
-          <div>
-            <p style={{
-              fontFamily: '"Inter", system-ui, sans-serif',
-              fontWeight: 600, fontSize: 14,
-              color: T.text1,
-              letterSpacing: '-0.01em',
-              lineHeight: 1.2,
-              margin: 0,
-            }}>
-              {profile?.full_name || 'usuario'}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px rgba(16,185,129,0.55)', flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: T.text3, fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}>
-                {ROLE_LABEL[profile?.role] || '—'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Centro — logo absolutamente centrado */}
-        <div style={{
-          position: 'absolute',
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-        }}>
-          <motion.img
-            src="/logo.png"
-            alt="ALAS"
-            style={{
-              height: 34, width: 'auto', display: 'block',
-              filter: 'brightness(0) saturate(100%) invert(24%) sepia(61%) saturate(1200%) hue-rotate(183deg) brightness(85%)',
-            }}
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: EASE }}
+        {isMobile ? (
+          <MobileHub
+            profile={profile}
+            modules={orderedModules}
+            onOpen={handleOpenModule}
+            onSignOut={() => setIsExiting(true)}
+            canAdmin={profile?.role === 'admin'}
+            roleLabel={roleLabel}
+            onAdminNav={stopEntry}
           />
-        </div>
-
-        {/* Derecha — botones */}
-        <motion.div
-          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-          initial="hidden"
-          animate="visible"
-          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.06 } } }}
-        >
-          {/* Ordenar Hub / Listo / Cancelar */}
-          <AnimatePresence mode="wait">
-            {hubEditMode ? (
-              <motion.div key="edit-btns" variants={btnItem}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                style={{ display: 'flex', gap: 6 }}
-              >
-                <button onClick={handleCancelHubOrder} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  padding: '10px 18px', borderRadius: 12,
-                  background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(148,163,184,0.30)',
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 600,
-                  color: '#64748b', cursor: 'pointer', transition: 'all 150ms ease',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.75)'}
-                >
-                  <X style={{ width: 13, height: 13 }} />
-                  CANCELAR
-                </button>
-                <button onClick={handleSaveHubOrder} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  padding: '10px 20px', borderRadius: 12,
-                  background: 'linear-gradient(135deg,#0B5F8D,#08486A)',
-                  border: 'none',
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700,
-                  color: '#fff', cursor: 'pointer', transition: 'opacity 150ms ease',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                >
-                  <Check style={{ width: 13, height: 13 }} />
-                  LISTO
-                </button>
-              </motion.div>
-            ) : (
-              <motion.div key="order-btn" variants={btnItem}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              >
-                <button onClick={() => setHubEditMode(true)} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '10px 20px', borderRadius: 12,
-                  background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(11,95,141,0.18)',
-                  boxShadow: '0 2px 10px rgba(11,95,141,0.07)',
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, fontWeight: 600,
-                  letterSpacing: '-0.01em', color: '#0B5F8D', cursor: 'pointer',
-                  transition: 'all 150ms ease',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#f0f7ff'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.35)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.18)' }}
-                >
-                  <LayoutGrid style={{ width: 14, height: 14 }} />
-                  ORDENAR HUB
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {(() => {
-            const canAccess = profile?.role === 'admin'
-            return (
-              <motion.div variants={btnItem}>
-                {canAccess ? (
-                  <Link to="/admin" onClick={stopEntry} style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '10px 20px', borderRadius: 12,
-                    background: 'rgba(255, 255, 255, 0.75)',
-                    border: '1px solid rgba(11, 95, 141, 0.18)',
-                    boxShadow: '0 2px 10px rgba(11, 95, 141, 0.07)',
-                    fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-                    fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em',
-                    color: '#0B5F8D', textDecoration: 'none',
-                    transition: 'all 150ms ease',
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#f0f7ff'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.35)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(11,95,141,0.18)' }}
-                  >
-                    <Settings2 style={{ width: 15, height: 15, color: '#0B5F8D' }} />
-                    <span>ADMIN // CONTROL</span>
-                  </Link>
-                ) : (
-                  <div title="Sin permisos de acceso" style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '10px 20px', borderRadius: 12,
-                    background: 'rgba(255, 255, 255, 0.40)',
-                    border: '1px solid rgba(148, 163, 184, 0.25)',
-                    fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-                    fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em',
-                    color: '#94a3b8', cursor: 'not-allowed',
-                    opacity: 0.6,
-                  }}>
-                    <Lock style={{ width: 13, height: 13 }} />
-                    <span>ADMIN // CONTROL</span>
-                  </div>
-                )}
-              </motion.div>
-            )
-          })()}
-          <motion.div variants={btnItem}>
-            <button onClick={handleSignOut} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '10px 20px', borderRadius: 12,
-              background: 'rgba(255, 255, 255, 0.75)',
-              border: '1px solid rgba(239, 68, 68, 0.18)',
-              boxShadow: '0 2px 10px rgba(239, 68, 68, 0.06)',
-              fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-              fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.01em',
-              color: '#ef4444', cursor: 'pointer',
-              transition: 'all 150ms ease',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#fff1f1'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.75)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.18)' }}
+        ) : (
+          <div className="launcher-desktop-shell">
+            <motion.header
+              className="launcher-brand"
+              initial={{ opacity: 0, y: -18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EASE, delay: 0.08 }}
             >
-              <LogOut style={{ width: 15, height: 15 }} />
-              <span>CERRAR SESIÓN</span>
-            </button>
-          </motion.div>
-        </motion.div>
-      </motion.header>
+              <img src="/logo.png" alt="ALAS" />
+            </motion.header>
 
-      {/* ════ Body — sidebar flotante + main siempre centrado ══════════ */}
-      <div className="relative z-10 flex-1" style={{ position: 'relative', overflow: 'hidden' }}>
+            <main className="launcher-orbit-stage">
+              {modulesLoading ? null : modules.length === 0 ? (
+                <motion.div
+                  className="launcher-empty-state"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, ease: EASE }}
+                >
+                  <strong>Sin módulos asignados</strong>
+                  <span>Pedí acceso al administrador.</span>
+                </motion.div>
+              ) : (
+                <CircularLauncher
+                  modules={orderedModules}
+                  onOpen={handleOpenModule}
+                  editMode={hubEditMode}
+                  onOrderChange={setPendingOrder}
+                />
+              )}
+            </main>
 
-        {/* Sidebar overlay — no desplaza el launcher, flota sobre él */}
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 5 }}>
-          <ProjectsSidebar />
-        </div>
+            <ProjectsSidebar
+              open={sidebarOpen}
+              setOpen={setSidebarOpen}
+              roleLabel={roleLabel}
+              editMode={hubEditMode}
+              onStartEdit={() => setHubEditMode(true)}
+              onSaveEdit={handleSaveHubOrder}
+              onCancelEdit={handleCancelHubOrder}
+              onSignOut={() => setIsExiting(true)}
+              onAdminNav={stopEntry}
+            />
 
-        {/* Main ocupa todo el ancho → launcher siempre centrado en pantalla */}
-        <main style={{
-          position: 'absolute', inset: 0,
-          display: 'grid', placeItems: 'center',
-          overflow: 'hidden',
-        }}>
-          {modulesLoading ? (
-            null
-          ) : modules.length === 0 ? (
-            <motion.div
-              className="text-center space-y-1"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE }}
-            >
-              <p style={{ fontSize: 14, color: T.text2, fontFamily: '"Inter", system-ui' }}>
-                Sin módulos asignados.
-              </p>
-              <p style={{ fontSize: 12, color: T.text3 }}>
-                Pedí acceso al administrador.
-              </p>
-            </motion.div>
-          ) : (
-            <CircularLauncher
+            <CommandPalette
+              open={commandOpen}
+              onClose={() => setCommandOpen(false)}
+              onRequestOpen={() => setCommandOpen(true)}
               modules={orderedModules}
               onOpen={handleOpenModule}
-              editMode={hubEditMode}
-              onOrderChange={setPendingOrder}
             />
-          )}
-        </main>
+          </div>
+        )}
+      </motion.div>
 
-      </div>
-      </>
-      )}
-
-    </motion.div>
-    <AlasTransitionLoader active={isLaunching} label="Abriendo módulo" />
-
+      <AlasTransitionLoader active={isLaunching} label="Abriendo módulo" />
     </>
   )
 }

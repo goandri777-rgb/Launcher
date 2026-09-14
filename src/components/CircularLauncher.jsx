@@ -54,7 +54,7 @@ function lineBaseColor(state) {
 
 function nodeStyles(state, hov) {
   const base = {
-    borderRadius: 22, width: BTN_SIZE, height: BTN_SIZE,
+    borderRadius: '50%', width: BTN_SIZE, height: BTN_SIZE,
     transition: 'none',
     transformOrigin: '50% 50%',
     backfaceVisibility: 'hidden',
@@ -62,31 +62,31 @@ function nodeStyles(state, hov) {
   }
   if (state === 'inactive') return {
     ...base,
-    background: 'rgba(240, 249, 255, 0.78)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255,255,255,0.80)',
-    boxShadow: '0 4px 16px rgba(37, 99, 235, 0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
-    opacity: 1,
+    background: 'rgba(248, 250, 252, 0.68)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    border: '1px solid rgba(13, 82, 119, 0.18)',
+    boxShadow: '0 4px 16px rgba(13, 82, 119, 0.05)',
+    opacity: 0.88,
     cursor: 'not-allowed',
   }
   if (state === 'blocked') return {
     ...base,
-    background: 'rgba(255,255,255,0.72)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255,255,255,0.82)',
-    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.04)',
+    background: 'rgba(255,255,255,0.82)',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    border: '1px solid rgba(13,82,119,0.26)',
+    boxShadow: '0 5px 16px rgba(13,82,119,0.08)',
     cursor: 'pointer',
-    opacity: 0.65,
+    opacity: 0.78,
   }
   return {
     ...base,
-    background: 'rgba(255,255,255,0.72)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255,255,255,0.85)',
-    boxShadow: '0 6px 22px rgba(11, 95, 141, 0.08), 0 2px 6px rgba(11, 95, 141, 0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+    background: 'rgba(255,255,255,0.94)',
+    backdropFilter: 'blur(18px)',
+    WebkitBackdropFilter: 'blur(18px)',
+    border: '1.5px solid #0D5277',
+    boxShadow: '0 9px 25px rgba(13,82,119,0.18), inset 0 2px 8px rgba(13,82,119,0.04)',
     cursor: 'pointer',
   }
 }
@@ -210,74 +210,76 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
         return
       }
 
-      const tl = gsap.timeline({ delay: 0.02 })
+      const tl = gsap.timeline({ delay: 0.08 })
 
-      // ── FASE 1: Sistema surge desde ángulo — más rápido, mismo feeling
+      // Fase 1: el sistema aparece con perspectiva.
       tl.to(systemRef.current, {
         autoAlpha: 1,
         rotationX: 0,
         scale: 1,
-        duration: 0.50,
+        duration: 0.58,
         ease: 'expo.out',
         force3D: true,
       }, 0)
 
-      // ── FASE 2: Hub emerge — más spring, empieza antes que antes
+      // Fase 2: barrido conjunto del hub y la órbita.
+      gsap.set(hubRef.current, { rotation: -180 })
+      gsap.set(orbitRef.current, { rotation: -180, transformOrigin: '50% 50%' })
+
       tl.to(hubRef.current, {
         autoAlpha: 1,
-        scale: 1.12,
-        duration: 0.30,
-        ease: 'back.out(2)',
-        force3D: true,
-      }, 0.22)
-      tl.to(hubRef.current, {
         scale: 1,
-        duration: 0.18,
+        rotation: 0,
+        duration: 1.18,
         ease: 'power3.out',
         force3D: true,
-      }, 0.52)
+      }, 0)
 
-      // ── FASE 3: Órbita snap — antes ──────────────────────────────────────
-      tl.set(orbitRef.current, { autoAlpha: 1 }, 0.28)
+      tl.set(orbitRef.current, { autoAlpha: 1 }, 0)
+      tl.to(orbitRef.current, {
+        rotation: 0,
+        duration: 1.42,
+        ease: 'power3.out',
+      }, 0)
 
-      // ── FASE 4: Líneas explotan — más temprano ────────────────────────────
-      tl.to(lineBaseRefs.current.filter(Boolean), {
-        strokeDashoffset: 0,
-        duration: 0.38,
-        stagger: 0,
-        ease: 'power4.out',
-      }, 0.34)
-
-      // ── FASE 5: Módulos en cascada — empiezan a 0.42 (antes era 0.70) ─────
+      // Fase 3: las conexiones y los módulos se encienden secuencialmente.
+      const sweepDuration = 0.98
       nodes.forEach((node, i) => {
         if (!node) return
-        const t = 0.42 + i * 0.050
+        const t = 0.18 + (i / Math.max(1, nodes.length - 1)) * sweepDuration
+        const line = lineBaseRefs.current[i]
+        if (line) {
+          tl.to(line, {
+            strokeDashoffset: 0,
+            duration: 0.34,
+            ease: 'power3.out',
+          }, t)
+        }
         tl.call(() => firePulse(i), [], t)
         tl.to(node, {
           autoAlpha: 1,
           scale: 1,
-          duration: 0.40,
-          ease: 'back.out(1.6)',
+          duration: 0.42,
+          ease: 'back.out(1.9)',
           force3D: true,
-        }, t)
+        }, t + 0.08)
       })
 
-      // ── FASE 6: Dashes fade-in junto a la cascada de nodos ───────────────
+      // Fase 4: la energía punteada queda circulando al cerrar el barrido.
       tl.to(dashLines, {
         opacity: 1,
-        duration: 0.50,
-        stagger: { each: 0.03, from: 'center' },
+        duration: 0.54,
+        stagger: 0.06,
         ease: 'power2.out',
-      }, 0.52)
+      }, 0.54)
 
-      // ── FASE 7: Hub float arranca tras el último nodo ─────────────────────
-      const lastNodeT = 0.42 + Math.max(0, nodes.length - 1) * 0.050
+      const lastNodeT = 0.18 + sweepDuration + 0.08
       tl.call(() => {
         floatTween.current?.kill()
         floatTween.current = gsap.to(hubRef.current, {
           y: -5, duration: 2.8, ease: 'sine.inOut', yoyo: true, repeat: -1,
         })
-      }, [], lastNodeT + 0.20)
+      }, [], lastNodeT + 0.24)
     })
 
     return () => {
@@ -969,7 +971,7 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
                 <div
                   data-hover-overlay
                   style={{
-                    position: 'absolute', inset: 0, borderRadius: 20,
+                    position: 'absolute', inset: 0, borderRadius: '50%',
                     background: '#f0f7ff',
                     boxShadow: '0 16px 36px rgba(11,95,141,0.15), 0 0 0 2px #0B5F8D, 0 0 0 5px rgba(11,95,141,0.08)',
                     opacity: 0,
@@ -978,14 +980,6 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
                   }}
                 />
               )}
-              {/* Top specular */}
-              <div style={{
-                position: 'absolute', top: 0, left: '50%',
-                transform: 'translateX(-50%)',
-                width: '46%', height: '1px', borderRadius: 99,
-                background: 'rgba(255,255,255,0.9)',
-              }} />
-
               {/* Status dot with subtle pulse */}
               <div style={{
                 position: 'absolute', top: 8, right: 8,
@@ -1070,7 +1064,7 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
               {/* Busy spinner */}
               {isBusy && (
                 <div className="absolute inset-0 grid place-items-center" style={{
-                  borderRadius: 22,
+                  borderRadius: '50%',
                   background: 'rgba(255,255,255,0.94)',
                 }}>
                   <div className="animate-spin rounded-full border-2" style={{
