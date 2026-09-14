@@ -258,14 +258,6 @@ body::before {
   z-index: 0;
 }
 
-.launcher-world-map {
-  position: absolute;
-  inset: 5% 12% 2% 7%;
-  background: url('/world-map.svg') center / contain no-repeat;
-  opacity: 0.024;
-  filter: saturate(0.7);
-}
-
 .launcher-vignette {
   position: absolute;
   inset: 0;

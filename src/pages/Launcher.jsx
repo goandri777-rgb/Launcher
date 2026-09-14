@@ -132,7 +132,6 @@ export default function Launcher() {
   return (
     <>
       <div className="launcher-background" aria-hidden>
-        <div className="launcher-world-map" />
         <div className="launcher-vignette" />
         <div className="alas-aurora alas-aurora-1" />
         <div className="alas-aurora alas-aurora-2" />
