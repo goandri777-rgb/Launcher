@@ -145,7 +145,6 @@ export default function Launcher() {
   }, [])
 
   const nombreCorto = (profile?.full_name || profile?.username || 'Usuario').trim().split(/[\s-]+/)[0]
-  const inicial = (profile?.full_name || profile?.username || 'U').charAt(0).toUpperCase()
 
   return (
     <>
@@ -195,11 +194,10 @@ export default function Launcher() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, ease: EASE, delay: 0.16 }}
             >
-              <span className="launcher-hello-avatar">{inicial}</span>
-              <div className="launcher-hello-copy">
-                <strong>{saludo}, {nombreCorto}</strong>
-                <small><i aria-hidden />{roleLabel}</small>
-              </div>
+              <h1 className="launcher-hello-title">
+                <span>{saludo},</span> <b>{nombreCorto}</b>
+              </h1>
+              <small className="launcher-hello-role"><i aria-hidden />{roleLabel}</small>
             </motion.div>
 
             <main className="launcher-orbit-stage">

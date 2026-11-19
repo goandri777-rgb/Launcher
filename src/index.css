@@ -298,66 +298,59 @@ body::before {
    panel azul y le comía el espacio a los botones. */
 .launcher-hello {
   position: absolute;
-  top: 24px;
-  left: 30px;
+  top: 34px;
+  left: 42px;
   z-index: 20;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
   pointer-events: none;
 }
 
-.launcher-hello-avatar {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  color: #fff;
+/* El saludo en peso liviano y el nombre en negrita: la jerarquía la hace la
+   tipografía, no una caja. */
+.launcher-hello-title {
+  margin: 0;
   font-family: 'Sora', sans-serif;
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  background: linear-gradient(135deg, #1a7cb0, #0b5f8d);
-  border-radius: 13px;
-  box-shadow: 0 6px 18px rgba(11,95,141,0.28);
-}
-
-.launcher-hello-copy {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.launcher-hello-copy strong {
-  color: #12303f;
-  font-family: 'Sora', sans-serif;
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  font-size: 38px;
+  line-height: 1.04;
+  letter-spacing: -0.038em;
   white-space: nowrap;
 }
 
-.launcher-hello-copy small {
+.launcher-hello-title span {
+  color: rgba(18,48,63,0.38);
+  font-weight: 300;
+}
+
+.launcher-hello-title b {
+  color: #12303f;
+  font-weight: 800;
+}
+
+.launcher-hello-role {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 3px;
-  color: rgba(18,48,63,0.5);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.09em;
+  gap: 7px;
+  margin-top: 11px;
+  color: rgba(18,48,63,0.34);
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
-.launcher-hello-copy i {
+.launcher-hello-role i {
   width: 6px;
   height: 6px;
   flex-shrink: 0;
   background: #10b981;
   border-radius: 50%;
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.16);
+}
+
+@media (max-width: 1400px) {
+  .launcher-hello-title { font-size: 30px; }
 }
 
 @media (max-width: 980px) {
