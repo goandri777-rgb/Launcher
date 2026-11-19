@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, UserPlus, ShieldCheck, ShieldX, Ban, CheckCircle2,
   X, Clock, Link2, Eye, EyeOff, Pencil, Check, UserCog,
-  Users, Boxes, TrendingUp, AlertTriangle, Trash2,
+  Users, Boxes, TrendingUp, AlertTriangle, Trash2, Search,
 } from 'lucide-react'
 import { adminApi } from '../lib/adminApi'
 import { getModuleIcon } from '../data/icons'
@@ -563,7 +563,35 @@ function EditUserModal({ user, onClose, onSaved, notify }) {
 }
 
 // ─── stat card ────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, accent, delay=0 }) {
+const _norm = t => String(t ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+// Resalta en amarillo las partes que coinciden con lo buscado.
+function Hl({ text, terms }) {
+  const s = String(text ?? '')
+  if (!terms || !terms.length) return <>{s}</>
+  const n = _norm(s)
+  const marks = new Array(s.length).fill(false)
+  terms.forEach(t => {
+    if (!t) return
+    let i = n.indexOf(t)
+    while (i >= 0) { for (let k = i; k < i + t.length && k < marks.length; k++) marks[k] = true; i = n.indexOf(t, i + 1) }
+  })
+  const parts = []
+  let i = 0
+  while (i < s.length) {
+    const m = marks[i]
+    let j = i
+    while (j < s.length && marks[j] === m) j++
+    const chunk = s.slice(i, j)
+    parts.push(m
+      ? <mark key={i} style={{background:'#fde68a',color:'inherit',borderRadius:2,padding:'0 1px'}}>{chunk}</mark>
+      : <span key={i}>{chunk}</span>)
+    i = j
+  }
+  return <>{parts}</>
+}
+
+function StatCard({ icon: Icon, label, value, accent, delay=0, onClick, active=false }) {
   const a = {
     blue:   { bg:'rgba(59, 130, 246, 0.12)', icon:C.brand,   ring:'rgba(59, 130, 246, 0.25)'   },
     green:  { bg:'rgba(16, 185, 129, 0.12)', icon:'#10b981', ring:'rgba(16, 185, 129, 0.25)'   },
@@ -571,11 +599,17 @@ function StatCard({ icon: Icon, label, value, accent, delay=0 }) {
     purple: { bg:'rgba(168, 85, 247, 0.12)', icon:'#a855f7', ring:'rgba(168, 85, 247, 0.25)'  },
   }[accent] || {}
 
+  const clickable = typeof onClick === 'function'
   return (
     <motion.div
       initial={{opacity:0,y:16,scale:0.97}} animate={{opacity:1,y:0,scale:1}}
+      whileHover={clickable ? {y:-2} : undefined}
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();onClick()} }) : undefined}
       transition={{duration:0.42,delay,ease:EASE}}
-      style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:'18px 20px',boxShadow:'0 1px 3px rgba(15,23,42,0.05)',display:'flex',alignItems:'center',gap:16}}
+      style={{background:C.surface,border:`1px solid ${active ? a.icon : C.border}`,borderRadius:16,padding:'18px 20px',boxShadow:active?`0 0 0 3px ${a.bg}, 0 6px 18px rgba(15,23,42,0.08)`:'0 1px 3px rgba(15,23,42,0.05)',cursor:clickable?'pointer':'default',transition:'border-color .18s, box-shadow .18s',display:'flex',alignItems:'center',gap:16}}
     >
       <div style={{width:46,height:46,borderRadius:13,flexShrink:0,background:a.bg,border:`1px solid ${a.ring}`,display:'grid',placeItems:'center'}}>
         <Icon style={{width:20,height:20,color:a.icon}}/>
@@ -617,6 +651,9 @@ export default function AdminPanel() {
   const [editingUser,  setEditingUser]  = useState(null)
   const [deletingUser, setDeletingUser] = useState(null)
   const [showCreate,   setShowCreate]   = useState(false)
+  const [q,    setQ]    = useState('')     // buscador de usuarios
+  const [fEst, setFEst] = useState(null)   // null | 'activos' | 'inactivos' | 'bloqueados'
+  const [fRol, setFRol] = useState(null)   // null | rol
   const [toast,       setToast]       = useState('')
   const toastTimer = useRef(null)
 
@@ -642,6 +679,18 @@ export default function AdminPanel() {
   const blocked = users.filter(u=>u.is_blocked).length
   const activeMods = modules.filter(m=>m.is_active).length
   const emailToName = Object.fromEntries(users.map(u => [u.email, u.full_name || u.username || u.email]))
+
+  // ── Buscador + filtros de la tabla de usuarios ──
+  const terms    = _norm(q).split(/\s+/).filter(Boolean)
+  const estadoDe = u => u.is_blocked ? 'bloqueados' : (u.is_active ? 'activos' : 'inactivos')
+  const coincide = u => { const h = _norm([u.full_name, u.username, u.email].filter(Boolean).join(' ')); return terms.every(t => h.includes(t)) }
+  const vistos   = users.filter(u => (!terms.length || coincide(u)) && (!fEst || estadoDe(u) === fEst) && (!fRol || u.role === fRol))
+  const hayFiltro = !!(terms.length || fEst || fRol)
+  const limpiar   = () => { setQ(''); setFEst(null); setFRol(null) }
+  const rolesPresentes = ROLES.filter(r => users.some(u => u.role === r))
+  const inactivos = users.filter(u => !u.is_active && !u.is_blocked).length
+  // Un estado ya elegido se vuelve a tocar para quitarlo.
+  const toggleEst = v => setFEst(p => p === v ? null : v)
 
 
   return (
@@ -696,10 +745,10 @@ export default function AdminPanel() {
 
         {/* Stats */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,minWidth:0}}>
-          <StatCard icon={Users}         label="Total usuarios"    value={users.length} accent="blue"   delay={0}    />
-          <StatCard icon={CheckCircle2}  label="Usuarios activos"  value={active}       accent="green"  delay={0.07} />
+          <StatCard icon={Users}         label="Total usuarios"    value={users.length} accent="blue"   delay={0}    onClick={()=>setFEst(null)} active={fEst===null}/>
+          <StatCard icon={CheckCircle2}  label="Usuarios activos"  value={active}       accent="green"  delay={0.07} onClick={()=>toggleEst('activos')} active={fEst==='activos'}/>
           <StatCard icon={Boxes}         label="Módulos activos"   value={activeMods}   accent="purple" delay={0.14} />
-          <StatCard icon={AlertTriangle} label="Bloqueados"        value={blocked}      accent="amber"  delay={0.21} />
+          <StatCard icon={AlertTriangle} label="Bloqueados"        value={blocked}      accent="amber"  delay={0.21} onClick={()=>toggleEst('bloqueados')} active={fEst==='bloqueados'}/>
         </div>
 
         {/* Main grid */}
@@ -709,10 +758,43 @@ export default function AdminPanel() {
           <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.42,delay:0.26,ease:EASE}}>
             <Card>
               <CardHeader title="Usuarios" right={
-                <span style={{fontSize:11,color:C.text4,background:C.surfaceHov,padding:'3px 9px',borderRadius:99,border:`1px solid ${C.border}`}}>
-                  {users.length} total
+                <span style={{fontSize:11,color:hayFiltro?C.brand:C.text4,background:hayFiltro?C.brandLight:C.surfaceHov,padding:'3px 9px',borderRadius:99,border:`1px solid ${hayFiltro?'transparent':C.border}`,fontWeight:hayFiltro?700:400}}>
+                  {hayFiltro ? `${vistos.length} de ${users.length}` : `${users.length} total`}
                 </span>
               }/>
+
+              {/* Buscador + filtro por rol */}
+              <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 18px',borderBottom:`1px solid ${C.border}`,flexWrap:'wrap'}}>
+                <div style={{position:'relative',flex:'1 1 230px',minWidth:0}}>
+                  <Search style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:14,height:14,color:C.text4,pointerEvents:'none'}}/>
+                  <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar por nombre, usuario o email…"
+                    style={{width:'100%',height:34,borderRadius:9,border:`1px solid ${C.border}`,background:C.surfaceHov,color:C.text1,fontSize:12.5,fontFamily:'inherit',padding:'0 30px 0 31px',outline:'none'}}
+                    onFocus={e=>{e.currentTarget.style.borderColor=C.brand;e.currentTarget.style.background=C.surface}}
+                    onBlur={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.background=C.surfaceHov}}/>
+                  {q && (
+                    <button onClick={()=>setQ('')} title="Limpiar"
+                      style={{position:'absolute',right:7,top:'50%',transform:'translateY(-50%)',width:19,height:19,borderRadius:99,border:'none',background:C.border,color:C.text3,cursor:'pointer',display:'grid',placeItems:'center',padding:0}}>
+                      <X style={{width:11,height:11}}/>
+                    </button>
+                  )}
+                </div>
+                {rolesPresentes.map(r=>{
+                  const on = fRol===r, rm = roleMap[r] || roleMap.operador
+                  return (
+                    <button key={r} onClick={()=>setFRol(p=>p===r?null:r)}
+                      style={{height:28,padding:'0 11px',borderRadius:8,cursor:'pointer',fontSize:11,fontWeight:700,letterSpacing:'0.02em',textTransform:'uppercase',fontFamily:'inherit',
+                        border:`1px solid ${on?'transparent':C.border}`, background:on?rm.fg:'transparent', color:on?'#fff':C.text3, transition:'background .16s, color .16s, border-color .16s'}}>
+                      {r}
+                    </button>
+                  )
+                })}
+                {hayFiltro && (
+                  <button onClick={limpiar}
+                    style={{height:28,padding:'0 11px',borderRadius:8,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit',border:`1px solid ${C.border}`,background:'transparent',color:C.text4}}>
+                    Limpiar
+                  </button>
+                )}
+              </div>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,tableLayout:'fixed', '--border': C.border}}>
                 <colgroup>
                   <col style={{width:'26%'}}/>  {/* Usuario */}
@@ -732,7 +814,7 @@ export default function AdminPanel() {
                 </thead>
                 <tbody>
                   {(() => {
-                    const sorted = [...users].sort((a,b) => ROLES.indexOf(a.role) - ROLES.indexOf(b.role))
+                    const sorted = [...vistos].sort((a,b) => ROLES.indexOf(a.role) - ROLES.indexOf(b.role))
                     const rows = []
                     let lastRole = null
                     let rowIdx = 0
@@ -757,8 +839,10 @@ export default function AdminPanel() {
                                 {(u.full_name||u.username||u.email||'U').charAt(0).toUpperCase()}
                               </div>
                               <div style={{minWidth:0}}>
-                                <div style={{fontWeight:600,color:C.text1,fontSize:12.5,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.full_name||'—'}</div>
+                                <div title={u.full_name||u.username||u.email} style={{fontWeight:600,color:C.text1,fontSize:12.5,letterSpacing:'-0.01em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}><Hl text={u.full_name||'—'} terms={terms}/></div>
                                 <div style={{fontSize:10,color:C.text4,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  <Hl text={u.username||u.email||''} terms={terms}/>
+                                  {(u.username||u.email) ? ' · ' : ''}
                                   {u.last_login ? new Date(u.last_login).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'Sin acceso'}
                                 </div>
                               </div>
@@ -794,9 +878,9 @@ export default function AdminPanel() {
                     })
                     return rows
                   })()}
-                  {users.length===0 && (
+                  {vistos.length===0 && (
                     <tr>
-                      <td colSpan={5} style={{padding:'36px 20px',textAlign:'center',color:C.text4,fontSize:13,borderBottom:'none'}}>Sin usuarios registrados</td>
+                      <td colSpan={5} style={{padding:'36px 20px',textAlign:'center',color:C.text4,fontSize:13,borderBottom:'none'}}>{hayFiltro ? 'Ningún usuario coincide con el filtro' : 'Sin usuarios registrados'}</td>
                     </tr>
                   )}
                 </tbody>
