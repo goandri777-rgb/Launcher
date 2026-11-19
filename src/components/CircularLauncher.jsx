@@ -124,7 +124,6 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
   useEffect(() => () => clearTimeout(alertTimer.current), [])
 
   // ── Refs for GSAP ────────────────────────────────────────────────────────
-  const containerRef = useRef(null)
   const hubRef      = useRef(null)
   const hubRingRef  = useRef(null)
   const orbitRef    = useRef(null)
@@ -629,14 +628,38 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
     }
   }
 
+  // El hub tenía tamaño fijo y sólo se achicaba por ancho en un breakpoint.
+  // Lo que en realidad lo recorta es el ALTO: con 8 módulos, a 1280x720 los
+  // nodos de abajo se salían. Acá se mide el espacio real y se escala por el
+  // lado que falte. Las etiquetas sobresalen del círculo, por eso NECESARIO_ALTO
+  // es mayor que SIZE.
+  const NECESARIO_ANCHO = SIZE + 48
+  const NECESARIO_ALTO  = SIZE + 132
+  const ajusteRef = useRef(null)
+  const [ajuste, setAjuste] = useState(1)
+  useLayoutEffect(() => {
+    const caja = ajusteRef.current?.parentElement
+    if (!caja || typeof ResizeObserver === 'undefined') return
+    const medir = () => {
+      const r = caja.getBoundingClientRect()
+      if (!r.width || !r.height) return
+      const s = Math.min(1, r.width / NECESARIO_ANCHO, r.height / NECESARIO_ALTO)
+      setAjuste(Math.max(0.5, Math.round(s * 1000) / 1000))
+    }
+    medir()
+    const ro = new ResizeObserver(medir)
+    ro.observe(caja)
+    return () => ro.disconnect()
+  }, [])
+
   // ── Render ────────────────────────────────────────────────────────────────
   const displayModules = editMode ? (editOrder.length ? editOrder : modules) : modules
 
   return (
     <div
-      ref={containerRef}
+      ref={ajusteRef}
       className="relative grid place-items-center select-none"
-      style={{ width: SIZE, height: SIZE, maxWidth: '92vw' }}
+      style={{ width: SIZE, height: SIZE, transform: `scale(${ajuste})`, transformOrigin: 'center center', transition: 'transform 220ms ease' }}
       onPointerMove={editMode ? handleEditDragMove : undefined}
       onPointerUp={editMode ? handleEditDragEnd : undefined}
       onPointerLeave={editMode ? handleEditDragEnd : undefined}

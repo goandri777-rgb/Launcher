@@ -270,7 +270,8 @@ body::before {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 650px;
+  /* min-height fijo empujaba todo fuera de la pantalla en ventanas bajas. */
+  min-height: min(650px, 100%);
   overflow: hidden;
   border-top: 4px solid #173847;
 }
@@ -307,8 +308,8 @@ body::before {
   pointer-events: none;
 }
 
-/* El saludo en peso liviano y el nombre en negrita: la jerarquía la hace la
-   tipografía, no una caja. */
+/* Los dos en el mismo peso liviano: la jerarquía la hace sólo el color. Sin
+   saltos de negrita, sin caja. */
 .launcher-hello-title {
   margin: 0;
   font-family: 'Sora', sans-serif;
@@ -319,13 +320,13 @@ body::before {
 }
 
 .launcher-hello-title span {
-  color: rgba(18,48,63,0.38);
+  color: rgba(18,48,63,0.32);
   font-weight: 300;
 }
 
 .launcher-hello-title b {
-  color: #12303f;
-  font-weight: 800;
+  color: #0b2f41;
+  font-weight: 300;
 }
 
 .launcher-hello-role {
@@ -349,8 +350,23 @@ body::before {
   border-radius: 50%;
 }
 
-@media (max-width: 1400px) {
-  .launcher-hello-title { font-size: 30px; }
+/* El saludo acompaña el ancho sin saltos bruscos. */
+@media (max-width: 1600px) {
+  .launcher-hello { top: 28px; left: 34px; }
+  .launcher-hello-title { font-size: 32px; }
+}
+
+@media (max-width: 1280px) {
+  .launcher-hello { top: 22px; left: 26px; }
+  .launcher-hello-title { font-size: 26px; }
+  .launcher-hello-role { margin-top: 8px; font-size: 9.5px; }
+}
+
+/* Pantallas bajas: el saludo roba alto al hub, así que se achica. */
+@media (max-height: 760px) {
+  .launcher-hello { top: 18px; }
+  .launcher-hello-title { font-size: 24px; }
+  .launcher-hello-role { margin-top: 6px; }
 }
 
 @media (max-width: 980px) {
@@ -1092,5 +1108,5 @@ body::before {
 
 @media (max-width: 1120px) and (min-width: 821px) {
   .launcher-side-panel { width: 310px; }
-  .launcher-orbit-stage { right: 110px; transform: scale(0.86); }
+  .launcher-orbit-stage { right: 110px; }
 }
