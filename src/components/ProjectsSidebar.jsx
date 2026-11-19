@@ -176,14 +176,6 @@ export default function ProjectsSidebar({
                 <ChevronRight aria-hidden />
               </button>
 
-              <div className="side-panel-user">
-                <span className="side-panel-avatar">{initial}</span>
-                <span className="side-panel-user-copy">
-                  <strong>{profile?.full_name || profile?.username || 'Usuario'}</strong>
-                  <small><i />{roleLabel}</small>
-                </span>
-              </div>
-
               <AnimatePresence mode="wait" initial={false}>
                 {editMode ? (
                   <motion.div

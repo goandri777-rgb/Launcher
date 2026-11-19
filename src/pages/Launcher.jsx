@@ -10,6 +10,14 @@ import ProjectsSidebar from '../components/ProjectsSidebar'
 
 const EASE = [0.16, 1, 0.3, 1]
 
+// El saludo cambia con la hora del equipo del usuario.
+function saludoDeLaHora(d = new Date()) {
+  const h = d.getHours()
+  if (h >= 5  && h < 12) return 'Buen día'
+  if (h >= 12 && h < 19) return 'Buenas tardes'
+  return 'Buenas noches'
+}
+
 const ROLE_LABEL = {
   admin: 'Administrador',
   supervisor: 'Supervisor',
@@ -129,6 +137,16 @@ export default function Launcher() {
 
   const roleLabel = ROLE_LABEL[profile?.role] || profile?.role || '—'
 
+  // Se revisa cada minuto: si el launcher queda abierto, el saludo acompaña la hora.
+  const [saludo, setSaludo] = useState(saludoDeLaHora)
+  useEffect(() => {
+    const id = setInterval(() => setSaludo(saludoDeLaHora()), 60000)
+    return () => clearInterval(id)
+  }, [])
+
+  const nombreCorto = (profile?.full_name || profile?.username || 'Usuario').trim().split(/[\s-]+/)[0]
+  const inicial = (profile?.full_name || profile?.username || 'U').charAt(0).toUpperCase()
+
   return (
     <>
       <div className="launcher-background" aria-hidden>
@@ -170,6 +188,19 @@ export default function Launcher() {
             >
               <img src="/alas_logo.png" alt="ALAS" />
             </motion.header>
+
+            <motion.div
+              className="launcher-hello"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, ease: EASE, delay: 0.16 }}
+            >
+              <span className="launcher-hello-avatar">{inicial}</span>
+              <div className="launcher-hello-copy">
+                <strong>{saludo}, {nombreCorto}</strong>
+                <small><i aria-hidden />{roleLabel}</small>
+              </div>
+            </motion.div>
 
             <main className="launcher-orbit-stage">
               {modulesLoading ? null : modules.length === 0 ? (
