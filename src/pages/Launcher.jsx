@@ -181,6 +181,12 @@ export default function Launcher() {
           />
         ) : (
           <div className="launcher-desktop-shell">
+            {/* Aerea del predio como fondo. Es decorativa: aria-hidden y sin
+                pointer-events, para que no se cruce con lectores ni con clicks. */}
+            <div className="launcher-photo" aria-hidden>
+              <img src="/predio-alas.webp" alt="" decoding="async" />
+            </div>
+
             <motion.header
               className="launcher-brand"
               initial={{ opacity: 0, y: -18 }}
