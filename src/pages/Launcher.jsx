@@ -129,11 +129,13 @@ export default function Launcher() {
     }
   }, [openModule])
 
+  // Sin y:0 el contenedor se quedaba 10 px abajo (el valor de 'initial') y el
+  // alto 100% terminaba 10 px fuera de la pantalla.
   const exitState = isExiting
-    ? { opacity: 0, scale: 0.965, filter: 'blur(8px)' }
+    ? { opacity: 0, y: 0, scale: 0.965, filter: 'blur(8px)' }
     : isLaunching
-      ? { opacity: 0, scale: 0.985, filter: 'blur(5px)' }
-      : { opacity: 1, scale: 1, filter: 'blur(0px)' }
+      ? { opacity: 0, y: 0, scale: 0.985, filter: 'blur(5px)' }
+      : { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }
 
   const roleLabel = ROLE_LABEL[profile?.role] || profile?.role || '—'
 

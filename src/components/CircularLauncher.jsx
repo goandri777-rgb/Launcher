@@ -658,8 +658,8 @@ export default function CircularLauncher({ modules, onOpen, editMode = false, on
   return (
     <div
       ref={ajusteRef}
-      className="relative grid place-items-center select-none"
-      style={{ width: SIZE, height: SIZE, transform: `scale(${ajuste})`, transformOrigin: 'center center', transition: 'transform 220ms ease' }}
+      className="grid place-items-center select-none"
+      style={{ position: 'absolute', left: '50%', top: '50%', width: SIZE, height: SIZE, transform: `translate(-50%, -50%) scale(${ajuste})`, transformOrigin: 'center center', transition: 'transform 220ms ease' }}
       onPointerMove={editMode ? handleEditDragMove : undefined}
       onPointerUp={editMode ? handleEditDragEnd : undefined}
       onPointerLeave={editMode ? handleEditDragEnd : undefined}
