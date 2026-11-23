@@ -17,9 +17,12 @@ const EXCLUSIVE_ROLE_MODULE = {
   calendario: 'calendario',
   acuses: 'calendario',
 }
-const MODULE_ENTRY_PATH = {
-  calendario: '/calendario',
-}
+/* Vacio a proposito. Forzar la ruta de entrada hacia un apartado concreto le
+   quitaba la decision a la app: el modulo calendario abria siempre en
+   /calendario, aunque ese apartado ya no este en su barra lateral. La app
+   resuelve el destino por rol en HomeRedirect y lo corrige con
+   SectionRouteGuard, asi que desde aca alcanza con abrir la raiz. */
+const MODULE_ENTRY_PATH = {}
 const DEMO_MODULES = [
   { key: 'calendario', name: 'Calendario · Incidencias · Acuses', url: IS_DEV ? 'http://localhost:8080' : import.meta.env.VITE_URL_CALENDARIO || '', is_active: true, is_blocked: false },
   { key: 'borrados',   name: 'Items Borrados',        url: IS_DEV ? 'http://localhost:4000'  : import.meta.env.VITE_URL_BORRADOS     || '', is_active: true, is_blocked: false },
@@ -32,10 +35,8 @@ function getExclusiveModuleKey(role) {
   return EXCLUSIVE_ROLE_MODULE[String(role || '').toLowerCase()] || null
 }
 
-function getModuleEntryUrl(rawUrl, moduleKey, role) {
-  const pathname = String(role || '').toLowerCase() === 'acuses'
-    ? '/acuses'
-    : MODULE_ENTRY_PATH[moduleKey]
+function getModuleEntryUrl(rawUrl, moduleKey) {
+  const pathname = MODULE_ENTRY_PATH[moduleKey]
   if (!pathname) return rawUrl
 
   try {
@@ -140,14 +141,14 @@ export function useModules() {
         if (import.meta.env.DEV) console.info(`[ALAS SSO] El módulo "${moduleKey}" no tiene URL configurada aún.`)
         return { ok: false, reason: 'URL del módulo no configurada' }
       }
-      destUrl = getModuleEntryUrl(mod.url, moduleKey, profile?.role)
+      destUrl = getModuleEntryUrl(mod.url, moduleKey)
     } else {
       // Producción: el RPC verifica permisos en servidor y devuelve la URL
       const { data, error } = await supabase.rpc('open_module', { p_module_key: moduleKey })
       if (error || !data?.url) {
         return { ok: false, reason: error?.message || 'No autorizado' }
       }
-      destUrl = getModuleEntryUrl(data.url, moduleKey, profile?.role)
+      destUrl = getModuleEntryUrl(data.url, moduleKey)
     }
 
     // ── Generar token SSO firmado ────────────────────────────────────────
